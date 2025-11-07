@@ -1,0 +1,14 @@
+18
+
+
+---
+
+### O que fazer agora:
+
+1.  **Atualize** o `curriculo/package.json` no seu GitHub com o novo conteúdo.
+2.  **Crie** o novo arquivo `curriculo/.nvmrc` no seu GitHub.
+3.  **Faça o "commit" e "push"** dessas duas alterações.
+
+O Netlify vai detectar o "push", iniciar um novo deploy, ler o `.nvmrc` (forçando o Node v18) e, em seguida, instalará o `patch-package` (corrigindo o erro principal).
+
+Isso *tem* que resolver. Estamos seguindo o manual de instruções do próprio Netlify.
