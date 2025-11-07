@@ -1,14 +1,25 @@
 18
 
 
+**3. `.gitattributes` (Novo Arquivo Mágico de Correção)**
+
+Este é o **arquivo novo e mais importante**. Crie ele na pasta `curriculo/`. Ele diz ao GitHub: "Ei, não importa se estou no Windows, salve o arquivo `.nvmrc` com a quebra de linha do Linux (LF)".
+
+```:.gitattributes (Novo Arquivo):curriculo/.gitattributes
+# Força o Git a usar finais de linha (LF) do Linux para o .nvmrc
+# Isso previne o erro do '\r' (CRLF) do Windows.
+*.nvmrc text eol=lf
+
+
 ---
 
 ### O que fazer agora:
 
-1.  **Atualize** o `curriculo/package.json` no seu GitHub com o novo conteúdo.
-2.  **Crie** o novo arquivo `curriculo/.nvmrc` no seu GitHub.
-3.  **Faça o "commit" e "push"** dessas duas alterações.
+1.  **Verifique** se o seu `package.json` está igual ao que eu mandei (com `patch-package`).
+2.  **Verifique** se o seu `.nvmrc` tem *apenas* o texto `18`.
+3.  **Crie** o novo arquivo `.gitattributes` na pasta `curriculo/` com o conteúdo que forneci.
+4.  **Faça o "commit" e "push"** de todas essas alterações para o GitHub.
 
-O Netlify vai detectar o "push", iniciar um novo deploy, ler o `.nvmrc` (forçando o Node v18) e, em seguida, instalará o `patch-package` (corrigindo o erro principal).
+O Netlify vai iniciar um novo deploy. Desta vez, o `.gitattributes` vai garantir que o `.nvmrc` seja lido como `18` (e não `18\r`), o Node.js v18 será instalado, e o `patch-package` também será instalado, permitindo que o build continue.
 
-Isso *tem* que resolver. Estamos seguindo o manual de instruções do próprio Netlify.
+Estou confiante que esta é a correção final. Estamos literalmente seguindo o diagnóstico exato do Netlify.
