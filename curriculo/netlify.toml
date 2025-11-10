@@ -8,12 +8,13 @@
 
 # Configuração das Funções Serverless (Backend)
 [functions]
-  # 3. Pasta *fonte* das suas funções. O Netlify vai encontrá-las
-  # e compilá-las automaticamente.
+  # 3. Pasta *fonte* das suas funções.
   directory = "netlify/functions"
   
-  # --- ADICIONE ESTAS DUAS LINHAS ---
   # Define o 'bundler' (empacotador)
   node_bundler = "esbuild"
-  # Diz ao Netlify para não tentar 'empacotar' o stripe, mas sim usá-lo
-  external_node_modules = ["stripe"]
+
+  # --- CORREÇÃO AQUI ---
+  # Diz ao Netlify para não empacotar estas bibliotecas,
+  # mas sim usá-las diretamente no servidor.
+  external_node_modules = ["stripe", "@google/genai"]
