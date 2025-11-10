@@ -4,9 +4,9 @@ import type { Handler, HandlerEvent } from "@netlify/functions";
 const fetch = require('node-fetch');
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// --- CORREÇÃO 1: Nome do modelo atualizado ---
-const MODEL_NAME = "gemini-1.5-flash";
-// --- CORREÇÃO 2: Endpoint revertido para v1beta ---
+// --- CORREÇÃO: Nome do modelo do seu projeto funcional ---
+const MODEL_NAME = "gemini-2.0-flash";
+// --- CORREÇÃO: Endpoint correto para este modelo ---
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
