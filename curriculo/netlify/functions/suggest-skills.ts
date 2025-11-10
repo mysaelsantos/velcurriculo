@@ -1,51 +1,71 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import { GoogleGenerativeAI } from "@google/genai";
+
+// CORREÇÃO: Usar 'require' em vez de 'import' para compatibilidade com Netlify Functions
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/genai");
+
+const MODEL_NAME = "gemini-1.0-pro";
+const API_KEY = process.env.GEMINI_API_KEY;
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const { GEMINI_API_KEY } = process.env;
-  if (!GEMINI_API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ message: "API key não configurada" }) };
+  if (!API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ message: "Chave da API do Gemini não configurada." }) };
   }
 
   try {
-    const body = JSON.parse(event.body || '{}');
-    const { jobTitle, experience } = body;
-
+    const { jobTitle, experience } = JSON.parse(event.body || '{}');
     if (!jobTitle) {
-      return { statusCode: 400, body: JSON.stringify({ message: "jobTitle é obrigatório" }) };
+      return { statusCode: 400, body: JSON.stringify({ message: "jobTitle é obrigatório." }) };
     }
 
-    const prompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
-    
-    const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        systemInstruction: "Você é um especialista em RH que ajuda a montar currículos. Sua tarefa é sugerir habilidades com base nas informações fornecidas. Responda apenas com a lista de habilidades separadas por vírgula, sem introduções ou comentários.",
-    });
+    const prompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
+
+    const generationConfig = {
+      temperature: 0.9,
+      topK: 1,
+      topP: 1,
+      maxOutputTokens: 2048,
+    };
+
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    ];
+
+    const result = await model.generateContent(
+      [prompt],
+      generationConfig,
+      safetySettings
+    );
+
+    const skillsText = result.response.text();
+    if (!skillsText) {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skills: [] }),
+      };
+    }
     
-    const skillsText = result.response.text().trim();
     const skills = skillsText.split(',').map(skill => skill.trim()).filter(Boolean);
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ skills }),
     };
 
-  } catch (err) {
-    const error = err as Error;
-    console.error(`Gemini Error (suggest-skills): ${error.message}`);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: error.message }),
-    };
+  } catch (error) {
+    console.error("Error calling Gemini API for skill suggestion:", error);
+    return { statusCode: 500, body: JSON.stringify({ message: "Falha ao sugerir habilidades com a IA." }) };
   }
 };
 
