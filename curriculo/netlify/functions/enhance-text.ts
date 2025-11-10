@@ -5,7 +5,8 @@ const fetch = require('node-fetch');
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-1.0-pro";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+// --- CORREÇÃO AQUI ---
+const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
@@ -65,6 +66,13 @@ const handler: Handler = async (event: HandlerEvent) => {
     }
 
     const result = await apiResponse.json();
+    
+    // Adicionada verificação de segurança para 'candidates'
+    if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+      console.error("Resposta inesperada da API:", result);
+      throw new Error("A API da IA retornou uma resposta inválida.");
+    }
+
     const text = result.candidates[0].content.parts[0].text;
 
     return {
@@ -75,7 +83,8 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    return { statusCode: 500, body: JSON.stringify({ message: "Falha ao aprimorar o texto com a IA." }) };
+    const errorMessage = error instanceof Error ? error.message : "Falha ao aprimorar o texto com a IA.";
+    return { statusCode: 500, body: JSON.stringify({ message: errorMessage }) };
   }
 };
 
