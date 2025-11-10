@@ -1,5 +1,7 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import Stripe from 'stripe';
+// --- CORREÇÃO AQUI ---
+// Trocado de 'import' para 'require'
+const Stripe = require("stripe");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -51,4 +53,6 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-export { handler };
+// --- CORREÇÃO AQUI ---
+// Trocado de 'export' para 'module.exports'
+module.exports = { handler };
