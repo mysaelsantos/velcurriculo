@@ -1,9 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// CORREÇÃO: Usar 'require' em vez de 'import' para compatibilidade com Netlify Functions
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } = require("@google/genai");
+// Usar 'require' para compatibilidade com Netlify Functions
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/genai");
 
-const MODEL_NAME = "gemini-1.0-pro-vision-latest";
 const API_KEY = process.env.GEMINI_API_KEY;
 
 const handler: Handler = async (event: HandlerEvent) => {
@@ -16,7 +15,6 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
-    // O frontend agora envia apenas o texto extraído do PDF
     const { fullText } = JSON.parse(event.body || '{}');
     if (!fullText) {
       return { statusCode: 400, body: JSON.stringify({ message: "Texto do PDF é obrigatório." }) };
@@ -46,8 +44,10 @@ const handler: Handler = async (event: HandlerEvent) => {
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     ];
 
+    // --- CORREÇÃO 1 ---
+    // A chamada da API estava com [parts], o correto é apenas 'parts'
     const result = await model.generateContent(
-      [parts],
+      parts,
       generationConfig,
       safetySettings
     );
@@ -55,7 +55,6 @@ const handler: Handler = async (event: HandlerEvent) => {
     const rawText = result.response.text();
     let jsonString = rawText;
 
-    // Limpar o JSON que pode vir com '```json ... ```'
     if (jsonString.startsWith('```json') && jsonString.endsWith('```')) {
       jsonString = jsonString.substring(7, jsonString.length - 3).trim();
     } else if (jsonString.startsWith('```') && jsonString.endsWith('```')) {
@@ -80,4 +79,6 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-export { handler };
+// --- CORREÇÃO 2 ---
+// Mudar de 'export' para 'module.exports' para ser compatível com o 'require'
+module.exports = { handler };
