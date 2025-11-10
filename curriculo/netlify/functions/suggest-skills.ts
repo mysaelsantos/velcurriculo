@@ -70,5 +70,5 @@ const handler: Handler = async (event: HandlerEvent) => {
 };
 
 // --- CORREÇÃO ---
-// Mudar de 'export' para 'module.exports' para ser compatível com o 'require'
-module.exports = { handler };
+// Alterado de 'module.exports' para 'export'
+export { handler };
