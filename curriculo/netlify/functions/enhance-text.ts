@@ -1,8 +1,7 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// --- CORREÇÃO AQUI ---
-// Trocado de 'require' para 'import' para ser compatível com "type": "module"
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
+// Usar 'require' para compatibilidade com Netlify Functions
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/genai");
 
 const MODEL_NAME = "gemini-1.0-pro";
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -68,4 +67,6 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-export { handler };
+// --- CORREÇÃO ---
+// Mudar de 'export' para 'module.exports' para ser compatível com o 'require'
+module.exports = { handler };
