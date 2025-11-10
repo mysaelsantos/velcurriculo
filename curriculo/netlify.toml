@@ -11,3 +11,9 @@
   # 3. Pasta *fonte* das suas funções. O Netlify vai encontrá-las
   # e compilá-las automaticamente.
   directory = "netlify/functions"
+  
+  # --- ADICIONE ESTAS DUAS LINHAS ---
+  # Define o 'bundler' (empacotador)
+  node_bundler = "esbuild"
+  # Diz ao Netlify para não tentar 'empacotar' o stripe, mas sim usá-lo
+  external_node_modules = ["stripe"]
