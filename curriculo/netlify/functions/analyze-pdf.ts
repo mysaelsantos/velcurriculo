@@ -58,7 +58,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (jsonString.startsWith('```json') && jsonString.endsWith('```')) {
       jsonString = jsonString.substring(7, jsonString.length - 3).trim();
     } else if (jsonString.startsWith('```') && jsonString.endsWith('```')) {
-      jsonString = jsonString.substring(3, jsonString.length - 3).trim();
+      jsonString = jsonS.substring(3, jsonString.length - 3).trim();
     }
 
     try {
@@ -80,5 +80,5 @@ const handler: Handler = async (event: HandlerEvent) => {
 };
 
 // --- CORREÇÃO 2 ---
-// Mudar de 'export' para 'module.exports' para ser compatível com o 'require'
-module.exports = { handler };
+// Alterado de 'module.exports' para 'export'
+export { handler };
