@@ -11,3 +11,7 @@
   # 3. Pasta *fonte* das suas funções. O Netlify vai encontrá-las
   # e compilá-las automaticamente.
   directory = "netlify/functions"
+
+# Novo bloco para instalar as dependências das funções
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
