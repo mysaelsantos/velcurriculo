@@ -1,80 +1,82 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, GenerationConfig } from "@google/genai";
+
+// CORREÇÃO: Usar 'require' em vez de 'import' para compatibilidade com Netlify Functions
+const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } = require("@google/genai");
+
+const MODEL_NAME = "gemini-1.0-pro-vision-latest";
+const API_KEY = process.env.GEMINI_API_KEY;
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const { GEMINI_API_KEY } = process.env;
-  if (!GEMINI_API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ message: "API key não configurada" }) };
+  if (!API_KEY) {
+    return { statusCode: 500, body: JSON.stringify({ message: "Chave da API do Gemini não configurada." }) };
   }
 
   try {
-    const body = JSON.parse(event.body || '{}');
-    const { fullText } = body;
-
+    // O frontend agora envia apenas o texto extraído do PDF
+    const { fullText } = JSON.parse(event.body || '{}');
     if (!fullText) {
-      return { statusCode: 400, body: JSON.stringify({ message: "Texto do PDF é obrigatório" }) };
+      return { statusCode: 400, body: JSON.stringify({ message: "Texto do PDF é obrigatório." }) };
     }
 
-    const prompt = `Analise o seguinte texto extraído de um PDF da Carteira de Trabalho Digital e extraia todas as experiências profissionais listadas. Para cada experiência, extraia: nome da empresa (empregador), cargo (ocupação), local (município do estabelecimento), data de início (admissão) e data de fim (desligamento). Se a data de fim não for especificada ou estiver em branco, use o valor "Atual". Ignore qualquer outra informação. Retorne os dados em formato JSON, seguindo o schema fornecido.`;
-    
-    const ai = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = ai.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            experiences: {
-              type: "ARRAY",
-              items: {
-                type: "OBJECT",
-                properties: {
-                  company: { type: "STRING", description: "Nome da empresa (Empregador)" },
-                  jobTitle: { type: "STRING", description: "Cargo ocupado (Ocupação)" },
-                  location: { type: "STRING", description: "Município do estabelecimento. Ex: SÃO PAULO - SP" },
-                  startDate: { type: "STRING", description: "Data de início do contrato (Admissão - DD/MM/YYYY)" },
-                  endDate: { type: "STRING", description: "Data de fim do contrato (Desligamento - DD/MM/YYYY) ou 'Atual'" }
-                },
-                required: ["company", "jobTitle", "location", "startDate", "endDate"],
-              },
-            },
-          },
-        } as GenerationConfig['responseSchema']
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-      ],
-    });
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" }); // Usar modelo de texto
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }, { text: fullText }] }],
-    });
-
-    // O Gemini com JSON schema já retorna o JSON direto
-    const jsonResult = JSON.parse(result.response.text());
+    const prompt = `Analise o seguinte texto extraído de um PDF da Carteira de Trabalho Digital e extraia todas as experiências profissionais listadas. Para cada experiência, extraia: nome da empresa (empregador), cargo (ocupação), local (município do estabelecimento), data de início (admissão) e data de fim (desligamento). Se a data de fim não for especificada ou estiver em branco, use o valor "Atual". Ignore qualquer outra informação. Retorne os dados em formato JSON, como no exemplo: {"experiences": [{"company": "EMPRESA EXEMPLO", "jobTitle": "CARGO EXEMPLO", "location": "CIDADE - UF", "startDate": "DD/MM/YYYY", "endDate": "DD/MM/YYYY"}]}`;
     
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(jsonResult),
+    const parts = [
+      { text: prompt },
+      { text: `Aqui está o texto do PDF: ${fullText}` },
+    ];
+
+    const generationConfig = {
+      temperature: 0.2,
+      topK: 1,
+      topP: 1,
+      maxOutputTokens: 2048,
     };
 
-  } catch (err) {
-    const error = err as Error;
-    console.error(`Gemini Error (analyze-pdf): ${error.message}`);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: error.message }),
-    };
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+    ];
+
+    const result = await model.generateContent(
+      [parts],
+      generationConfig,
+      safetySettings
+    );
+
+    const rawText = result.response.text();
+    let jsonString = rawText;
+
+    // Limpar o JSON que pode vir com '```json ... ```'
+    if (jsonString.startsWith('```json') && jsonString.endsWith('```')) {
+      jsonString = jsonString.substring(7, jsonString.length - 3).trim();
+    } else if (jsonString.startsWith('```') && jsonString.endsWith('```')) {
+      jsonString = jsonString.substring(3, jsonString.length - 3).trim();
+    }
+
+    try {
+      const parsedJson = JSON.parse(jsonString);
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsedJson),
+      };
+    } catch (parseError) {
+      console.error("Failed to parse JSON from Gemini API:", parseError, "Raw string:", rawText);
+      return { statusCode: 500, body: JSON.stringify({ message: "A IA retornou uma resposta em formato inválido." }) };
+    }
+
+  } catch (error) {
+    console.error("Error calling Gemini API for PDF analysis:", error);
+    return { statusCode: 500, body: JSON.stringify({ message: "Falha ao analisar o PDF com a IA." }) };
   }
 };
 
