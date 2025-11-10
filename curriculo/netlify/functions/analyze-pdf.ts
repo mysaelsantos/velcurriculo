@@ -1,8 +1,11 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// --- CORREÇÃO: MUDADO PARA IMPORT ---
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
+
+// Usar 'require' (CJS)
+const fetch = require('node-fetch');
 
 const API_KEY = process.env.GEMINI_API_KEY;
+const MODEL_NAME = "gemini-1.0-pro";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
@@ -19,9 +22,6 @@ const handler: Handler = async (event: HandlerEvent) => {
       return { statusCode: 400, body: JSON.stringify({ message: "Texto do PDF é obrigatório." }) };
     }
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" }); // Usar modelo de texto
-
     const prompt = `Analise o seguinte texto extraído de um PDF da Carteira de Trabalho Digital e extraia todas as experiências profissionais listadas. Para cada experiência, extraia: nome da empresa (empregador), cargo (ocupação), local (município do estabelecimento), data de início (admissão) e data de fim (desligamento). Se a data de fim não for especificada ou estiver em branco, use o valor "Atual". Ignore qualquer outra informação. Retorne os dados em formato JSON, como no exemplo: {"experiences": [{"company": "EMPRESA EXEMPLO", "jobTitle": "CARGO EXEMPLO", "location": "CIDADE - UF", "startDate": "DD/MM/YYYY", "endDate": "DD/MM/YYYY"}]}`;
     
     const parts = [
@@ -29,27 +29,36 @@ const handler: Handler = async (event: HandlerEvent) => {
       { text: `Aqui está o texto do PDF: ${fullText}` },
     ];
 
-    const generationConfig = {
-      temperature: 0.2,
-      topK: 1,
-      topP: 1,
-      maxOutputTokens: 2048,
+    const payload = {
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.2,
+        topK: 1,
+        topP: 1,
+        maxOutputTokens: 2048,
+      },
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      ],
     };
 
-    const safetySettings = [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ];
+    const apiResponse = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-    const result = await model.generateContent(
-      parts,
-      generationConfig,
-      safetySettings
-    );
-
-    const rawText = result.response.text();
+    if (!apiResponse.ok) {
+      const errorBody = await apiResponse.text();
+      console.error("Erro da API Gemini:", errorBody);
+      return { statusCode: apiResponse.status, body: JSON.stringify({ message: `Erro da API Gemini: ${errorBody}` }) };
+    }
+    
+    const result = await apiResponse.json();
+    const rawText = result.candidates[0].content.parts[0].text;
     let jsonString = rawText;
 
     if (jsonString.startsWith('```json') && jsonString.endsWith('```')) {
@@ -76,5 +85,5 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-// --- CORREÇÃO: MUDADO PARA EXPORT ---
-export { handler };
+// Usar 'module.exports' (CJS)
+module.exports = { handler };
