@@ -8,13 +8,6 @@
 
 # Configuração das Funções Serverless (Backend)
 [functions]
-  # 3. Pasta *fonte* das suas funções.
+  # 3. Pasta *fonte* das suas funções. O Netlify vai encontrá-las
+  # e compilá-las automaticamente.
   directory = "netlify/functions"
-  
-  # Define o 'bundler' (empacotador)
-  node_bundler = "esbuild"
-
-  # --- CORREÇÃO AQUI ---
-  # Diz ao Netlify para não empacotar estas bibliotecas,
-  # mas sim usá-las diretamente no servidor.
-  external_node_modules = ["stripe", "@google/genai"]
