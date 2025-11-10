@@ -4,9 +4,10 @@ import type { Handler, HandlerEvent } from "@netlify/functions";
 const fetch = require('node-fetch');
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-1.0-pro";
-// --- CORREÇÃO AQUI ---
-const API_URL = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+// --- CORREÇÃO 1: Nome do modelo atualizado ---
+const MODEL_NAME = "gemini-1.5-flash";
+// --- CORREÇÃO 2: Endpoint revertido para v1beta ---
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
@@ -60,7 +61,6 @@ const handler: Handler = async (event: HandlerEvent) => {
     
     const result = await apiResponse.json();
 
-    // Adicionada verificação de segurança para 'candidates'
     if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
       console.error("Resposta inesperada da API:", result);
       throw new Error("A API da IA retornou uma resposta inválida.");
