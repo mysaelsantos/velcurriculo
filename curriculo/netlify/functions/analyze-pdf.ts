@@ -1,7 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// Usar 'require' para compatibilidade com Netlify Functions
-const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require("@google/genai");
+// --- CORREÇÃO AQUI ---
+// Trocado de 'require' para 'import' para ser compatível com "type": "module"
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/genai";
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -44,8 +45,6 @@ const handler: Handler = async (event: HandlerEvent) => {
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     ];
 
-    // --- CORREÇÃO 1 ---
-    // A chamada da API estava com [parts], o correto é apenas 'parts'
     const result = await model.generateContent(
       parts,
       generationConfig,
@@ -58,7 +57,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (jsonString.startsWith('```json') && jsonString.endsWith('```')) {
       jsonString = jsonString.substring(7, jsonString.length - 3).trim();
     } else if (jsonString.startsWith('```') && jsonString.endsWith('```')) {
-      jsonString = jsonS.substring(3, jsonString.length - 3).trim();
+      jsonString = jsonString.substring(3, jsonString.length - 3).trim();
     }
 
     try {
@@ -79,6 +78,4 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-// --- CORREÇÃO 2 ---
-// Alterado de 'module.exports' para 'export'
 export { handler };
