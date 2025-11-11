@@ -34,5 +34,10 @@
     "services/**/*.ts",
     "vite.config.ts"
   ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "netlify/functions"  // <-- Adicione esta linha
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
