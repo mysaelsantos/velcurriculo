@@ -1,7 +1,8 @@
-{
-  "type": "commonjs",
-  "dependencies": {
-    "node-fetch": "^2.7.0",
-    "mercadopago": "^2.0.10"
-  }
-}
+"include": [
+    "App.tsx",
+    "index.tsx",
+    "types.ts",
+    "components/**/*.tsx",
+    "services/**/*.ts",
+    "vite.config.ts"
+  ],
