@@ -32,7 +32,6 @@
     "types.ts",
     "components/**/*.tsx",
     "services/**/*.ts",
-    "netlify/functions/**/*.ts",
     "vite.config.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
