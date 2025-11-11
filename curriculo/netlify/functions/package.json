@@ -2,6 +2,6 @@
   "type": "commonjs",
   "dependencies": {
     "node-fetch": "^2.7.0",
-    "stripe": "^16.2.0"
+    "mercadopago": "^2.0.10"
   }
 }
