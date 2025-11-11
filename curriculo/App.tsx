@@ -132,7 +132,7 @@ const calculateCurrentGenerated = (base: number) => {
 interface PixPaymentData {
     qrCodeUrl: string;
     copyPasteCode: string;
-    paymentIntentId: string;
+    paymentId: string; // <-- MUDANÇA DE NOME AQUI
 }
 
 const App: React.FC = () => {
@@ -584,7 +584,7 @@ const App: React.FC = () => {
                 setPixPaymentData({
                     qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
                     copyPasteCode: '00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5913Test_User_Name6009SAO_PAULO62070503***6304E2A4',
-                    paymentIntentId: `pi_test_${Date.now()}`,
+                    paymentId: `pi_test_${Date.now()}`, // <-- MUDANÇA DE NOME AQUI
                 });
                 setIsPixModalOpen(true);
                 setIsPaymentProcessing(false);
@@ -603,7 +603,7 @@ const App: React.FC = () => {
     
             const data = await response.json();
     
-            if (!response.ok || !data.paymentIntentId) {
+            if (!response.ok || !data.paymentId) { // <-- MUDANÇA DE NOME AQUI
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
     
