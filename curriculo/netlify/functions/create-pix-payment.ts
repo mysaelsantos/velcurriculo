@@ -47,7 +47,9 @@ const handler: Handler = async (event: HandlerEvent) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         paymentId: payment.id,
-        qrCodeUrl: `data:image/png;base64,${qrCodeBase64}`,
+        // --- CORREÇÃO AQUI: Remover o prefixo duplicado ---
+        // O qrCodeBase64 já vem com "data:image/png;base64,"
+        qrCodeUrl: qrCodeBase64,
         copyPasteCode: copyPasteCode,
       }),
     };
