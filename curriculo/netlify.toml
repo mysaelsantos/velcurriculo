@@ -1,7 +1,7 @@
 # Configuração de Build para um site Vite
 [build]
-  # 1. Comando para construir o site Vite
-  command = "npm run build"
+  # 1. Comando CORRIGIDO para construir o site (força a instalação limpa)
+  command = "npm install && npm run build"
   
   # 2. Pasta de saída do Vite (onde o site estático fica)
   publish = "dist"
