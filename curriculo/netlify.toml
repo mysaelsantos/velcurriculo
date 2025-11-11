@@ -1,17 +1,17 @@
 # Configuração de Build para um site Vite
 [build]
   # 1. Comando CORRIGIDO para construir o site (força a instalação limpa)
-  command = "npm install && npm run build"
+  #    DELETA TUDO (rm -rf) antes de instalar e construir.
+  command = "rm -rf node_modules && rm -rf netlify/functions/node_modules && npm install && npm run build"
   
   # 2. Pasta de saída do Vite (onde o site estático fica)
   publish = "dist"
 
 # Configuração das Funções Serverless (Backend)
 [functions]
-  # 3. Pasta *fonte* das suas funções. O Netlify vai encontrá-las
-  # e compilá-las automaticamente.
+  # 3. Pasta *fonte* das suas funções.
   directory = "netlify/functions"
 
-# Novo bloco para instalar as dependências das funções
+# Plugin para instalar as dependências das funções
 [[plugins]]
   package = "@netlify/plugin-functions-install-core"
