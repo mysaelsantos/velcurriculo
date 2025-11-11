@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface PixPaymentData {
   qrCodeUrl: string;
   copyPasteCode: string;
-  paymentIntentId: string;
+  paymentId: string; // <-- MUDANÇA DE NOME AQUI
 }
 
 interface PixModalProps {
@@ -24,7 +24,8 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
 
   const checkPaymentStatus = async () => {
     try {
-      const backendUrl = `/.netlify/functions/get-payment-status?paymentIntentId=${paymentData.paymentIntentId}`;
+      // <-- MUDANÇA DE NOME AQUI
+      const backendUrl = `/.netlify/functions/get-payment-status?paymentId=${paymentData.paymentId}`;
       
       const response = await fetch(backendUrl);
       const data = await response.json();
@@ -64,7 +65,8 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
         if (intervalRef.current) clearInterval(intervalRef.current);
       };
     }
-  }, [isOpen, status, paymentData.paymentIntentId, isTestMode]);
+    // <-- MUDANÇA DE NOME AQUI
+  }, [isOpen, status, paymentData.paymentId, isTestMode]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
