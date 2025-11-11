@@ -1,9 +1,10 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 // --- CORREÇÃO: MUDADO PARA REQUIRE ---
-const Stripe = require("stripe");
+const mercadopago = require("mercadopago");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+// Configura o Mercado Pago
+mercadopago.configure({
+  access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
 });
 
 const handler: Handler = async (event: HandlerEvent) => {
@@ -15,30 +16,40 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 
-  const paymentIntentId = event.queryStringParameters?.paymentIntentId;
+  // Mudamos o parâmetro de 'paymentIntentId' para 'paymentId'
+  const paymentId = event.queryStringParameters?.paymentId;
 
-  if (!paymentIntentId || typeof paymentIntentId !== 'string') {
+  if (!paymentId || typeof paymentId !== 'string') {
     return {
       statusCode: 400,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Payment Intent ID is required.' }),
+      body: JSON.stringify({ message: 'Payment ID is required.' }),
     };
   }
 
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // Busca o pagamento na API do Mercado Pago
+    const paymentResponse = await mercadopago.payment.get(paymentId);
+    const payment = paymentResponse.body;
 
+    // "Traduz" o status do Mercado Pago para o status que o frontend espera
+    // O frontend espera 'succeeded'
+    let frontendStatus = 'pending';
+    if (payment.status === 'approved') {
+        frontendStatus = 'succeeded';
+    }
+    
     return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            status: paymentIntent.status,
+            status: frontendStatus,
         }),
     };
 
   } catch (err) {
     const error = err as Error;
-    console.error(`Stripe Error retrieving payment status: ${error.message}`);
+    console.error(`Mercado Pago Error retrieving payment status: ${error.message}`);
     return {
         statusCode: 500,
         headers: { 'Content-Type': 'application/json' },
