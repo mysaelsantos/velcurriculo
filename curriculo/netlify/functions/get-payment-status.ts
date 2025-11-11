@@ -1,6 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// --- CORREÇÃO: Usando a sintaxe V2 do SDK ---
-const { MercadoPago } = require("mercadopago");
+// --- CORREÇÃO: Removidas as chaves {} da importação ---
+const MercadoPago = require("mercadopago");
 
 const client = new MercadoPago({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
