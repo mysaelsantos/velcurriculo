@@ -1,6 +1,6 @@
 {
   "dependencies": {
     "node-fetch": "^2.6.7",
-    "mercadopago": "^2.0.10"
+    "mercadopago": "^1.5.17"
   }
 }
