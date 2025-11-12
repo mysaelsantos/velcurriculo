@@ -1,5 +1,7 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import MercadoPago from "mercadopago"; // <-- MUDANÇA
+
+// --- CORREÇÃO DEFINITIVA ---
+const MercadoPago = require("mercadopago").default;
 
 const client = new MercadoPago({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
@@ -59,4 +61,5 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-export { handler }; // <-- MUDANÇA
+// --- REVERTIDO ---
+module.exports = { handler };
