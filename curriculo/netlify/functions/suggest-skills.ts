@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import fetch from 'node-fetch'; // <-- CORREÇÃO: Trocado de 'require' para 'import'
+// CORREÇÃO: Revertido para 'require'
+const fetch = require('node-fetch');
 
 const MODEL_NAME = "gemini-2.0-flash";
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -77,9 +78,10 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     console.error("Error calling Gemini API for skill suggestion:", error);
-    const errorMessage = error instanceof Error ? error.message : "Falha ao sugerir habilidades com a IA.";
+    const errorMessage = error instanceof Error ? error.message : "Falha ao aprimorar o texto com a IA.";
     return { statusCode: 500, body: JSON.stringify({ message: errorMessage }) };
   }
 };
 
-export { handler }; // <-- CORREÇÃO: Trocado de 'module.exports' para 'export'
+// CORREÇÃO: Revertido para 'module.exports'
+module.exports = { handler };
