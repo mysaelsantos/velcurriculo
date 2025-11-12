@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// CORREÇÃO: Sintaxe de importação da V1 do MercadoPago
+// Sintaxe de importação da V1 do MercadoPago
 const mercadopago = require("mercadopago");
 
 const handler: Handler = async (event: HandlerEvent) => {
@@ -11,7 +11,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 
-  // CORREÇÃO: Configuração da V1
+  // Configuração da V1
   mercadopago.configure({
     access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
   });
@@ -31,7 +31,7 @@ const handler: Handler = async (event: HandlerEvent) => {
       },
     };
 
-    // CORREÇÃO: Chamada da API da V1
+    // Chamada da API da V1
     const payment = await mercadopago.payment.create(payment_data);
 
     if (!payment.body.id || !payment.body.point_of_interaction?.transaction_data) {
@@ -45,8 +45,10 @@ const handler: Handler = async (event: HandlerEvent) => {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        paymentId: payment.body.id, // CORREÇÃO: Acesso ao ID na V1
-        qrCodeUrl: qrCodeBase64,
+        paymentId: payment.body.id,
+        // **** A CORREÇÃO ESTÁ AQUI ****
+        // Adicionamos o prefixo de imagem Base64
+        qrCodeUrl: `data:image/png;base64,${qrCodeBase64}`,
         copyPasteCode: copyPasteCode,
       }),
     };
