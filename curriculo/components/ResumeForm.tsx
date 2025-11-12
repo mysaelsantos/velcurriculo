@@ -802,7 +802,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const getFinalButtonText = () => {
     if (hasPaidInSession) return "Baixar Novamente";
     if (isEditing) return "Pagar R$2,50 e Baixar";
-    return "Pagar R$5,00 e Baixar";
+    return "Pagar e Baixar";
   };
 
   return (
