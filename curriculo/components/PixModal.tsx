@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface PixPaymentData {
   qrCodeUrl: string;
   copyPasteCode: string;
-  paymentId: string; // <-- MUDANÇA DE NOME AQUI
+  paymentId: string;
 }
 
 interface PixModalProps {
@@ -12,11 +12,12 @@ interface PixModalProps {
   paymentData: PixPaymentData;
   onPaymentSuccess: () => void;
   isTestMode?: boolean;
+  amount: number; // <-- 1. RECEBE O VALOR
 }
 
 type PaymentStatus = 'pending' | 'success' | 'expired' | 'error';
 
-const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPaymentSuccess, isTestMode = false }) => {
+const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPaymentSuccess, isTestMode = false, amount }) => {
   const [status, setStatus] = useState<PaymentStatus>('pending');
   const [isCopied, setIsCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutos em segundos
@@ -24,7 +25,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
 
   const checkPaymentStatus = async () => {
     try {
-      // <-- MUDANÇA DE NOME AQUI
       const backendUrl = `/.netlify/functions/get-payment-status?paymentId=${paymentData.paymentId}`;
       
       const response = await fetch(backendUrl);
@@ -65,7 +65,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
         if (intervalRef.current) clearInterval(intervalRef.current);
       };
     }
-    // <-- MUDANÇA DE NOME AQUI
   }, [isOpen, status, paymentData.paymentId, isTestMode]);
 
   useEffect(() => {
@@ -94,7 +93,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
     switch(status) {
         case 'success':
             return (
-                <div className="text-center flex flex-col items-center justify-center h-[480px]">
+                <div className="text-center flex flex-col items-center justify-center h-full min-h-[480px]">
                     <div className="flex items-center justify-center bg-green-100 rounded-full w-24 h-24">
                        <svg className="w-16 h-16 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -106,7 +105,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
             );
         case 'expired':
             return (
-                <div className="text-center flex flex-col items-center justify-center h-[480px]">
+                <div className="text-center flex flex-col items-center justify-center h-full min-h-[480px]">
                      <div className="flex items-center justify-center bg-yellow-100 rounded-full w-24 h-24">
                         <svg className="w-14 h-14 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -118,7 +117,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
             );
         case 'error':
              return (
-                <div className="text-center flex flex-col items-center justify-center h-[480px]">
+                <div className="text-center flex flex-col items-center justify-center h-full min-h-[480px]">
                     <div className="flex items-center justify-center bg-red-100 rounded-full w-24 h-24">
                         <svg className="w-14 h-14 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
                      </div>
@@ -128,13 +127,25 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
             );
         case 'pending':
         default:
+            // 2. FORMATA O VALOR
+            const formattedAmount = new Intl.NumberFormat('pt-BR', {
+              style: 'currency',
+              currency: 'BRL',
+            }).format(amount);
+
             return (
                 <>
                     <h3 className="text-xl font-semibold text-center text-gray-800">Pague com Pix para Baixar</h3>
-                    <div className="my-4 p-4 border rounded-lg bg-gray-50 flex justify-center">
+                    
+                    {/* 3. EXIBE O VALOR */}
+                    <p className="text-3xl font-bold text-center text-gray-900 mt-2 mb-2">
+                        {formattedAmount}
+                    </p>
+
+                    <div className="p-4 border rounded-lg bg-gray-50 flex justify-center">
                         <img src={paymentData.qrCodeUrl} alt="QR Code Pix" className="w-48 h-48" />
                     </div>
-                    <p className="text-center text-sm text-gray-500 mb-2">Ou use o Pix Copia e Cola:</p>
+                    <p className="text-center text-sm text-gray-500 mb-2 mt-4">Ou use o Pix Copia e Cola:</p>
                     <div className="relative">
                         <input type="text" readOnly value={paymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-lg p-3 text-sm text-gray-700 pr-24" />
                         <button onClick={handleCopy} className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs font-bold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors">
@@ -148,6 +159,14 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                         </div>
                          <p className="text-sm text-gray-500 mt-2">O código expira em: <span className="font-bold text-gray-800">{minutes}:{seconds}</span></p>
                     </div>
+
+                    {/* Botão Voltar (da sua solicitação anterior) */}
+                    <button 
+                        onClick={onClose} 
+                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
+                    >
+                        Voltar
+                    </button>
                 </>
             );
     }
@@ -156,11 +175,9 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm relative transition-all duration-300">
-        {status === 'pending' && (
-            <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-        )}
+        
+        {/* Botão "X" (removido, conforme sua solicitação anterior) */}
+        
         {renderContent()}
       </div>
     </div>
