@@ -1,10 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// CORREÇÃO: Alterado para a sintaxe de require sem desestruturação
-const MercadoPago = require("mercadopago");
-
-const client = new MercadoPago({
-  accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
-});
+// CORREÇÃO: Sintaxe de importação da V1 do MercadoPago
+const mercadopago = require("mercadopago");
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
@@ -14,6 +10,11 @@ const handler: Handler = async (event: HandlerEvent) => {
       body: 'Method Not Allowed',
     };
   }
+
+  // CORREÇÃO: Configuração da V1
+  mercadopago.configure({
+    access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
+  });
 
   try {
     const body = JSON.parse(event.body || '{}');
@@ -30,20 +31,21 @@ const handler: Handler = async (event: HandlerEvent) => {
       },
     };
 
-    const payment = await client.payment.create({ body: payment_data });
+    // CORREÇÃO: Chamada da API da V1
+    const payment = await mercadopago.payment.create(payment_data);
 
-    if (!payment.id || !payment.point_of_interaction?.transaction_data) {
+    if (!payment.body.id || !payment.body.point_of_interaction?.transaction_data) {
         throw new Error('Não foi possível gerar os dados do pagamento Pix.');
     }
 
-    const qrCodeBase64 = payment.point_of_interaction.transaction_data.qr_code_base64;
-    const copyPasteCode = payment.point_of_interaction.transaction_data.qr_code;
+    const qrCodeBase64 = payment.body.point_of_interaction.transaction_data.qr_code_base64;
+    const copyPasteCode = payment.body.point_of_interaction.transaction_data.qr_code;
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        paymentId: payment.id,
+        paymentId: payment.body.id, // CORREÇÃO: Acesso ao ID na V1
         qrCodeUrl: qrCodeBase64,
         copyPasteCode: copyPasteCode,
       }),
