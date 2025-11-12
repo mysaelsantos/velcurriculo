@@ -1,7 +1,5 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-
-// --- CORREÇÃO: Revertido para 'require' e adicionado '.default' ---
-const MercadoPago = require("mercadopago").default;
+import { MercadoPago } from "mercadopago"; // <-- CORREÇÃO AQUI
 
 const client = new MercadoPago({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
@@ -53,5 +51,4 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-// --- REVERTIDO ---
-module.exports = { handler };
+export { handler };
