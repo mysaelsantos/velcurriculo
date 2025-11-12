@@ -18,6 +18,7 @@ interface ResumeFormProps {
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   isFinished: boolean;
   setIsFinished: React.Dispatch<React.SetStateAction<boolean>>;
+  onRequestImport: () => void; // **** 1. NOVA PROP ADICIONADA ****
 }
 
 const WIZARD_STEPS = [
@@ -31,6 +32,7 @@ const WIZARD_STEPS = [
   "Habilidades e Competências",
 ];
 
+// ... (Restante das constantes SKILL_SUGGESTIONS, LANGUAGE_SUGGESTIONS, etc. mantido, sem alteração) ...
 const SKILL_SUGGESTIONS = [
     "Pacote Office", "Excel Avançado", "Comunicação Efetiva", "Trabalho em Equipa",
     "Liderança", "Proatividade", "Organização", "Atendimento ao Cliente", "Gestão de Tempo"
@@ -125,7 +127,9 @@ const capitalizeName = (value: string): string => {
     .join(' ');
 };
 
-const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onStartEditing, onRequestPayment, isPaymentProcessing, onRequestDelete, hasPaidInSession, isEditing, showToast, currentStep, setCurrentStep, isFinished, setIsFinished }) => {
+
+// **** 2. PROP `onRequestImport` RECEBIDA AQUI ****
+const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onStartEditing, onRequestPayment, isPaymentProcessing, onRequestDelete, hasPaidInSession, isEditing, showToast, currentStep, setCurrentStep, isFinished, setIsFinished, onRequestImport }) => {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [openAccordion, setOpenAccordion] = useState<{ experience: string | null; education: string | null; course: string | null; language: string | null; }>({ experience: null, education: null, course: null, language: null });
   const [aiSkillSuggestions, setAiSkillSuggestions] = useState<string[]>([]);
@@ -161,9 +165,11 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
 
   const handleNext = () => {
+    // **** 3. MUDANÇA PRINCIPAL AQUI ****
+    // Ao clicar em "Começar" (no modo demo, passo 0), agora abre o modal de importação
     if (isDemoMode && currentStep === 0) {
-      onStartEditing();
-      setCurrentStep(currentStep + 1);
+      onRequestImport(); // Em vez de `onStartEditing()`
+      // Não avança o passo, o modal vai tratar disso
       return;
     }
     if (currentStep < WIZARD_STEPS.length - 1) {
@@ -183,6 +189,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
+  // ... (Restante das funções handleDataChange, handlePersonalInfoChange, etc. mantido, sem alteração) ...
   const handleDataChange = <T extends keyof ResumeData>(section: T, value: ResumeData[T]) => {
     setData(prev => ({ ...prev, [section]: value }));
   };
@@ -383,6 +390,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
+  // ... (Função renderStepContent e o restante do arquivo mantidos sem alteração) ...
   const renderStepContent = () => {
     return WIZARD_STEPS.map((_, index) => {
         let content;
@@ -801,7 +809,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
   const getFinalButtonText = () => {
     if (hasPaidInSession) return "Baixar Novamente";
-    if (isEditing) return "Pagar R$2,50 e Baixar";
+    // Esta função foi alterada em um passo anterior para remover o preço
+    if (isEditing) return "Pagar e Baixar";
     return "Pagar e Baixar";
   };
 
