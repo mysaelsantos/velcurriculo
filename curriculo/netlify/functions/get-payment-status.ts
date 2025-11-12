@@ -1,6 +1,5 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// --- CORREÇÃO: Removidas as chaves {} da importação ---
-const MercadoPago = require("mercadopago");
+import MercadoPago from "mercadopago"; // <-- MUDANÇA
 
 const client = new MercadoPago({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
@@ -26,10 +25,8 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
-    // --- CORREÇÃO: Sintaxe V2 para buscar pagamento ---
     const payment = await client.payment.get({ id: Number(paymentId) });
 
-    // "Traduz" o status do Mercado Pago para o status que o frontend espera
     let frontendStatus = 'pending';
     if (payment.status === 'approved') {
         frontendStatus = 'succeeded';
@@ -54,4 +51,4 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-module.exports = { handler };
+export { handler }; // <-- MUDANÇA
