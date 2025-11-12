@@ -3,7 +3,7 @@ import type { ResumeData } from '../types';
 
 interface ImportModalProps {
   isOpen: boolean;
-  onClose: ();
+  onClose: () => void; // <-- A CORREÇÃO ESTÁ AQUI
   onImport: (file: File) => Promise<void>;
   onStartFromScratch: () => void;
   isAnalyzing: boolean;
