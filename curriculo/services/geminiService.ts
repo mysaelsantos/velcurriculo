@@ -86,3 +86,46 @@ export const analyzeWorkExperiencePDF = async (file: File): Promise<{company: st
     throw error;
   }
 };
+
+// **** 1. NOVA FUNÇÃO ADICIONADA ****
+// Esta função lê o PDF no frontend e chama nossa nova função de backend.
+export const analyzeResumePDF = async (file: File): Promise<Partial<ResumeData>> => {
+  if (typeof pdfjsLib === 'undefined') {
+    throw new Error("A biblioteca pdf.js não está carregada.");
+  }
+
+  // 1. Extração de texto (igual à função analyzeWorkExperiencePDF)
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+
+  const reader = new FileReader();
+  const fileReadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+
+  const arrayBuffer = await fileReadPromise;
+  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  let fullText = '';
+
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(' ');
+    fullText += pageText + '\n\n';
+  }
+
+  // 2. Envia o texto para a *nova* função de backend
+  try {
+    const response = await fetch('/.netlify/functions/analyze-resume-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullText }),
+    });
+    const data = await handleResponse(response);
+    return data as Partial<ResumeData>;
+  } catch (error) {
+    console.error("Error calling analyze-resume-pdf function:", error);
+    throw error;
+  }
+};
