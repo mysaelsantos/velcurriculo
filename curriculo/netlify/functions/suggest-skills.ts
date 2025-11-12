@@ -7,7 +7,6 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
-  // ... (o resto do código da função permanece o mesmo) ...
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
