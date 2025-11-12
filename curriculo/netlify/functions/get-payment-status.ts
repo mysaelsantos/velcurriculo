@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import { MercadoPago } from "mercadopago"; // <-- A CORREÇÃO ESTÁ AQUI
+import MercadoPago from "mercadopago"; // <-- CORREÇÃO APLICADA
 
 const client = new MercadoPago({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
