@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import fetch from 'node-fetch'; // <-- MUDANÇA
+// --- REVERTIDO ---
+const fetch = require('node-fetch');
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-2.0-flash";
@@ -91,4 +92,5 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-export { handler }; // <-- MUDANÇA
+// --- REVERTIDO ---
+module.exports = { handler };
