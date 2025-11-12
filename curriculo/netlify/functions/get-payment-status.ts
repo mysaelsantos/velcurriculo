@@ -1,10 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// CORREÇÃO: Alterado para a sintaxe de require sem desestruturação
-const MercadoPago = require("mercadopago");
-
-const client = new MercadoPago({
-  accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
-});
+// CORREÇÃO: Sintaxe de importação da V1 do MercadoPago
+const mercadopago = require("mercadopago");
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'GET') {
@@ -14,6 +10,11 @@ const handler: Handler = async (event: HandlerEvent) => {
         body: 'Method Not Allowed',
     };
   }
+
+  // CORREÇÃO: Configuração da V1
+  mercadopago.configure({
+    access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
+  });
 
   const paymentId = event.queryStringParameters?.paymentId;
 
@@ -26,10 +27,11 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
-    const payment = await client.payment.get({ id: Number(paymentId) });
+    // CORREÇÃO: Chamada da API da V1
+    const payment = await mercadopago.payment.get(Number(paymentId));
 
     let frontendStatus = 'pending';
-    if (payment.status === 'approved') {
+    if (payment.body.status === 'approved') { // CORREÇÃO: Acesso ao status na V1
         frontendStatus = 'succeeded';
     }
     
