@@ -1,15 +1,12 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
+import fetch from 'node-fetch'; // <-- MUDANÇA
 
-// Usar 'require' (CJS)
-const fetch = require('node-fetch');
-
-// --- CORREÇÃO 1: Nome do modelo do seu projeto funcional ---
 const MODEL_NAME = "gemini-2.0-flash";
 const API_KEY = process.env.GEMINI_API_KEY;
-// --- CORREÇÃO 2: Endpoint correto para este modelo ---
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const handler: Handler = async (event: HandlerEvent) => {
+  // ... (o resto do código da função permanece o mesmo) ...
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
@@ -54,7 +51,7 @@ const handler: Handler = async (event: HandlerEvent) => {
       return { statusCode: apiResponse.status, body: JSON.stringify({ message: `Erro da API Gemini: ${errorBody}` }) };
     }
     
-    const result = await apiResponse.json();
+    const result: any = await apiResponse.json();
 
     if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
       console.error("Resposta inesperada da API:", result);
@@ -86,5 +83,4 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 };
 
-// Usar 'module.exports' (CJS)
-module.exports = { handler };
+export { handler }; // <-- MUDANÇA
