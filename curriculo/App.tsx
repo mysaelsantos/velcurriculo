@@ -132,7 +132,7 @@ const calculateCurrentGenerated = (base: number) => {
 interface PixPaymentData {
     qrCodeUrl: string;
     copyPasteCode: string;
-    paymentId: string; // <-- MUDANÇA DE NOME AQUI
+    paymentId: string;
 }
 
 const App: React.FC = () => {
@@ -156,6 +156,9 @@ const App: React.FC = () => {
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
+    
+    // **** NOVO ESTADO PARA GUARDAR O VALOR ****
+    const [paymentAmount, setPaymentAmount] = useState(5.00); 
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
@@ -578,13 +581,18 @@ const App: React.FC = () => {
 
         setIsPaymentProcessing(true);
 
+        // **** LÓGICA DO VALOR MOVIDA PARA CIMA ****
+        const isDiscounted = !!editingResumeId;
+        const amountToPay = isDiscounted ? 2.50 : 5.00;
+        setPaymentAmount(amountToPay); // <-- Define o valor no estado
+
         if (isPixTestMode) {
             console.log("Entering Pix Test Mode...");
             setTimeout(() => {
                 setPixPaymentData({
                     qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
                     copyPasteCode: '00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5913Test_User_Name6009SAO_PAULO62070503***6304E2A4',
-                    paymentId: `pi_test_${Date.now()}`, // <-- MUDANÇA DE NOME AQUI
+                    paymentId: `pi_test_${Date.now()}`,
                 });
                 setIsPixModalOpen(true);
                 setIsPaymentProcessing(false);
@@ -598,12 +606,12 @@ const App: React.FC = () => {
             const response = await fetch(backendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isDiscounted: !!editingResumeId })
+                body: JSON.stringify({ isDiscounted: isDiscounted }) // <-- Usa a variável
             });
     
             const data = await response.json();
     
-            if (!response.ok || !data.paymentId) { // <-- MUDANÇA DE NOME AQUI
+            if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
     
@@ -699,6 +707,7 @@ const App: React.FC = () => {
                 paymentData={pixPaymentData}
                 onPaymentSuccess={handlePaymentSuccess}
                 isTestMode={isPixTestMode}
+                amount={paymentAmount} 
             />
         )}
         {isMyResumesModalOpen && (
