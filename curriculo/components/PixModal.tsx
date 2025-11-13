@@ -137,8 +137,9 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                 <>
                     <h3 className="text-xl font-semibold text-center text-gray-800">Pague com Pix para Baixar</h3>
                     
-                    {/* 3. EXIBE O VALOR */}
-                    <p className="text-3xl font-bold text-center text-gray-900 mt-2 mb-2">
+                    {/* **** MUDANÇA ESTÁ AQUI **** */}
+                    {/* 3. EXIBE O VALOR com a classe 'gradient-text' */}
+                    <p className="text-3xl font-bold text-center mt-2 mb-2 gradient-text">
                         {formattedAmount}
                     </p>
 
