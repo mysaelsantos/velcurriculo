@@ -5,8 +5,9 @@ import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ImportModal from './components/ImportModal'; 
-import ContinueProgressModal from './components/ContinueProgressModal'; // **** 1. IMPORTA O NOVO MODAL ****
-import type { ResumeData, PersonalInfo, Experience, Education, Course, Language } from './types'; // Importe os tipos
+import ContinueProgressModal from './components/ContinueProgressModal';
+// **** CORREÇÃO: Importa todos os tipos necessários ****
+import type { ResumeData, PersonalInfo, Experience, Education, Course, Language } from './types';
 import { analyzeResumePDF } from './services/geminiService'; 
 
 interface PageData extends Partial<ResumeData> {
@@ -70,6 +71,7 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true }
 };
 
+// ... (Restante do arquivo ALL_TESTIMONIALS, shuffleArray, etc. mantido) ...
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está a começar a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -696,12 +698,17 @@ const App: React.FC = () => {
         setIsImportModalOpen(false);
     };
 
+    // **** FUNÇÃO REESCRITA PARA CORRIGIR BUGS ****
     const handleImportResume = async (file: File) => {
         setIsAnalyzingPdf(true);
         try {
+            // 1. Chama a IA
             const extractedData = await analyzeResumePDF(file);
 
-            // HIGIENIZAÇÃO (A CORREÇÃO)
+            // 2. HIGIENIZAÇÃO ROBUSTA (A CORREÇÃO)
+            // Garante que todos os campos sejam strings vazias ou arrays vazios,
+            // em vez de null/undefined, para evitar a "tela branca".
+            
             const pi = (extractedData.personalInfo || {}) as Partial<PersonalInfo>;
             const sanitizedPI: PersonalInfo = {
                 name: pi.name || '',
@@ -709,44 +716,66 @@ const App: React.FC = () => {
                 email: pi.email || '',
                 phone: pi.phone || '',
                 address: pi.address || '',
-                age: (pi.age || '').toString(), 
+                age: (pi.age ?? '').toString(), // Garante que é string
                 maritalStatus: pi.maritalStatus || '',
                 cnh: pi.cnh || '',
                 profilePicture: pi.profilePicture || '',
             };
 
-            const sanitizedExperiences: Experience[] = (extractedData.experiences || []).map(e => ({
-                id: Date.now().toString() + Math.random(),
-                jobTitle: e.jobTitle || '',
-                company: e.company || '',
-                location: e.location || '',
-                startDate: e.startDate || '',
-                endDate: e.endDate || '',
-                description: e.description || '',
-            }));
+            // Valida cada item dos arrays
+            const sanitizedExperiences: Experience[] = (extractedData.experiences || [])
+                .filter(e => e && typeof e === 'object') // Remove nulos ou itens inválidos
+                .map(e => ({
+                    id: Date.now().toString() + Math.random(),
+                    jobTitle: e.jobTitle || '',
+                    company: e.company || '',
+                    location: e.location || '',
+                    startDate: e.startDate || '',
+                    endDate: e.endDate || '',
+                    description: e.description || '',
+                }));
             
-            const sanitizedEducation: Education[] = (extractedData.education || []).map(e => ({
-                id: Date.now().toString() + Math.random(),
-                degree: e.degree || '',
-                institution: e.institution || '',
-                startDate: e.startDate || '',
-                endDate: e.endDate || '',
-            }));
+            const sanitizedEducation: Education[] = (extractedData.education || [])
+                .filter(e => e && typeof e === 'object')
+                .map(e => ({
+                    id: Date.now().toString() + Math.random(),
+                    degree: e.degree || '',
+                    institution: e.institution || '',
+                    startDate: e.startDate || '',
+                    endDate: e.endDate || '',
+                }));
             
-            const sanitizedCourses: Course[] = (extractedData.courses || []).map(c => ({
-                id: Date.now().toString() + Math.random(),
-                name: c.name || '',
-                institution: c.institution || '',
-                completionDate: c.completionDate || '',
-            }));
+            const sanitizedCourses: Course[] = (extractedData.courses || [])
+                .filter(c => c && typeof c === 'object')
+                .map(c => ({
+                    id: Date.now().toString() + Math.random(),
+                    name: c.name || '',
+                    institution: c.institution || '',
+                    completionDate: c.completionDate || '',
+                }));
 
-            const sanitizedLanguages: Language[] = (extractedData.languages || []).map(l => ({
-                id: Date.now().toString() + Math.random(),
-                language: l.language || '',
-                proficiency: (l.proficiency || '') as Language['proficiency'],
-            }));
+            // Lista de proficiências válidas
+            const validProficiencies: Language['proficiency'][] = ['Básico', 'Intermediário', 'Avançado', 'Fluente', ''];
+            
+            const sanitizedLanguages: Language[] = (extractedData.languages || [])
+                .filter(l => l && typeof l === 'object')
+                .map(l => {
+                    let proficiency = l.proficiency || '';
+                    // Garante que o valor é um dos tipos permitidos
+                    if (!validProficiencies.includes(proficiency as any)) {
+                        proficiency = '';
+                    }
+                    return {
+                        id: Date.now().toString() + Math.random(),
+                        language: l.language || '',
+                        proficiency: proficiency as Language['proficiency'],
+                    };
+                });
 
+            // 3. Monta o novo estado do zero (começando do INITIAL_DATA)
+            // Isso previne que dados do MODO DEMO sejam mesclados
             const newResumeData: ResumeData = {
+                ...INITIAL_DATA, // Começa com um estado 100% limpo
                 personalInfo: sanitizedPI,
                 summary: extractedData.summary || '',
                 experiences: sanitizedExperiences,
@@ -754,9 +783,10 @@ const App: React.FC = () => {
                 courses: sanitizedCourses,
                 languages: sanitizedLanguages,
                 skills: (extractedData.skills || []).filter(s => typeof s === 'string'),
-                style: resumeData.style, 
+                style: resumeData.style, // Mantém o estilo que o usuário selecionou no Passo 1
             };
 
+            // 4. Atualiza o estado
             setResumeData(newResumeData);
             setIsDemoMode(false); 
             setEditingResumeId(null);
@@ -1035,7 +1065,7 @@ const App: React.FC = () => {
                          <div>
                             <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
                             <div className="flex space-x-4 justify-center md:justify-start">
-                                <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon"><svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0 2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353-.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zM12 15a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg></a>
+                                <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon"><svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353-.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zM12 15a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg></a>
                             </div>
                         </div>
                     </div>
