@@ -1,16 +1,49 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// CORREÇÃO: Revertido para 'require'
 const fetch = require('node-fetch');
 
 const MODEL_NAME = "gemini-2.0-flash";
 const API_KEY = process.env.GEMINI_API_KEY;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
+// --- NOVA LÓGICA DE TENTATIVAS ---
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
+  let lastError: Error | null = new Error("Falha ao contactar a API.");
+
+  for (let i = 0; i < maxTries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) return response;
+
+      if (response.status === 429) {
+        console.warn(`Tentativa ${i + 1}/${maxTries} falhou: Erro 429 (Resource Exhausted).`);
+        lastError = new Error("RESOURCE_EXHAUSTED");
+        if (i < maxTries - 1) {
+          const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+          await sleep(delay);
+          continue; 
+        }
+      } else {
+        console.error(`Tentativa ${i + 1} falhou com status ${response.status}.`);
+        const errorBody = await response.json().catch(() => ({}));
+        lastError = new Error(errorBody.message || `Erro da API: ${response.statusText}`);
+        break; 
+      }
+    } catch (fetchError) {
+      console.error(`Tentativa ${i + 1} falhou com erro de rede:`, fetchError);
+      lastError = fetchError as Error;
+      if (i < maxTries - 1) await sleep(1000);
+    }
+  }
+  throw lastError;
+};
+// --- FIM DA LÓGICA DE TENTATIVAS ---
+
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
-
   if (!API_KEY) {
     return { statusCode: 500, body: JSON.stringify({ message: "Chave da API do Gemini não configurada." }) };
   }
@@ -22,14 +55,10 @@ const handler: Handler = async (event: HandlerEvent) => {
     }
 
     const prompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
-
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.9,
-        topK: 1,
-        topP: 1,
-        maxOutputTokens: 2048,
+        temperature: 0.9, topK: 1, topP: 1, maxOutputTokens: 2048,
       },
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -39,18 +68,13 @@ const handler: Handler = async (event: HandlerEvent) => {
       ],
     };
     
-    const apiResponse = await fetch(API_URL, {
+    // USA O NOVO FETCH COM TENTATIVAS
+    const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
-    if (!apiResponse.ok) {
-      const errorBody = await apiResponse.text();
-      console.error("Erro da API Gemini:", errorBody);
-      return { statusCode: apiResponse.status, body: JSON.stringify({ message: `Erro da API Gemini: ${errorBody}` }) };
-    }
-    
     const result: any = await apiResponse.json();
 
     if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
@@ -77,11 +101,20 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
 
   } catch (error) {
-    console.error("Error calling Gemini API for skill suggestion:", error);
-    const errorMessage = error instanceof Error ? error.message : "Falha ao aprimorar o texto com a IA.";
-    return { statusCode: 500, body: JSON.stringify({ message: errorMessage }) };
+    const err = error as Error;
+    // --- MUDANÇA PRINCIPAL AQUI ---
+    if (err.message === "RESOURCE_EXHAUSTED") {
+      return {
+        statusCode: 429,
+        body: JSON.stringify({ message: "Ops! Prometemos que não é drama, é só um bugzinho do nosso lado. Por favor, tente novamente em 1 minuto ou atualize a página." })
+      };
+    }
+    console.error("Error calling Gemini API for skill suggestion:", err);
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ message: err.message || "Falha ao sugerir habilidades com a IA." }) 
+    };
   }
 };
 
-// CORREÇÃO: Revertido para 'module.exports'
 module.exports = { handler };
