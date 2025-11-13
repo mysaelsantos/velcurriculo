@@ -159,12 +159,13 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     if (currentStep === 5 && data.courses.length === 0) {
       addCourse();
     }
-  }, [currentStep]);
+  }, [currentStep, data.courses.length]);
 
 
   const handleNext = () => {
-    // **** Modal de Importação desativado ****
-    // O botão "Começar" volta a limpar o formulário.
+    // **** Modal de Importação está DESATIVADO ****
+    // O botão "Começar" (no modo demo, passo 0) agora apenas limpa o formulário
+    // e sai do modo demo, como era originalmente.
     if (isDemoMode && currentStep === 0) {
       onStartEditing(); 
       setCurrentStep(currentStep + 1); 
@@ -833,28 +834,46 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                   
                   <div className="p-6">
                       <ol className="space-y-5 text-gray-700">
+                          {/* --- Ícone 1: Celular --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">1</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Abra o App "Carteira de Trabalho Digital".</p>
                           </li>
+                          {/* --- Ícone 2: Enviar --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">2</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Na tela inicial, toque em <strong className="font-bold">"Enviar Carteira de Trabalho Digital"</strong>.</p>
                           </li>
+                          {/* --- Ícone 3: Lista --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">3</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Selecione os contratos de trabalho que deseja usar.</p>
                           </li>
+                          {/* --- Ícone 4: PDF --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm">4</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Toque no ícone de <strong className="font-bold">PDF</strong> no canto inferior direito.</p>
                           </li>
+                          {/* --- Ícone 5: Download --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">5</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Salve o arquivo PDF no seu celular ou computador.</p>
                           </li>
+                          {/* --- Ícone 6: Anexo --- */}
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">6</div>
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                              </div>
                               <p className="font-medium text-gray-800 pt-1">Anexe o arquivo salvo aqui.</p>
                           </li>
                       </ol>
