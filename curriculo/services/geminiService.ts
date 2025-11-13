@@ -1,7 +1,7 @@
 // Este arquivo agora chama NOSSAS Funções Netlify, e não mais a API do Google diretamente.
 // Isso mantém nossa chave de API segura no backend.
 
-// **** 1. CORREÇÃO: Importação de tipo que faltava ****
+// **** 1. CORREÇÃO: Caminho de importação corrigido de './types' para '../types' ****
 import type { ResumeData } from '../types';
 
 declare const pdfjsLib: any;
