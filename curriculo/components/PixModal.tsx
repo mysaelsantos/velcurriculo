@@ -12,7 +12,7 @@ interface PixModalProps {
   paymentData: PixPaymentData;
   onPaymentSuccess: () => void;
   isTestMode?: boolean;
-  amount: number; // <-- 1. RECEBE O VALOR
+  amount: number;
 }
 
 type PaymentStatus = 'pending' | 'success' | 'expired' | 'error';
@@ -47,7 +47,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
             onPaymentSuccess();
         }, 3000);
     }
-  }, [status]);
+  }, [status, onPaymentSuccess]); // Adicionado onPaymentSuccess ao array de dependências
 
 
   useEffect(() => {
@@ -99,8 +99,9 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                        </svg>
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-800 mt-6">Pagamento Aprovado!</h3>
-                    <p className="text-gray-600 mt-2">Seu download começará em instantes...</p>
+                    {/* **** MUDANÇA (ETAPA 1) **** */}
+                    <h3 className="text-2xl font-bold text-gray-800 mt-6">Pagamento Confirmado!</h3>
+                    <p className="text-gray-600 mt-2">Seu currículo está pronto para download.</p>
                 </div>
             );
         case 'expired':
@@ -127,7 +128,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
             );
         case 'pending':
         default:
-            // 2. FORMATA O VALOR
             const formattedAmount = new Intl.NumberFormat('pt-BR', {
               style: 'currency',
               currency: 'BRL',
@@ -137,8 +137,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                 <>
                     <h3 className="text-xl font-semibold text-center text-gray-800">Pague com Pix para Baixar</h3>
                     
-                    {/* **** MUDANÇA ESTÁ AQUI **** */}
-                    {/* 3. EXIBE O VALOR com a classe 'gradient-text' */}
+                    {/* (Mudança da sessão anterior: texto com degradê) */}
                     <p className="text-3xl font-bold text-center mt-2 mb-2 gradient-text">
                         {formattedAmount}
                     </p>
@@ -161,7 +160,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                          <p className="text-sm text-gray-500 mt-2">O código expira em: <span className="font-bold text-gray-800">{minutes}:{seconds}</span></p>
                     </div>
 
-                    {/* Botão Voltar (da sua solicitação anterior) */}
                     <button 
                         onClick={onClose} 
                         className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
@@ -176,8 +174,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm relative transition-all duration-300">
-        
-        {/* Botão "X" (removido, conforme sua solicitação anterior) */}
         
         {renderContent()}
       </div>
