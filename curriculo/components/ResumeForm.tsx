@@ -163,13 +163,11 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
 
   const handleNext = () => {
-    // **** A MUDANÇA ESTÁ AQUI ****
-    // Desativámos o `onRequestImport()` e voltámos a usar o `onStartEditing()`.
-    // Isto faz com que o botão "Começar" volte a limpar o formulário,
-    // em vez de abrir o modal de importação.
+    // **** Modal de Importação desativado ****
+    // O botão "Começar" volta a limpar o formulário.
     if (isDemoMode && currentStep === 0) {
-      onStartEditing(); // <-- Linha alterada
-      setCurrentStep(currentStep + 1); // <-- Linha adicionada de volta
+      onStartEditing(); 
+      setCurrentStep(currentStep + 1); 
       return;
     }
     if (currentStep < WIZARD_STEPS.length - 1) {
@@ -812,27 +810,25 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
   return (
     <React.Fragment>
+
+      {/* --- CÓDIGO DO MODAL DE TUTORIAL MODIFICADO --- */}
       {isTutorialModalOpen && (
           <div 
               role="dialog" 
               aria-modal="true" 
               aria-labelledby="tutorial-title"
               className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" 
-              onClick={() => setIsTutorialModalOpen(false)}
+              onClick={() => setIsTutorialModalOpen(false)} // Permite fechar clicando fora
           >
               <div 
                   className="bg-white rounded-lg shadow-xl w-full max-w-lg transform animate-fade-in-scale" 
-                  onClick={e => e.stopPropagation()}
+                  onClick={e => e.stopPropagation()} // Impede que o clique *dentro* do modal o feche
               >
                   <div className="p-5 border-b border-gray-200 flex justify-between items-center">
                       <h3 id="tutorial-title" className="text-xl font-bold gradient-text">Como Baixar seu Histórico de Trabalho</h3>
-                      <button 
-                          onClick={() => setIsTutorialModalOpen(false)} 
-                          className="text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors"
-                          aria-label="Fechar"
-                      >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
+                      
+                      {/* --- O BOTÃO "X" FOI REMOVIDO DAQUI --- */}
+
                   </div>
                   
                   <div className="p-6">
@@ -864,7 +860,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                       </ol>
                   </div>
 
-                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-right rounded-b-lg">
+                  {/* --- BOTÃO CENTRALIZADO (text-center) --- */}
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-center rounded-b-lg">
                       <button 
                           onClick={() => setIsTutorialModalOpen(false)}
                           className="btn-primary text-white font-semibold py-2 px-6 rounded-full"
@@ -875,6 +872,9 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
               </div>
           </div>
       )}
+      {/* --- FIM DO MODAL DE TUTORIAL --- */}
+
+
       <div id="form-wizard" style={{scrollMarginTop: '9rem'}} className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-md form-container">
         {!isFinished && (
           <div id="wizard-header" className="mb-4 text-center">
