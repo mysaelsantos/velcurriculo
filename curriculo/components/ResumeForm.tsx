@@ -18,7 +18,7 @@ interface ResumeFormProps {
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   isFinished: boolean;
   setIsFinished: React.Dispatch<React.SetStateAction<boolean>>;
-  onRequestImport: () => void; // **** 1. NOVA PROP ADICIONADA ****
+  onRequestImport: () => void; // A prop ainda existe, mas não será chamada
 }
 
 const WIZARD_STEPS = [
@@ -128,7 +128,6 @@ const capitalizeName = (value: string): string => {
 };
 
 
-// **** 2. PROP `onRequestImport` RECEBIDA AQUI ****
 const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onStartEditing, onRequestPayment, isPaymentProcessing, onRequestDelete, hasPaidInSession, isEditing, showToast, currentStep, setCurrentStep, isFinished, setIsFinished, onRequestImport }) => {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [openAccordion, setOpenAccordion] = useState<{ experience: string | null; education: string | null; course: string | null; language: string | null; }>({ experience: null, education: null, course: null, language: null });
@@ -157,7 +156,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   };
 
   useEffect(() => {
-    // When user gets to "Cursos Complementares" step, if there are no courses, add one automatically.
     if (currentStep === 5 && data.courses.length === 0) {
       addCourse();
     }
@@ -165,11 +163,13 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
 
   const handleNext = () => {
-    // **** 3. MUDANÇA PRINCIPAL AQUI ****
-    // Ao clicar em "Começar" (no modo demo, passo 0), agora abre o modal de importação
+    // **** A MUDANÇA ESTÁ AQUI ****
+    // Desativámos o `onRequestImport()` e voltámos a usar o `onStartEditing()`.
+    // Isto faz com que o botão "Começar" volte a limpar o formulário,
+    // em vez de abrir o modal de importação.
     if (isDemoMode && currentStep === 0) {
-      onRequestImport(); // Em vez de `onStartEditing()`
-      // Não avança o passo, o modal vai tratar disso
+      onStartEditing(); // <-- Linha alterada
+      setCurrentStep(currentStep + 1); // <-- Linha adicionada de volta
       return;
     }
     if (currentStep < WIZARD_STEPS.length - 1) {
@@ -189,7 +189,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
-  // ... (Restante das funções handleDataChange, handlePersonalInfoChange, etc. mantido, sem alteração) ...
   const handleDataChange = <T extends keyof ResumeData>(section: T, value: ResumeData[T]) => {
     setData(prev => ({ ...prev, [section]: value }));
   };
@@ -296,7 +295,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
           const newSummary = currentSummary ? `${currentSummary} ${suggestion}` : `${suggestion}`;
           return { ...prev, summary: newSummary.substring(0, CHAR_LIMITS.summary) };
       });
-      // Focus and scroll to the end of textarea
       if (textarea) {
         textarea.focus();
         setTimeout(() => {
@@ -390,7 +388,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
-  // ... (Função renderStepContent e o restante do arquivo mantidos sem alteração) ...
   const renderStepContent = () => {
     return WIZARD_STEPS.map((_, index) => {
         let content;
@@ -809,7 +806,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
   const getFinalButtonText = () => {
     if (hasPaidInSession) return "Baixar Novamente";
-    // Esta função foi alterada em um passo anterior para remover o preço
     if (isEditing) return "Pagar e Baixar";
     return "Pagar e Baixar";
   };
@@ -854,7 +850,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                               <p className="font-medium text-gray-800 pt-1">Selecione os contratos de trabalho que deseja usar.</p>
                           </li>
                           <li className="flex items-start gap-4">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">4</div>
+                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm">4</div>
                               <p className="font-medium text-gray-800 pt-1">Toque no ícone de <strong className="font-bold">PDF</strong> no canto inferior direito.</p>
                           </li>
                           <li className="flex items-start gap-4">
