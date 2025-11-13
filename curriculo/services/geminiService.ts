@@ -1,6 +1,9 @@
 // Este arquivo agora chama NOSSAS Funções Netlify, e não mais a API do Google diretamente.
 // Isso mantém nossa chave de API segura no backend.
 
+// **** 1. CORREÇÃO: Importação de tipo que faltava ****
+import type { ResumeData } from '../types';
+
 declare const pdfjsLib: any;
 
 // Função helper para lidar com respostas de fetch
@@ -87,7 +90,6 @@ export const analyzeWorkExperiencePDF = async (file: File): Promise<{company: st
   }
 };
 
-// **** 1. NOVA FUNÇÃO ADICIONADA ****
 // Esta função lê o PDF no frontend e chama nossa nova função de backend.
 export const analyzeResumePDF = async (file: File): Promise<Partial<ResumeData>> => {
   if (typeof pdfjsLib === 'undefined') {
