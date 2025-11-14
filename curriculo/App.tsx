@@ -4,11 +4,7 @@ import ResumeForm from './components/ResumeForm';
 import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
-import ImportModal from './components/ImportModal'; 
-import ContinueProgressModal from './components/ContinueProgressModal';
-// **** CORREÇÃO: Importa todos os tipos necessários ****
-import type { ResumeData, PersonalInfo, Experience, Education, Course, Language } from './types';
-import { analyzeResumePDF } from './services/geminiService'; 
+import type { ResumeData } from './types';
 
 interface PageData extends Partial<ResumeData> {
     continuation?: {
@@ -71,7 +67,6 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true }
 };
 
-// ... (Restante do arquivo ALL_TESTIMONIALS, shuffleArray, etc. mantido) ...
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está a começar a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -114,6 +109,7 @@ const calculateCurrentGenerated = (base: number) => {
   const now = new Date();
   const hour = now.getHours();
   
+  // Antes das 9h, exibe apenas o número base do dia.
   if (hour < 9) return base;
   
   const startOfDayCount = new Date();
@@ -122,11 +118,13 @@ const calculateCurrentGenerated = (base: number) => {
   const endOfDayCount = new Date();
   endOfDayCount.setHours(19, 0, 0, 0);
   
+  // Após as 19h, exibe o total do dia (10 horas de contagem).
   if (now > endOfDayCount) {
     const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
     return base + Math.floor(totalSecondsInWorkDay / 20);
   }
   
+  // Durante o dia (9h às 19h), calcula com base no tempo decorrido.
   const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
   return base + Math.floor(secondsElapsed / 20);
 };
@@ -134,11 +132,14 @@ const calculateCurrentGenerated = (base: number) => {
 interface PixPaymentData {
     qrCodeUrl: string;
     copyPasteCode: string;
-    paymentId: string;
+    paymentId: string; // <-- MUDANÇA DE NOME AQUI
 }
 
 const App: React.FC = () => {
+    // --- PRODUCTION MODE ---
+    // This is now set to 'false' to use the real Stripe API.
     const isPixTestMode = false;
+    // ------------------------
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
@@ -155,10 +156,6 @@ const App: React.FC = () => {
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
-    const [paymentAmount, setPaymentAmount] = useState(5.00); 
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
-    const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
@@ -175,8 +172,9 @@ const App: React.FC = () => {
     
     useEffect(() => {
         const interval = setInterval(() => {
+            // Recalcula o valor com base na hora atual para garantir que todos os usuários vejam o mesmo número.
             setResumesGenerated(calculateCurrentGenerated(calculateTodaysBase()));
-        }, 5000);
+        }, 5000); // Atualiza a cada 5 segundos para uma sensação mais "ao vivo".
         return () => clearInterval(interval);
     }, []);
 
@@ -197,13 +195,20 @@ const App: React.FC = () => {
         };
     }, []);
     
-
+    // Load data from localStorage on initial render
     useEffect(() => {
         try {
+            // Load in-progress resume
             const savedProgress = localStorage.getItem('inProgressResume');
             if (savedProgress) {
-                setIsContinueModalOpen(true);
+                const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = JSON.parse(savedProgress);
+                setResumeData(savedData);
+                setCurrentStep(savedStep);
+                setIsFinished(savedIsFinished);
+                setIsDemoMode(false);
             }
+
+            // Load saved (paid) resumes
             const storedResumes = localStorage.getItem('savedResumes');
             if (storedResumes) {
                 setSavedResumes(JSON.parse(storedResumes));
@@ -211,31 +216,11 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Failed to load data from localStorage:", error);
         }
-    }, []); 
+    }, []);
 
-    const isDataEmpty = (data: ResumeData): boolean => {
-      if (data.personalInfo.name.trim() !== '' ||
-          data.personalInfo.jobTitle.trim() !== '' ||
-          data.personalInfo.email.trim() !== '' ||
-          data.personalInfo.phone.trim() !== '' ||
-          data.personalInfo.address.trim() !== '') {
-        return false;
-      }
-      if (data.summary.trim() !== '') {
-        return false;
-      }
-      if (data.experiences.length > 0 ||
-          data.education.length > 0 ||
-          data.courses.length > 0 ||
-          data.languages.length > 0 ||
-          data.skills.length > 0) {
-        return false;
-      }
-      return true;
-    };
-
+    // Save progress to localStorage whenever it changes
     useEffect(() => {
-        if (!isDemoMode && !isDataEmpty(resumeData)) { 
+        if (!isDemoMode) { // Don't save if in demo mode
             try {
                 const progress = { resumeData, currentStep, isFinished };
                 localStorage.setItem('inProgressResume', JSON.stringify(progress));
@@ -292,16 +277,6 @@ const App: React.FC = () => {
     }, [paginatedData, currentPage]);
     
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
-        
-        // ***** INÍCIO DA CORREÇÃO 1 *****
-        // Esta linha foi adicionada de volta do seu código antigo.
-        // Ela força o navegador a carregar a fonte "Poppins" ANTES
-        // de medir o layout, o que corrige o bug de "encolhimento".
-        if (document.fonts) {
-            await document.fonts.ready;
-        }
-        // ***** FIM DA CORREÇÃO 1 *****
-        
         if (!measurementRootRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
@@ -332,7 +307,7 @@ const App: React.FC = () => {
         });
         
         try {
-            // A linha 'document.fonts.ready' foi movida para o topo
+            if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
             if (previewEl.scrollHeight <= 1123) {
@@ -536,8 +511,6 @@ const App: React.FC = () => {
 
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
-        // A espera pelas fontes já aconteceu no 'paginateResume' que
-        // gerou o 'paginatedData', mas manter aqui é uma boa garantia.
         if (document.fonts) await document.fonts.ready;
         
         const { jsPDF } = (window as any).jspdf;
@@ -549,12 +522,7 @@ const App: React.FC = () => {
             return;
         }
     
-        // ***** INÍCIO DA CORREÇÃO 2 *****
-        // Esta linha foi alterada para usar o estado 'paginatedData'
-        // (que agora é calculado corretamente) em vez de recalcular.
-        // const pagesToExport = await paginateResume(dataToExport); // Linha antiga
-        const pagesToExport = paginatedData; // Linha nova (como no código antigo)
-        // ***** FIM DA CORREÇÃO 2 *****
+        const pagesToExport = await paginateResume(dataToExport);
         
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
         const tempContainer = document.createElement('div');
@@ -574,8 +542,6 @@ const App: React.FC = () => {
                     tempRoot.render(
                         <ResumePreview data={pageData} isDemoMode={false} isFirstPage={i === 0} />
                     );
-                    // O timeout é mantido para dar tempo ao React de pintar
-                    // no DOM invisível antes do html2canvas "fotografar".
                     setTimeout(resolve, 300);
                 });
     
@@ -600,11 +566,9 @@ const App: React.FC = () => {
         } finally {
             document.body.removeChild(tempContainer);
             setIsPaymentProcessing(false);
-            // Esta chamada foi removida pois agora usamos o estado 'paginatedData'
-            // e 'dataToExport' não foi alterada.
-            // paginateResume(resumeData); 
+            paginateResume(resumeData);
         }
-    }, [resumeData, isDemoMode, paginatedData]); // 'paginateResume' removido, 'paginatedData' adicionado
+    }, [paginateResume, resumeData, isDemoMode]);
 
     const handlePaymentRequest = async () => {
         if(hasPaidInSession) {
@@ -613,9 +577,6 @@ const App: React.FC = () => {
         }
 
         setIsPaymentProcessing(true);
-        const isDiscounted = !!editingResumeId;
-        const amountToPay = isDiscounted ? 2.50 : 5.00;
-        setPaymentAmount(amountToPay); 
 
         if (isPixTestMode) {
             console.log("Entering Pix Test Mode...");
@@ -623,7 +584,7 @@ const App: React.FC = () => {
                 setPixPaymentData({
                     qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
                     copyPasteCode: '00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5913Test_User_Name6009SAO_PAULO62070503***6304E2A4',
-                    paymentId: `pi_test_${Date.now()}`,
+                    paymentId: `pi_test_${Date.now()}`, // <-- MUDANÇA DE NOME AQUI
                 });
                 setIsPixModalOpen(true);
                 setIsPaymentProcessing(false);
@@ -637,12 +598,12 @@ const App: React.FC = () => {
             const response = await fetch(backendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isDiscounted: isDiscounted })
+                body: JSON.stringify({ isDiscounted: !!editingResumeId })
             });
     
             const data = await response.json();
     
-            if (!response.ok || !data.paymentId) {
+            if (!response.ok || !data.paymentId) { // <-- MUDANÇA DE NOME AQUI
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
     
@@ -702,6 +663,7 @@ const App: React.FC = () => {
             setIsDemoMode(false);
             setHasPaidInSession(false);
             setIsMyResumesModalOpen(false);
+            // Scroll to form
             document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
         }
     };
@@ -713,146 +675,6 @@ const App: React.FC = () => {
             return updated;
         });
     };
-
-    const handleStartFromScratch = () => {
-        handleStartEditing(); 
-        setIsImportModalOpen(false);
-    };
-
-    // **** FUNÇÃO REESCRITA PARA CORRIGIR BUGS ****
-    const handleImportResume = async (file: File) => {
-        setIsAnalyzingPdf(true);
-        try {
-            // 1. Chama a IA
-            const extractedData = await analyzeResumePDF(file);
-
-            // 2. HIGIENIZAÇÃO ROBUSTA (A CORREÇÃO)
-            // Garante que todos os campos sejam strings vazias ou arrays vazios,
-            // em vez de null/undefined, para evitar a "tela branca".
-            
-            const pi = (extractedData.personalInfo || {}) as Partial<PersonalInfo>;
-            const sanitizedPI: PersonalInfo = {
-                name: pi.name || '',
-                jobTitle: pi.jobTitle || '',
-                email: pi.email || '',
-                phone: pi.phone || '',
-                address: pi.address || '',
-                age: (pi.age ?? '').toString(), // Garante que é string
-                maritalStatus: pi.maritalStatus || '',
-                cnh: pi.cnh || '',
-                profilePicture: pi.profilePicture || '',
-            };
-
-            // Valida cada item dos arrays
-            const sanitizedExperiences: Experience[] = (extractedData.experiences || [])
-                .filter(e => e && typeof e === 'object') // Remove nulos ou itens inválidos
-                .map(e => ({
-                    id: Date.now().toString() + Math.random(),
-                    jobTitle: e.jobTitle || '',
-                    company: e.company || '',
-                    location: e.location || '',
-                    startDate: e.startDate || '',
-                    endDate: e.endDate || '',
-                    description: e.description || '',
-                }));
-            
-            const sanitizedEducation: Education[] = (extractedData.education || [])
-                .filter(e => e && typeof e === 'object')
-                .map(e => ({
-                    id: Date.now().toString() + Math.random(),
-                    degree: e.degree || '',
-                    institution: e.institution || '',
-                    startDate: e.startDate || '',
-                    endDate: e.endDate || '',
-                }));
-            
-            const sanitizedCourses: Course[] = (extractedData.courses || [])
-                .filter(c => c && typeof c === 'object')
-                .map(c => ({
-                    id: Date.now().toString() + Math.random(),
-                    name: c.name || '',
-                    institution: c.institution || '',
-                    completionDate: c.completionDate || '',
-                }));
-
-            // Lista de proficiências válidas
-            const validProficiencies: Language['proficiency'][] = ['Básico', 'Intermediário', 'Avançado', 'Fluente', ''];
-            
-            const sanitizedLanguages: Language[] = (extractedData.languages || [])
-                .filter(l => l && typeof l === 'object')
-                .map(l => {
-                    let proficiency = l.proficiency || '';
-                    // Garante que o valor é um dos tipos permitidos
-                    if (!validProficiencies.includes(proficiency as any)) {
-                        proficiency = '';
-                    }
-                    return {
-                        id: Date.now().toString() + Math.random(),
-                        language: l.language || '',
-                        proficiency: proficiency as Language['proficiency'],
-                    };
-                });
-
-            // 3. Monta o novo estado do zero (começando do INITIAL_DATA)
-            // Isso previne que dados do MODO DEMO sejam mesclados
-            const newResumeData: ResumeData = {
-                ...INITIAL_DATA, // Começa com um estado 100% limpo
-                personalInfo: sanitizedPI,
-                summary: extractedData.summary || '',
-                experiences: sanitizedExperiences,
-                education: sanitizedEducation,
-                courses: sanitizedCourses,
-                languages: sanitizedLanguages,
-                skills: (extractedData.skills || []).filter(s => typeof s === 'string'),
-                style: resumeData.style, // Mantém o estilo que o usuário selecionou no Passo 1
-            };
-
-            // 4. Atualiza o estado
-            setResumeData(newResumeData);
-            setIsDemoMode(false); 
-            setEditingResumeId(null);
-            setCurrentStep(1); 
-            setIsImportModalOpen(false);
-            showToast("Currículo importado! Revise os campos.", 'success');
-
-        } catch (error) {
-            console.error("Erro ao importar currículo:", error);
-            showToast((error as Error).message || "Erro ao ler o arquivo PDF.");
-        } finally {
-            setIsAnalyzingPdf(false);
-        }
-    };
-
-    const handleContinueProgress = () => {
-        try {
-            const savedProgress = localStorage.getItem('inProgressResume');
-            if (savedProgress) {
-                const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = JSON.parse(savedProgress);
-                setResumeData(savedData);
-                setCurrentStep(savedStep);
-                setIsFinished(savedIsFinished);
-                setIsDemoMode(false); 
-            }
-        } catch (error) {
-            console.error("Failed to load progress:", error);
-            handleStartNewAndReset();
-        }
-        setIsContinueModalOpen(false);
-    };
-
-    const handleStartNewAndReset = () => {
-        try {
-            localStorage.removeItem('inProgressResume'); 
-        } catch (error) {
-            console.error("Failed to remove progress:", error);
-        }
-        setResumeData(DEMO_DATA); 
-        setCurrentStep(0);
-        setIsFinished(false);
-        setIsDemoMode(true);
-        setIsContinueModalOpen(false);
-    };
-
 
     return (
         <>
@@ -877,7 +699,6 @@ const App: React.FC = () => {
                 paymentData={pixPaymentData}
                 onPaymentSuccess={handlePaymentSuccess}
                 isTestMode={isPixTestMode}
-                amount={paymentAmount} 
             />
         )}
         {isMyResumesModalOpen && (
@@ -890,20 +711,6 @@ const App: React.FC = () => {
                 onDelete={handleDeleteSavedResume}
             />
         )}
-        <ImportModal
-            isOpen={isImportModalOpen}
-            onClose={() => setIsImportModalOpen(false)}
-            onImport={handleImportResume}
-            onStartFromScratch={handleStartFromScratch}
-            isAnalyzing={isAnalyzingPdf}
-        />
-
-        <ContinueProgressModal
-            isOpen={isContinueModalOpen}
-            onContinue={handleContinueProgress}
-            onStartNew={handleStartNewAndReset}
-        />
-
         {deletionTarget && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
@@ -944,7 +751,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="mt-8 flex flex-col items-center gap-4">
-                    <a href="#form-wizard" className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">
+                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">
                         Criar meu Currículo
                     </a>
                     {savedResumes.length > 0 && (
@@ -976,7 +783,6 @@ const App: React.FC = () => {
                         isFinished={isFinished}
                         setIsFinished={setIsFinished}
                         showToast={showToast}
-                        onRequestImport={() => setIsImportModalOpen(true)} 
                     />
                     <div className="w-full lg:w-2/3">
                         <div ref={previewWrapperRef} className="w-full">
@@ -1062,7 +868,7 @@ const App: React.FC = () => {
              <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
                  <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
                  <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                 <a href="#form-wizard" className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
+                 <a href="#form-wizard" onClick={handleStartEditing} className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
             </section>
         </main>
         
