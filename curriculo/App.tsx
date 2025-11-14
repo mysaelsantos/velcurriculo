@@ -292,6 +292,16 @@ const App: React.FC = () => {
     }, [paginatedData, currentPage]);
     
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
+        
+        // ***** INÍCIO DA CORREÇÃO *****
+        // Esta linha foi adicionada de volta do seu código antigo.
+        // Ela força o navegador a carregar a fonte "Poppins" ANTES
+        // de medir o layout, o que corrige o bug de "encolhimento" no PDF.
+        if (document.fonts) {
+            await document.fonts.ready;
+        }
+        // ***** FIM DA CORREÇÃO *****
+        
         if (!measurementRootRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
@@ -322,7 +332,8 @@ const App: React.FC = () => {
         });
         
         try {
-            if (document.fonts) await document.fonts.ready;
+            // A linha abaixo foi removida pois agora está no topo da função
+            // if (document.fonts) await document.fonts.ready; 
             const previewEl = await onRenderComplete;
             
             if (previewEl.scrollHeight <= 1123) {
