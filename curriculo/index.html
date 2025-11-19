@@ -8,8 +8,7 @@
     <link rel="apple-touch-icon" href="https://i.postimg.cc/yNWrvPQJ/Subcabe-alho-76.png">
     <title>Currículo Profissional com IA - Por R$5,00!</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Scripts de PDF removidos: Usando Impressão Nativa do Navegador (window.print) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.1/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +29,6 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            -webkit-print-color-adjust: exact;
             background-color: #f9fafb;
         }
         
@@ -75,9 +73,9 @@
             border-bottom-right-radius: 0.5rem;
         }
 
-        /* Estilo Base da Pré-visualização */
+        /* Estilo Base da Pré-visualização (Na Tela) */
         .resume-preview {
-            width: 794px; /* Largura exata A4 em 96DPI */
+            width: 794px; /* Largura A4 base */
             background-color: white;
             transition: all 0.3s ease-in-out;
             transform-origin: top left;
@@ -85,16 +83,14 @@
             box-sizing: border-box;
         }
 
-        /* Estilo para a UI (Preview na tela com paginação e sombra) */
         .resume-preview-paginated {
-            height: 1123px; /* Altura exata A4 em 96DPI */
+            height: 1123px; /* Altura A4 base */
             overflow: hidden;
         }
         
-        /* Ajustes para quando não é paginação (medição/exportação) */
-        .resume-preview:not(.resume-preview-paginated) {
-             min-height: 1123px;
-             height: auto;
+        /* Área de Impressão Oculta por padrão na visualização de tela */
+        #print-area {
+            display: none;
         }
 
         .pagination-controls {
@@ -126,25 +122,65 @@
             border-color: var(--theme-color);
         }
         
+        /* --- ESTILOS DE IMPRESSÃO --- */
         @media print {
-            body > *:not(.resume-preview-for-print) {
-                display: none;
+            @page {
+                size: A4 portrait; /* Força tamanho A4 */
+                margin: 0; /* Remove margens padrão da impressora */
             }
-            .resume-preview-for-print {
-                display: block !important;
-                box-shadow: none;
+
+            html, body {
                 margin: 0;
                 padding: 0;
+                background: white;
                 width: 100%;
-                min-height: auto;
-                transform: none !important;
-                position: static !important;
-                left: unset !important;
-                top: unset !important;
+                height: 100%;
             }
-            body {
+
+            /* Esconde todo o conteúdo do site (formulários, cabeçalhos, etc) */
+            body > *:not(#print-area) {
+                display: none !important;
+            }
+
+            /* Mostra apenas a área de impressão */
+            #print-area {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 210mm; /* Largura exata A4 */
                 margin: 0;
                 padding: 0;
+            }
+
+            /* Estilos para cada página dentro da área de impressão */
+            #print-area .resume-page {
+                width: 210mm;
+                min-height: 297mm; /* Altura A4 */
+                page-break-after: always; /* Força quebra de página */
+                overflow: hidden;
+                background: white;
+                position: relative;
+                margin: 0;
+                padding: 0;
+                /* Garante impressão fiel de cores de fundo */
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            #print-area .resume-page:last-child {
+                page-break-after: auto;
+            }
+            
+            /* Ajusta o preview para ocupar 100% da folha de impressão */
+            .resume-preview {
+                width: 100% !important;
+                height: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+                transform: none !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
             }
         }
 
@@ -160,7 +196,7 @@
         
         /* Espaçamentos ajustados nos templates */
         .template-classic { padding: 40px 60px; font-size: 0.85rem; }
-        .template-classic header { text-align: left; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; position: relative;}
+        .template-classic header { text-align: left; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; position: relative; margin-top: 1.5rem; }
         .template-classic main { margin-top: 1.75rem; } 
         .template-classic #resume-name { color: var(--theme-color); font-size: 2.2rem; }
         .template-classic #resume-job-title { font-size: 1.1rem; }
@@ -194,6 +230,9 @@
             padding: 25px 40px 15px;
             border-bottom: none; 
             position: relative;
+             /* Garante que a cor de fundo imprima */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         .template-modern #resume-name { color: white; font-size: 1.8rem; }
         .template-modern #resume-job-title { color: #e0e7ff; font-size: 1rem; }
@@ -218,7 +257,7 @@
             height: 0.9rem;
             flex-shrink: 0;
         }
-        .template-modern main { padding: 24px 40px 25px; } /* Padding aumentado para separar do header */
+        .template-modern main { padding: 24px 40px 25px; } 
         .template-modern .section-title { color: var(--theme-color); border-color: #d1d5db; }
         .template-modern h4 { font-size: 0.95rem; }
         .template-modern p { font-size: 0.85rem; }
