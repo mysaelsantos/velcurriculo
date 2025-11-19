@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import ResumeForm from './components/ResumeForm';
@@ -550,9 +549,6 @@ const App: React.FC = () => {
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
-    // REMOVED THE DOM MANIPULATION USEEFFECT FOR SCROLLER
-    // It was causing conflicts with the re-renders triggered by 'resumesGenerated' state.
-
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         
@@ -561,108 +557,14 @@ const App: React.FC = () => {
             await document.fonts.ready;
         }
         
-        const { jsPDF } = (window as any).jspdf;
-        const html2canvas = (window as any).html2canvas;
-    
-        if (!jsPDF || !html2canvas) {
-            console.error("PDF generation dependencies not found.");
+        // 2. Pequeno delay para garantir que o React renderizou qualquer estado pendente
+        // e que o CSS de impressão será aplicado corretamente.
+        setTimeout(() => {
+            window.print();
             setIsPaymentProcessing(false);
-            return;
-        }
-    
-        const pagesToExport = await paginateResume(dataToExport);
+        }, 500);
         
-        // CORREÇÃO DE TAMANHO: Usar 'px' para mapeamento 1:1 com o DOM e dimensões A4 exatas
-        const pdf = new jsPDF({ 
-            orientation: 'portrait', 
-            unit: 'px', 
-            format: [794, 1123]
-        });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-
-        // Cria um container temporário fora da tela, mas com o tamanho EXATO em pixels de uma página A4 (96DPI)
-        // Isso evita problemas de escala e transformações CSS que afetam o html2canvas
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.left = '-10000px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '794px'; // 210mm @ 96dpi
-        tempContainer.style.zIndex = '-9999';
-        document.body.appendChild(tempContainer);
-    
-        try {
-            const tempRoot = ReactDOM.createRoot(tempContainer);
-    
-            for (let i = 0; i < pagesToExport.length; i++) {
-                const pageData = pagesToExport[i];
-    
-                // Renderiza a página atual no container temporário de forma síncrona (via Promise)
-                await new Promise<void>(resolve => {
-                    tempRoot.render(
-                        <ResumePreview 
-                            data={pageData} 
-                            isDemoMode={false} 
-                            isFirstPage={i === 0}
-                            isMeasurement={true} // Remove sombras e bordas arredondadas
-                        />
-                    );
-                    // Aguarda renderização inicial
-                    setTimeout(async () => {
-                         // 2. Verificação de Imagens dentro do container
-                         const images = Array.from(tempContainer.querySelectorAll('img'));
-                         const imagePromises = images.map(img => {
-                             if (img.complete) return Promise.resolve();
-                             return new Promise(res => { img.onload = res; img.onerror = res; });
-                         });
-                         await Promise.all(imagePromises);
-                         // Pequeno atraso extra para garantir o paint
-                         setTimeout(resolve, 150);
-                    }, 250); 
-                });
-    
-                const resumeElement = tempContainer.querySelector('.resume-preview') as HTMLElement;
-                if (!resumeElement) continue;
-                
-                // 3. Captura com alta qualidade (scale: 4) e configurações robustas
-                const canvas = await html2canvas(resumeElement, { 
-                    scale: 4, // Aumentado para 4 para maior nitidez
-                    useCORS: true, // Permite imagens externas se tiverem headers CORS
-                    logging: false,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff', // Força fundo branco
-                    windowWidth: 794, // Força a largura da "janela" do canvas para A4
-                });
-
-                // Usa JPEG com qualidade alta para reduzir tamanho do arquivo final se houver fotos
-                const imgData = canvas.toDataURL('image/jpeg', 0.95); 
-    
-                if (i > 0) pdf.addPage();
-                
-                // Adiciona a imagem ocupando exatamente o tamanho da página PDF
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-            }
-    
-            const fileName = `${dataToExport.personalInfo.name.replace(/\s+/g, '_') || 'curriculo'}.pdf`;
-            pdf.save(fileName);
-    
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            alert("Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.");
-        } finally {
-            // Limpeza do container temporário
-            setTimeout(() => {
-                if (document.body.contains(tempContainer)) {
-                    document.body.removeChild(tempContainer);
-                }
-                setIsPaymentProcessing(false);
-            }, 100);
-            
-            // Restaura a paginação original na tela
-            paginateResume(resumeData);
-        }
-    }, [paginateResume, resumeData, isDemoMode]);
+    }, []);
 
     // FIX: Update to use paymentId and set payment amount for the modal.
     const handlePaymentRequest = async () => {
@@ -787,6 +689,20 @@ const App: React.FC = () => {
 
     return (
         <>
+        {/* Hidden Print Area */}
+        <div id="print-area">
+             {paginatedData.map((pageData, index) => (
+                 <div key={index} className="resume-page">
+                    <ResumePreview 
+                        data={pageData} 
+                        isDemoMode={false} 
+                        isFirstPage={index === 0} 
+                        isMeasurement={true} // Removes UI shadows and rounded corners
+                    />
+                 </div>
+             ))}
+        </div>
+
         {toast && (
             <div
                 role="alert"
