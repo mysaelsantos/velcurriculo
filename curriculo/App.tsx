@@ -556,7 +556,7 @@ const App: React.FC = () => {
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         
-        // Garantir que as fontes estejam carregadas
+        // 1. Aguardar carregamento de fontes explicitamente
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -608,22 +608,31 @@ const App: React.FC = () => {
                             isMeasurement={true} // Remove sombras e bordas arredondadas
                         />
                     );
-                    // Pequeno delay para garantir que imagens e fontes sejam pintadas
-                    setTimeout(resolve, 250); 
+                    // Aguarda renderização inicial
+                    setTimeout(async () => {
+                         // 2. Verificação de Imagens dentro do container
+                         const images = Array.from(tempContainer.querySelectorAll('img'));
+                         const imagePromises = images.map(img => {
+                             if (img.complete) return Promise.resolve();
+                             return new Promise(res => { img.onload = res; img.onerror = res; });
+                         });
+                         await Promise.all(imagePromises);
+                         // Pequeno atraso extra para garantir o paint
+                         setTimeout(resolve, 150);
+                    }, 250); 
                 });
     
                 const resumeElement = tempContainer.querySelector('.resume-preview') as HTMLElement;
                 if (!resumeElement) continue;
                 
-                // Captura com alta qualidade (scale: 3)
-                // CORREÇÃO DE ALINHAMENTO: letterRendering: false (default) geralmente funciona melhor para evitar 'pulos' de caracteres
+                // 3. Captura com alta qualidade (scale: 4) e configurações robustas
                 const canvas = await html2canvas(resumeElement, { 
-                    scale: 3, 
-                    useCORS: true, 
+                    scale: 4, // Aumentado para 4 para maior nitidez
+                    useCORS: true, // Permite imagens externas se tiverem headers CORS
                     logging: false,
                     allowTaint: true,
-                    // letterRendering: true, // REMOVIDO para evitar desalinhamento de fonte
-                    windowWidth: 1920
+                    backgroundColor: '#ffffff', // Força fundo branco
+                    windowWidth: 794, // Força a largura da "janela" do canvas para A4
                 });
 
                 // Usa JPEG com qualidade alta para reduzir tamanho do arquivo final se houver fotos
