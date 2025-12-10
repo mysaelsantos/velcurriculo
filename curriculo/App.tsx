@@ -322,7 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V3 (Robusto e com Margens) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V4 (Com Correção de Viúvas e QR Code) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -362,7 +362,7 @@ const App: React.FC = () => {
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 60; // Margem de segurança no fundo
-            const QR_CODE_RESERVED_HEIGHT = 140; // Espaço reservado para o QR code na página 1
+            const QR_CODE_RESERVED_HEIGHT = 160; // Aumentei um pouco para segurança
 
             // Função para pegar altura com margens do elemento
             const getElementHeight = (element: HTMLElement) => {
@@ -385,8 +385,8 @@ const App: React.FC = () => {
             // Preparação dos Blocos de Conteúdo
             interface ContentBlock {
                 id: string;
-                type: keyof ResumeData; // 'summary', 'experiences', etc.
-                data: any; // O objeto de dados (ex: Experience)
+                type: keyof ResumeData; 
+                data: any; 
                 height: number;
                 node: HTMLElement;
             }
@@ -404,7 +404,7 @@ const App: React.FC = () => {
                     blocks.push({
                         id: `${dataKey}-title`,
                         type: dataKey,
-                        data: null, // Título não tem dados específicos
+                        data: null, 
                         height: getElementHeight(titleEl) + 10, // +10 de respiro
                         node: titleEl
                     });
@@ -422,7 +422,6 @@ const App: React.FC = () => {
                         });
                     }
                 } else if (listId) {
-                    // Para listas (experiência, educação, etc)
                     const listContainer = sectionEl.querySelector(`#${listId}`);
                     if (!listContainer) return;
                     
@@ -442,13 +441,12 @@ const App: React.FC = () => {
                         }
                     });
                 } else if (dataKey === 'skills' || dataKey === 'languages') {
-                     // Skills e Languages muitas vezes são blocos únicos ou flex
                      const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
                      if(contentDiv) {
                          blocks.push({
                              id: `${dataKey}-block`,
                              type: dataKey,
-                             data: dataToPaginate[dataKey], // Passa o array todo
+                             data: dataToPaginate[dataKey],
                              height: getElementHeight(contentDiv),
                              node: contentDiv
                          })
@@ -467,15 +465,12 @@ const App: React.FC = () => {
             // Lógica de Distribuição nas Páginas
             const pages: PageData[] = [];
             
-            // Inicia a primeira página
             let currentPageData: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
-                // Inicializa arrays vazios
                 experiences: [], education: [], courses: [], languages: [], skills: []
             };
             
-            // Altura inicial usada na página 1 (Header + margem inicial)
             let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
             let currentPageIndex = 0;
 
@@ -486,38 +481,40 @@ const App: React.FC = () => {
                     experiences: [], education: [], courses: [], languages: [], skills: []
                 };
                 currentPageIndex++;
-                currentY = MARGIN_TOP + 30; // Margem topo na página 2+ (menor pois não tem header)
+                // Margin top na pag 2+ (considerando o padding-top do ResumePreview)
+                currentY = MARGIN_TOP + 30; 
             };
 
             const getAvailableSpace = () => {
                 let limit = A4_HEIGHT - MARGIN_BOTTOM;
-                // Se for a página 1 e tiver QR Code habilitado, reduz o espaço disponível
                 if (currentPageIndex === 0 && (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr)) {
                     limit -= QR_CODE_RESERVED_HEIGHT;
                 }
                 return limit - currentY;
             };
 
-            for (const block of blocks) {
-                // Caso especial: Títulos
+            // Variável para rastrear se acabamos de adicionar um título mas nenhum item
+            let pendingTitleHeight = 0;
+
+            for (let i = 0; i < blocks.length; i++) {
+                const block = blocks[i];
+                
+                // Lógica Especial para Títulos
                 if (block.id.endsWith('-title')) {
-                    // Verifica se tem espaço para o título + pelo menos 40px do próximo conteúdo
-                    // Se não tiver, joga o título para a próxima página
-                    if (getAvailableSpace() < (block.height + 40)) {
+                    // Verifica se o título cabe E se tem espaço para pelo menos o primeiro item do grupo
+                    const nextBlock = blocks[i+1];
+                    const nextItemHeight = nextBlock ? nextBlock.height : 40; // Default 40px
+                    
+                    if (getAvailableSpace() < (block.height + nextItemHeight)) {
                         createNewPage();
                     }
-                    // Títulos não são dados, são renderizados automaticamente se houver dados daquele tipo na página
-                    // Mas precisamos somar a altura dele no cursor Y para saber onde o próximo item vai entrar
-                    // O componente ResumePreview é inteligente: se houver items de 'experience' na página, ele renderiza o título.
-                    // Então, se acabamos de criar uma página, o título vai ser renderizado lá.
-                    // Nós apenas somamos a altura SE ele for ser renderizado (ou seja, se já não criamos uma pag nova para ele)
                     
-                    // Pequena correção: Se o título "caber", nós somamos a altura. Se jogamos pra próxima pag, resetamos Y e somamos lá.
-                    currentY += block.height; 
+                    currentY += block.height;
+                    pendingTitleHeight = block.height; // Guarda a altura deste título
                     continue; 
                 }
 
-                // Blocos de Dados (Experiência, Resumo, etc)
+                // Blocos de Dados
                 const spaceNeeded = block.height;
                 const available = getAvailableSpace();
 
@@ -528,22 +525,21 @@ const App: React.FC = () => {
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
                     } else if (block.type === 'skills' || block.type === 'languages') {
-                         // Skills/Languages vêm como bloco único ou array, dependendo da extração.
-                         // Na extração simplificada acima, tratei como bloco único se for lista simples
                          currentPageData[block.type] = block.data;
                     }
                     currentY += spaceNeeded;
+                    pendingTitleHeight = 0; // Item adicionado, título não é mais orfão
                 } else {
-                    // Não cabe. Tentar quebrar ou mover para próxima?
-                    // Estratégia Segura: Mover para próxima página (evita cortes feios no meio do texto)
+                    // Não cabe. Move para a próxima.
                     
-                    // Se o item for MAIOR que uma página inteira (muito raro, mas possível em descrições gigantes)
-                    // Aí sim precisaríamos de lógica de "continuation" (quebrar texto).
-                    // Para simplificar e garantir estabilidade, vamos mover para a próxima página.
+                    // SE acabamos de colocar um título (pendingTitleHeight > 0), 
+                    // significa que o título ficou na página anterior "sozinho" (viúva de cabeçalho).
+                    // Neste caso, seria ideal remover o título da página anterior?
+                    // Como não podemos "apagar" o que já foi processado facilmente,
+                    // a verificação no passo "Títulos" acima (block.height + nextItemHeight) já deve prevenir isso na maioria dos casos.
                     
                     createNewPage();
                     
-                    // Adiciona na nova página
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
@@ -552,19 +548,19 @@ const App: React.FC = () => {
                         currentPageData[block.type] = block.data;
                     }
                     
-                    // Se for a nova página, temos que considerar que o título da seção será renderizado novamente
-                    // Então somamos a altura de um título "virtual"
-                    const titleHeight = 40; 
+                    // Na nova página, o título da seção será renderizado automaticamente pelo componente
+                    // se houver itens. Precisamos contabilizar o espaço desse título "implícito".
+                    // Usamos a altura do último título processado ou um padrão de 40px.
+                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
                     currentY += titleHeight + spaceNeeded;
+                    pendingTitleHeight = 0;
                 }
             }
 
-            // Adiciona a última página
             if (Object.keys(currentPageData).length > 0) {
                pages.push(currentPageData);
             }
             
-            // Filtra páginas vazias (safety check)
             const finalPages = pages.filter(p => {
                 const hasData = p.summary || 
                                 (p.experiences && p.experiences.length > 0) || 
@@ -579,7 +575,6 @@ const App: React.FC = () => {
 
         } catch (error) {
             console.error("Pagination failed:", error);
-            // Fallback: mostra tudo numa página só se der erro
             setPaginatedData([dataToPaginate]);
             return [dataToPaginate];
         }
