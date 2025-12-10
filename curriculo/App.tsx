@@ -322,7 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V8.1 (AJUSTE DE ALTURA E ZONA DE PERIGO) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V9 (Calibrado para Layout em L) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -360,8 +360,8 @@ const App: React.FC = () => {
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 100; 
-            // AUMENTADO PARA 280px para garantir que o sistema entenda a área real do QR Code
-            const QR_CODE_ZONE_HEIGHT = 280; 
+            // Altura reservada para a zona do QR Code (aumentada para garantir detecção)
+            const QR_CODE_ZONE_HEIGHT = 200; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -482,7 +482,7 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
-            // Ponto onde começa a área do QR Code (de baixo para cima)
+            // Zona de perigo calculada de baixo para cima
             const dangerZoneStart = A4_HEIGHT - MARGIN_BOTTOM - QR_CODE_ZONE_HEIGHT;
 
             let pendingTitleHeight = 0;
@@ -491,7 +491,7 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE OVERLAP CORRIGIDA E MAIS AGRESSIVA ---
+                // Verifica se o bloco entra na zona do QR Code
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
@@ -500,8 +500,8 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // Aumentamos o multiplicador para 1.8x para garantir que a quebra de linha seja contabilizada
-                    effectiveHeight = block.height * 1.8; 
+                    // Multiplicador 1.6x: Estima que o texto estreito cresce em altura, mas tenta manter na página
+                    effectiveHeight = block.height * 1.6; 
                 }
 
                 if (block.id.endsWith('-title')) {
@@ -824,7 +824,7 @@ const App: React.FC = () => {
                             isDemoMode={false} 
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
-                            isPrint={true} // Força layout de impressão (altura fixa)
+                            isPrint={true} 
                             hideEmptySections={true}
                         />
                     </div>
