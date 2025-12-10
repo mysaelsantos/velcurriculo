@@ -8,7 +8,6 @@
     <link rel="apple-touch-icon" href="https://i.postimg.cc/yNWrvPQJ/Subcabe-alho-76.png">
     <title>Currículo Profissional com IA - Por R$5,00!</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Scripts de PDF removidos: Usando Impressão Nativa do Navegador (window.print) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.1/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,7 +74,7 @@
 
         /* Estilo Base da Pré-visualização (Na Tela) */
         .resume-preview {
-            width: 794px; /* Largura A4 base */
+            width: 794px; /* Largura A4 base (96dpi) */
             background-color: white;
             transition: all 0.3s ease-in-out;
             transform-origin: top left;
@@ -88,9 +87,39 @@
             overflow: hidden;
         }
         
-        /* Área de Impressão Oculta por padrão na visualização de tela */
+        /* ESTRATÉGIA "SANDBOX" PARA GERAÇÃO DE PDF MOBILE
+           O container tem tamanho 0x0 para não ser visto, mas não usa display:none
+           para que o conteúdo interno seja renderizado pelo navegador.
+        */
+        #print-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+            z-index: -9999; /* Fica atrás de tudo */
+        }
+
+        /* A área real que será capturada pelo html-to-image */
         #print-area {
-            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 794px; /* Largura fixa A4 */
+            background: white;
+            transform: none !important; /* Importante para cálculos de coordenadas precisos */
+        }
+
+        #print-area .resume-page {
+            width: 794px;
+            height: 1123px; /* Altura Fixa A4 */
+            background: white;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            page-break-after: always;
         }
 
         .pagination-controls {
@@ -122,68 +151,6 @@
             border-color: var(--theme-color);
         }
         
-        /* --- ESTILOS DE IMPRESSÃO --- */
-        @media print {
-            @page {
-                size: A4 portrait; /* Força tamanho A4 */
-                margin: 0; /* Remove margens padrão da impressora */
-            }
-
-            html, body {
-                margin: 0;
-                padding: 0;
-                background: white;
-                width: 100%;
-                height: 100%;
-            }
-
-            /* Esconde todo o conteúdo do site (formulários, cabeçalhos, etc) */
-            body > *:not(#print-area) {
-                display: none !important;
-            }
-
-            /* Mostra apenas a área de impressão */
-            #print-area {
-                display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 210mm; /* Largura exata A4 */
-                margin: 0;
-                padding: 0;
-            }
-
-            /* Estilos para cada página dentro da área de impressão */
-            #print-area .resume-page {
-                width: 210mm;
-                min-height: 297mm; /* Altura A4 */
-                page-break-after: always; /* Força quebra de página */
-                overflow: hidden;
-                background: white;
-                position: relative;
-                margin: 0;
-                padding: 0;
-                /* Garante impressão fiel de cores de fundo */
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            #print-area .resume-page:last-child {
-                page-break-after: auto;
-            }
-            
-            /* Ajusta o preview para ocupar 100% da folha de impressão */
-            .resume-preview {
-                width: 100% !important;
-                height: 100% !important;
-                box-shadow: none !important;
-                border: none !important;
-                transform: none !important;
-                border-radius: 0 !important;
-                margin: 0 !important;
-            }
-        }
-
         .section-title {
             font-weight: bold;
             text-transform: uppercase;
@@ -230,7 +197,6 @@
             padding: 25px 40px 15px;
             border-bottom: none; 
             position: relative;
-             /* Garante que a cor de fundo imprima */
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -435,7 +401,9 @@
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "node-fetch": "https://aistudiocdn.com/node-fetch@^3.3.2",
-    "mercadopago": "https://aistudiocdn.com/mercadopago@^2.10.0"
+    "mercadopago": "https://aistudiocdn.com/mercadopago@^2.10.0",
+    "html-to-image": "https://aistudiocdn.com/html-to-image@^1.11.11",
+    "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1"
   }
 }
 </script>
