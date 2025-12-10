@@ -10,7 +10,7 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
-    // Novo campo para identificar blocos que devem ser estreitados
+    // Lista de IDs que devem ser estreitados para não bater no QR Code
     restrictedBlockIds?: string[];
 }
 
@@ -20,7 +20,7 @@ interface ResumePreviewProps {
   isFirstPage: boolean;
   isMeasurement?: boolean;
   hideEmptySections?: boolean;
-  isPrint?: boolean; // Nova prop para forçar layout de impressão fixo
+  isPrint?: boolean;
 }
 
 export interface ResumePreviewRef {
@@ -41,10 +41,16 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
+  // Helper para verificar se um bloco específico está na zona de perigo (QR Code)
+  const getRestrictionClass = (blockId: string) => {
+      // Se estiver na lista de restritos, limita a 60% da largura para dar espaço ao QR Code
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
+  };
+
   const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
     const continuationInfo = continuation?.[itemId];
-    const isRestricted = restrictedBlockIds.includes(itemId);
-    const restrictionClass = isRestricted ? 'max-w-[70%]' : '';
+    // Verifica restrição também para itens individuais (como experiências longas)
+    const restrictionClass = getRestrictionClass(itemId);
 
     if (continuationInfo) {
       const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
@@ -68,8 +74,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       );
     }
     
-    // Se for restrito (na zona do QR Code), aplicamos a classe de largura máxima
-    if (isRestricted) {
+    // Se não for continuação mas for restrito (ex: item curto na zona do QR Code)
+    if (restrictionClass) {
         return <div className={restrictionClass}>{content}</div>;
     }
 
@@ -81,30 +87,16 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
           ? (Array.isArray(content) && content.length > 0)
           : (content && typeof content === 'string' && content.trim().length > 0);
 
-      // Prioridade 1: Se for para esconder vazios (PDF), obedece estritamente
-      if (hideEmptySections) {
-          return hasContent;
-      }
-
-      // Prioridade 2: Medição precisa renderizar tudo para calcular alturas
+      if (hideEmptySections) return hasContent;
       if (isMeasurement) return true;
-
-      // Prioridade 3: Páginas de continuação não mostram placeholders
-      if (!isFirstPage) {
-          return hasContent;
-      }
-
-      // Prioridade 4: Editor na página 1 mostra tudo
+      if (!isFirstPage) return hasContent;
       return true; 
   };
 
-  // Lógica de classes para garantir altura fixa no PDF e evitar "dança" dos ícones
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
       style?.template,
-      // Se for Impressão (PDF) OU Visualização Paginada (não medição), fixa a altura A4
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
-      // Somente adiciona sombras e bordas se for visualização em tela (não medição e não impressão)
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
   ].filter(Boolean).join(' ');
 
@@ -137,8 +129,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
-                    <h3 className="section-title">Resumo Profissional{(!isFirstPage && summary) ? ' (continuação)' : ''}</h3>
-                     {renderWithContinuation('summary-text', // ID padronizado com App.tsx
+                    <h3 className="section-title">Resumo Profissional</h3>
+                     {renderWithContinuation('summary-text',
                         <p id="resume-summary" className="text-gray-700 leading-relaxed">
                             {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
                         </p>
@@ -147,7 +139,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         )}
         {shouldShowSection(experiences, true) && (
         <section id="experience-section">
-            <h3 className="section-title">Experiência Profissional{(!isFirstPage && experiences && experiences.length > 0) ? ' (continuação)' : ''}</h3>
+            <h3 className="section-title">Experiência Profissional</h3>
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => {
@@ -177,7 +169,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         )}
         {shouldShowSection(education, true) && (
         <section id="education-section">
-            <h3 className="section-title">Formação Acadêmica{(!isFirstPage && education && education.length > 0) ? ' (continuação)' : ''}</h3>
+            <h3 className="section-title">Formação Acadêmica</h3>
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
@@ -198,8 +190,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(courses, true) && (
-        <section id="courses-section">
-            <h3 className="section-title">Cursos Complementares{(!isFirstPage && courses && courses.length > 0) ? ' (continuação)' : ''}</h3>
+        <section id="courses-section" className={getRestrictionClass('courses-block')}>
+            <h3 className="section-title">Cursos Complementares</h3>
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
@@ -220,8 +212,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(languages, true) && (
-        <section id="languages-section">
-            <h3 className="section-title">Idiomas{(!isFirstPage && languages && languages.length > 0) ? ' (continuação)' : ''}</h3>
+        <section id="languages-section" className={getRestrictionClass('languages-block')}>
+            <h3 className="section-title">Idiomas</h3>
             <div id="resume-languages-list" className="flex flex-wrap gap-x-4 gap-y-1">
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
@@ -237,12 +229,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(skills, true) && (
-        <section id="skills-section">
-            <h3 className="section-title">Habilidades e Competências{(!isFirstPage && skills && skills.length > 0) ? ' (continuação)' : ''}</h3>
-            <div id="resume-skills">
+        <section id="skills-section" className={getRestrictionClass('skills-block')}>
+            <h3 className="section-title">Habilidades e Competências</h3>
+            {/* CORREÇÃO: Usar Flexbox para evitar pílulas coladas/gigantes */}
+            <div id="resume-skills" className="flex flex-wrap gap-2">
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
-                        <span key={index} className="inline-block h-5 leading-5 bg-gray-200 rounded-full px-2.5 text-xs font-semibold text-gray-700 mr-1.5 mb-1.5 align-top">
+                        <span key={index} className="inline-block bg-gray-200 rounded-full px-3 py-1 text-xs font-semibold text-gray-700">
                         {skill}
                         </span>
                     ))
