@@ -1,4 +1,3 @@
-
 import React, { useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 import type { ResumeData } from '../types';
 import QRCodeComponent from './QRCode';
@@ -18,13 +17,14 @@ interface ResumePreviewProps {
   isDemoMode: boolean;
   isFirstPage: boolean;
   isMeasurement?: boolean;
+  hideEmptySections?: boolean; // Nova prop para esconder secções vazias
 }
 
 export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement }, ref) => {
+const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections }, ref) => {
   const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation } = data;
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -64,6 +64,18 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     return content;
   };
   
+  // Helper para verificar se devemos mostrar uma secção
+  const shouldShowSection = (content: any, isArray = false) => {
+      if (isMeasurement) return true; // Sempre mostra na medição
+      if (hideEmptySections) {
+          // Se estamos escondendo vazios (PDF final), só mostra se tiver dados
+          if (isArray) return content && content.length > 0;
+          return !!content;
+      }
+      // Comportamento padrão (Edição/Demo): mostra se tem dados OU se é demo/medição
+      return content || !isDemoMode; 
+  };
+
   return (
     <div id="resume-preview" ref={previewRef} className={`resume-preview bg-white text-gray-900 ${style?.template} ${!isMeasurement ? 'resume-preview-paginated rounded-lg shadow-xl' : ''}`}>
       {isFirstPage && personalInfo && (
@@ -91,7 +103,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </>
       )}
       <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
-        {(summary || (!isDemoMode && !isMeasurement)) && 
+        {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional{(!isFirstPage && summary) ? ' (continuação)' : ''}</h3>
                      {renderWithContinuation('summary',
@@ -100,8 +112,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         </p>
                     )}
                 </section>
-        }
-        {((experiences && experiences.length > 0) || (!isDemoMode && !isMeasurement)) && (
+        )}
+        {shouldShowSection(experiences, true) && (
         <section id="experience-section">
             <h3 className="section-title">Experiência Profissional{(!isFirstPage && experiences && experiences.length > 0) ? ' (continuação)' : ''}</h3>
             <div id="resume-experience-list" className="space-y-4">
@@ -131,7 +143,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-        {((education && education.length > 0) || (!isDemoMode && !isMeasurement)) && (
+        {shouldShowSection(education, true) && (
         <section id="education-section">
             <h3 className="section-title">Formação Acadêmica{(!isFirstPage && education && education.length > 0) ? ' (continuação)' : ''}</h3>
             <div id="resume-education-list" className="space-y-2">
@@ -153,7 +165,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-        {((courses && courses.length > 0) || (!isDemoMode && !isMeasurement)) && (
+        {shouldShowSection(courses, true) && (
         <section id="courses-section">
             <h3 className="section-title">Cursos Complementares{(!isFirstPage && courses && courses.length > 0) ? ' (continuação)' : ''}</h3>
             <div id="resume-courses-list" className="space-y-2">
@@ -175,7 +187,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-        {((languages && languages.length > 0) || (!isDemoMode && !isMeasurement)) && (
+        {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas{(!isFirstPage && languages && languages.length > 0) ? ' (continuação)' : ''}</h3>
             <div id="resume-languages-list" className="flex flex-wrap gap-x-4 gap-y-1">
@@ -192,7 +204,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-        {((skills && skills.length > 0) || (!isDemoMode && !isMeasurement)) && (
+        {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências{(!isFirstPage && skills && skills.length > 0) ? ' (continuação)' : ''}</h3>
             <div id="resume-skills">
