@@ -231,7 +231,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section" className={getRestrictionClass('skills-block')}>
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* CORREÇÃO: Usar Flexbox para evitar pílulas coladas/gigantes */}
             <div id="resume-skills" className="flex flex-wrap gap-2">
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
