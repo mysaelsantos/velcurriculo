@@ -322,7 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V6 (Correção Final de Layout) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V7 (Correção de Placeholders e Layout) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -347,8 +347,9 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
-            // Renderizamos o currículo inteiro SEM paginação para medir os blocos.
-            // Aqui usamos isMeasurement={true} para que ele não tenha altura fixa e expanda.
+            // Renderizamos o currículo para medição
+            // IMPORTANTE: isDemoMode=false e isMeasurement=true para que os placeholders NÃO apareçam
+            // e os cálculos de altura sejam reais (sem textos de exemplo vazios ocupando espaço).
             measurementRootRef.current.render(
                 <ResumePreview data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />
             );
@@ -377,7 +378,6 @@ const App: React.FC = () => {
             const headerEl = previewEl.querySelector('header') as HTMLElement;
             const mainEl = previewEl.querySelector('main') as HTMLElement;
             
-            // Se não tem main, retorna o dado original
             if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
 
             const headerHeight = getElementHeight(headerEl);
@@ -401,12 +401,11 @@ const App: React.FC = () => {
 
                 const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
                 if (titleEl) {
-                    // Adiciona o Título da Seção como um bloco
                     blocks.push({
                         id: `${dataKey}-title`,
                         type: dataKey,
                         data: null, 
-                        height: getElementHeight(titleEl) + 10, // +10 de respiro
+                        height: getElementHeight(titleEl) + 10,
                         node: titleEl
                     });
                 }
@@ -482,7 +481,6 @@ const App: React.FC = () => {
                     experiences: [], education: [], courses: [], languages: [], skills: []
                 };
                 currentPageIndex++;
-                // Margin top na pag 2+ (considerando o padding-top do ResumePreview)
                 currentY = MARGIN_TOP + 30; 
             };
 
@@ -494,7 +492,6 @@ const App: React.FC = () => {
                 return limit - currentY;
             };
 
-            // Variável para rastrear se acabamos de adicionar um título mas nenhum item
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
@@ -502,16 +499,15 @@ const App: React.FC = () => {
                 
                 // Lógica Especial para Títulos
                 if (block.id.endsWith('-title')) {
-                    // Verifica se o título cabe E se tem espaço para pelo menos o primeiro item do grupo
                     const nextBlock = blocks[i+1];
-                    const nextItemHeight = nextBlock ? nextBlock.height : 40; // Default 40px
+                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
                     if (getAvailableSpace() < (block.height + nextItemHeight)) {
                         createNewPage();
                     }
                     
                     currentY += block.height;
-                    pendingTitleHeight = block.height; // Guarda a altura deste título
+                    pendingTitleHeight = block.height; 
                     continue; 
                 }
 
@@ -529,10 +525,9 @@ const App: React.FC = () => {
                          currentPageData[block.type] = block.data;
                     }
                     currentY += spaceNeeded;
-                    pendingTitleHeight = 0; // Item adicionado, título não é mais orfão
+                    pendingTitleHeight = 0; 
                 } else {
                     // Não cabe. Move para a próxima.
-                    
                     createNewPage();
                     
                     if (block.type === 'summary') {
@@ -652,11 +647,8 @@ const App: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
-                // **** CORREÇÃO FINAL: Forçar Altura para Evitar Ícones Dançantes ****
-                // Forçamos a altura via style inline para garantir que o html-to-image capture
-                // o fundo completo da página A4, mantendo os ícones no lugar certo (rodapé).
-                const originalHeight = pageEl.style.height;
-                const originalMinHeight = pageEl.style.minHeight;
+                // **** CORREÇÃO FINAL: Garantir que o CSS do index.html esteja atuando ****
+                // Se o style inline já está no JSX, isso é redundante mas seguro.
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
 
@@ -680,10 +672,6 @@ const App: React.FC = () => {
                         width: 794
                     });
                 }
-
-                // Restaurar estilos originais (opcional, mas boa prática)
-                pageEl.style.height = originalHeight;
-                pageEl.style.minHeight = originalMinHeight;
 
                 if (i > 0) pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
@@ -833,10 +821,10 @@ const App: React.FC = () => {
                             data={pageData} 
                             isDemoMode={false} 
                             isFirstPage={index === 0} 
-                            // **** CORREÇÃO CRUCIAL AQUI: isMeasurement={false} ****
-                            // Isso garante que o componente tenha a altura fixa de 1123px (A4)
-                            // durante a geração da imagem, fixando os QR Codes no rodapé.
-                            isMeasurement={false} 
+                            // **** AQUI ESTÁ A CHAVE: Passamos hideEmptySections={true} ****
+                            // Isso garante que títulos sem conteúdo não apareçam no PDF final.
+                            isMeasurement={true}
+                            hideEmptySections={true}
                         />
                     </div>
                 ))}
