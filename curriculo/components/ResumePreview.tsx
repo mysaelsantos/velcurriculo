@@ -10,6 +10,8 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
+    // Novo campo para identificar blocos que devem ser estreitados
+    restrictedBlockIds?: string[];
 }
 
 interface ResumePreviewProps {
@@ -25,7 +27,7 @@ export interface ResumePreviewRef {
 }
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections }, ref) => {
-  const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation } = data;
+  const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation, restrictedBlockIds = [] } = data;
   const previewRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -40,6 +42,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
     const continuationInfo = continuation?.[itemId];
+    const isRestricted = restrictedBlockIds.includes(itemId);
+    const restrictionClass = isRestricted ? 'max-w-[70%]' : '';
+
     if (continuationInfo) {
       const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
 
@@ -54,47 +59,42 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       }
 
       return (
-        <div style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
+        <div className={restrictionClass} style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
             {content}
           </div>
         </div>
       );
     }
+    
+    // Se for restrito (na zona do QR Code), aplicamos a classe de largura máxima
+    if (isRestricted) {
+        return <div className={restrictionClass}>{content}</div>;
+    }
+
     return content;
   };
   
-  /**
-   * LÓGICA DE VISIBILIDADE DE SECÇÃO (CORRIGIDA)
-   * * Esta função determina se um bloco (Resumo, Experiência, etc.) deve aparecer na página atual.
-   */
   const shouldShowSection = (content: any, isArray = false) => {
-      // 1. MODO DE MEDIÇÃO:
-      // Se estamos medindo a altura para calcular a paginação, PRECISAMOS renderizar tudo,
-      // caso contrário os cálculos ficarão errados.
-      if (isMeasurement) return true;
+      const hasContent = isArray 
+          ? (Array.isArray(content) && content.length > 0)
+          : (content && typeof content === 'string' && content.trim().length > 0);
 
-      // 2. MODO ESTRITO (Páginas de Continuação ou PDF Final):
-      // Se não é a primeira página (ex: Pag 2) OU se explicitamente pediram para esconder vazios (PDF):
-      // A secção só deve aparecer se tiver conteúdo REAL dentro dela nesta página específica.
-      if (!isFirstPage || hideEmptySections) {
-          if (isArray) {
-              // Para listas (experiência, educação), o array deve ter itens.
-              return Array.isArray(content) && content.length > 0;
-          }
-          // Para textos (resumo), a string não pode ser vazia.
-          return content && typeof content === 'string' && content.trim().length > 0;
+      if (hideEmptySections) {
+          return hasContent;
       }
 
-      // 3. MODO EDITOR (Primeira Página):
-      // Se estamos na primeira página editando, queremos mostrar a secção mesmo vazia
-      // (com o placeholder) para o utilizador saber que aquele campo existe.
+      if (isMeasurement) return true;
+
+      if (!isFirstPage) {
+          return hasContent;
+      }
+
       return true; 
   };
 
   return (
     <div id="resume-preview" ref={previewRef} className={`resume-preview bg-white text-gray-900 ${style?.template} ${!isMeasurement ? 'resume-preview-paginated rounded-lg shadow-xl' : ''}`}>
-      {/* O cabeçalho só aparece na primeira página */}
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
@@ -119,21 +119,17 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </header>
         </>
       )}
-      
-      {/* Ajuste de margem top para páginas subsequentes */}
       <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
-        
         {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional{(!isFirstPage && summary) ? ' (continuação)' : ''}</h3>
-                     {renderWithContinuation('summary',
+                     {renderWithContinuation('summary-text', // ID padronizado com App.tsx
                         <p id="resume-summary" className="text-gray-700 leading-relaxed">
                             {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
                         </p>
                     )}
                 </section>
         )}
-
         {shouldShowSection(experiences, true) && (
         <section id="experience-section">
             <h3 className="section-title">Experiência Profissional{(!isFirstPage && experiences && experiences.length > 0) ? ' (continuação)' : ''}</h3>
@@ -164,7 +160,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-
         {shouldShowSection(education, true) && (
         <section id="education-section">
             <h3 className="section-title">Formação Acadêmica{(!isFirstPage && education && education.length > 0) ? ' (continuação)' : ''}</h3>
@@ -187,7 +182,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-
         {shouldShowSection(courses, true) && (
         <section id="courses-section">
             <h3 className="section-title">Cursos Complementares{(!isFirstPage && courses && courses.length > 0) ? ' (continuação)' : ''}</h3>
@@ -210,7 +204,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas{(!isFirstPage && languages && languages.length > 0) ? ' (continuação)' : ''}</h3>
@@ -228,7 +221,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
-
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências{(!isFirstPage && skills && skills.length > 0) ? ' (continuação)' : ''}</h3>
@@ -246,8 +238,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
       </main>
-      
-      {/* QR Codes só aparecem na primeira página e se habilitados */}
       {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
     </div>
   );
