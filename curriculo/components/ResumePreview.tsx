@@ -20,13 +20,14 @@ interface ResumePreviewProps {
   isFirstPage: boolean;
   isMeasurement?: boolean;
   hideEmptySections?: boolean;
+  isPrint?: boolean; // Nova prop para forçar layout de impressão fixo
 }
 
 export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections }, ref) => {
+const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation, restrictedBlockIds = [] } = data;
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -80,21 +81,35 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
           ? (Array.isArray(content) && content.length > 0)
           : (content && typeof content === 'string' && content.trim().length > 0);
 
+      // Prioridade 1: Se for para esconder vazios (PDF), obedece estritamente
       if (hideEmptySections) {
           return hasContent;
       }
 
+      // Prioridade 2: Medição precisa renderizar tudo para calcular alturas
       if (isMeasurement) return true;
 
+      // Prioridade 3: Páginas de continuação não mostram placeholders
       if (!isFirstPage) {
           return hasContent;
       }
 
+      // Prioridade 4: Editor na página 1 mostra tudo
       return true; 
   };
 
+  // Lógica de classes para garantir altura fixa no PDF e evitar "dança" dos ícones
+  const containerClasses = [
+      'resume-preview bg-white text-gray-900',
+      style?.template,
+      // Se for Impressão (PDF) OU Visualização Paginada (não medição), fixa a altura A4
+      (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
+      // Somente adiciona sombras e bordas se for visualização em tela (não medição e não impressão)
+      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <div id="resume-preview" ref={previewRef} className={`resume-preview bg-white text-gray-900 ${style?.template} ${!isMeasurement ? 'resume-preview-paginated rounded-lg shadow-xl' : ''}`}>
+    <div id="resume-preview" ref={previewRef} className={containerClasses}>
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
