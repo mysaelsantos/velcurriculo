@@ -322,6 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
+    // --- NOVO SISTEMA DE PAGINAÇÃO V3 (Robusto e com Margens) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -346,6 +347,7 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
+            // Renderizamos o currículo inteiro SEM paginação para medir os blocos
             measurementRootRef.current.render(
                 <ResumePreview data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />
             );
@@ -356,141 +358,228 @@ const App: React.FC = () => {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            if (previewEl.scrollHeight <= 1123) {
-                setPaginatedData([dataToPaginate]);
-                return [dataToPaginate];
-            }
+            // Definições Rígidas de Tamanho A4 (em pixels a 96DPI)
+            const A4_HEIGHT = 1123; 
+            const MARGIN_TOP = 50;
+            const MARGIN_BOTTOM = 60; // Margem de segurança no fundo
+            const QR_CODE_RESERVED_HEIGHT = 140; // Espaço reservado para o QR code na página 1
 
-            const A4_PIXEL_HEIGHT = 1123;
-            const BOTTOM_MARGIN = 56;
-            const TOP_MARGIN_P2 = 56;
-            const CONTENT_HEIGHT_LIMIT = A4_PIXEL_HEIGHT - BOTTOM_MARGIN;
-            const MIN_SPLIT_HEIGHT = 50;
-
-            const getElementFullHeight = (element: Element | null): number => {
+            // Função para pegar altura com margens do elemento
+            const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
                 const style = window.getComputedStyle(element);
                 const marginTop = parseFloat(style.marginTop) || 0;
                 const marginBottom = parseFloat(style.marginBottom) || 0;
-                return (element as HTMLElement).offsetHeight + marginTop + marginBottom;
+                return element.offsetHeight + marginTop + marginBottom;
             };
 
+            const headerEl = previewEl.querySelector('header') as HTMLElement;
+            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            
+            // Se não tem main, retorna o dado original
+            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+
+            const headerHeight = getElementHeight(headerEl);
+            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+
+            // Preparação dos Blocos de Conteúdo
             interface ContentBlock {
-                id: string; type: keyof ResumeData; data: any; height: number; marginTop: number; isSplittable: boolean; isTitle?: boolean;
+                id: string;
+                type: keyof ResumeData; // 'summary', 'experiences', etc.
+                data: any; // O objeto de dados (ex: Experience)
+                height: number;
+                node: HTMLElement;
             }
 
             const blocks: ContentBlock[] = [];
-            const mainEl = previewEl.querySelector('main');
-            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
-            
-            Array.from(mainEl.children as HTMLCollectionOf<HTMLElement>).forEach(sectionEl => {
-                const sectionId = sectionEl.id || '';
-                let key = sectionId.replace('-section', '') as keyof ResumeData | 'experience';
-                if (key === 'experience') key = 'experiences';
-                
-                const data = dataToPaginate[key as keyof ResumeData];
-                if (!data || (Array.isArray(data) && data.length === 0)) return;
 
-                const sectionMarginTop = parseFloat(window.getComputedStyle(sectionEl).marginTop) || 0;
-                const titleEl = sectionEl.querySelector<HTMLElement>('.section-title');
+            // Helper para extrair blocos de uma seção
+            const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
+                const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
+                if (!sectionEl) return;
+
+                const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
                 if (titleEl) {
-                    blocks.push({ id: `${key}-title`, type: key, data: null, height: getElementFullHeight(titleEl), marginTop: sectionMarginTop, isSplittable: false, isTitle: true });
-                }
-
-                if (key === 'summary') {
-                    const contentEl = sectionEl.querySelector<HTMLElement>('#resume-summary');
-                    if (contentEl) blocks.push({ id: 'summary', type: 'summary', data: dataToPaginate.summary, height: getElementFullHeight(contentEl), marginTop: 0, isSplittable: true });
-                } else if (key === 'experiences') {
-                    const itemEls = Array.from(sectionEl.querySelectorAll<HTMLElement>(`#resume-experience-list > div`));
-                    dataToPaginate.experiences.forEach((exp, index) => {
-                        const itemEl = itemEls[index];
-                        if (!itemEl) return;
-                        const itemMarginTop = parseFloat(window.getComputedStyle(itemEl).marginTop) || 0;
-                        const headerEl = itemEl.querySelector(':scope > div:first-child') as HTMLElement;
-                        const descEl = itemEl.querySelector('p') as HTMLElement;
-                        if(headerEl) blocks.push({ id: `${exp.id}-header`, type: 'experiences', data: exp, height: getElementFullHeight(headerEl), marginTop: itemMarginTop, isSplittable: false});
-                        if(descEl) blocks.push({ id: exp.id, type: 'experiences', data: exp, height: getElementFullHeight(descEl), marginTop: 0, isSplittable: true});
+                    // Adiciona o Título da Seção como um bloco
+                    blocks.push({
+                        id: `${dataKey}-title`,
+                        type: dataKey,
+                        data: null, // Título não tem dados específicos
+                        height: getElementHeight(titleEl) + 10, // +10 de respiro
+                        node: titleEl
                     });
-                } else {
-                    blocks.push({ id: key, type: key, data, height: sectionEl.offsetHeight - (titleEl?.offsetHeight || 0), marginTop: 0, isSplittable: false });
                 }
-            });
 
-            const pages: PageData[] = [];
-            let currentPageData: PageData = { personalInfo: dataToPaginate.personalInfo, style: dataToPaginate.style };
-            const headerHeight = getElementFullHeight(previewEl.querySelector('header'));
-            const mainMarginTop = parseInt(window.getComputedStyle(mainEl).marginTop, 10) || 0;
-            let currentHeight = headerHeight + mainMarginTop;
+                if (dataKey === 'summary') {
+                    const pEl = sectionEl.querySelector('p') as HTMLElement;
+                    if (pEl) {
+                        blocks.push({
+                            id: 'summary-text',
+                            type: 'summary',
+                            data: dataToPaginate.summary,
+                            height: getElementHeight(pEl),
+                            node: pEl
+                        });
+                    }
+                } else if (listId) {
+                    // Para listas (experiência, educação, etc)
+                    const listContainer = sectionEl.querySelector(`#${listId}`);
+                    if (!listContainer) return;
+                    
+                    const items = Array.from(listContainer.children) as HTMLElement[];
+                    const dataList = dataToPaginate[dataKey] as any[];
 
-            const startNewPage = () => {
-                pages.push(currentPageData);
-                currentPageData = { style: dataToPaginate.style };
-                currentHeight = TOP_MARGIN_P2;
+                    items.forEach((itemEl, index) => {
+                        const itemData = dataList[index];
+                        if (itemData) {
+                            blocks.push({
+                                id: itemData.id,
+                                type: dataKey,
+                                data: itemData,
+                                height: getElementHeight(itemEl),
+                                node: itemEl
+                            });
+                        }
+                    });
+                } else if (dataKey === 'skills' || dataKey === 'languages') {
+                     // Skills e Languages muitas vezes são blocos únicos ou flex
+                     const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                     if(contentDiv) {
+                         blocks.push({
+                             id: `${dataKey}-block`,
+                             type: dataKey,
+                             data: dataToPaginate[dataKey], // Passa o array todo
+                             height: getElementHeight(contentDiv),
+                             node: contentDiv
+                         })
+                     }
+                }
             };
 
-            const addDataToPage = (page: PageData, block: ContentBlock) => {
-                if (block.isTitle) return;
-                const { type, data } = block;
-                if (Array.isArray((dataToPaginate as any)[type])) {
-                    if (!(page as any)[type]) (page as any)[type] = [];
-                    if (!(page as any)[type].some((i: any) => i.id === data.id)) (page as any)[type].push(data);
-                } else {
-                    (page as any)[type] = data;
-                }
+            // Extrair todos os blocos na ordem
+            if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
+            if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
+            if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
+            if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
+            if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
+            if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
+
+            // Lógica de Distribuição nas Páginas
+            const pages: PageData[] = [];
+            
+            // Inicia a primeira página
+            let currentPageData: PageData = { 
+                personalInfo: dataToPaginate.personalInfo, 
+                style: dataToPaginate.style,
+                // Inicializa arrays vazios
+                experiences: [], education: [], courses: [], languages: [], skills: []
             };
             
-            for (let i = 0; i < blocks.length; i++) {
-                const block = blocks[i];
-                const blockTotalHeight = block.height + block.marginTop;
+            // Altura inicial usada na página 1 (Header + margem inicial)
+            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
+            let currentPageIndex = 0;
 
-                if (block.isTitle) {
-                    const nextBlock = blocks[i + 1];
-                    if (nextBlock && nextBlock.type === block.type && !nextBlock.isTitle) {
-                        const spaceNeeded = blockTotalHeight + nextBlock.marginTop + (nextBlock.isSplittable ? MIN_SPLIT_HEIGHT : nextBlock.height);
-                        if (currentHeight + spaceNeeded > CONTENT_HEIGHT_LIMIT) {
-                            startNewPage();
-                        }
-                    }
+            const createNewPage = () => {
+                pages.push(currentPageData);
+                currentPageData = { 
+                    style: dataToPaginate.style,
+                    experiences: [], education: [], courses: [], languages: [], skills: []
+                };
+                currentPageIndex++;
+                currentY = MARGIN_TOP + 30; // Margem topo na página 2+ (menor pois não tem header)
+            };
+
+            const getAvailableSpace = () => {
+                let limit = A4_HEIGHT - MARGIN_BOTTOM;
+                // Se for a página 1 e tiver QR Code habilitado, reduz o espaço disponível
+                if (currentPageIndex === 0 && (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr)) {
+                    limit -= QR_CODE_RESERVED_HEIGHT;
                 }
-                
-                if (currentHeight + blockTotalHeight <= CONTENT_HEIGHT_LIMIT) {
-                    addDataToPage(currentPageData, block);
-                    currentHeight += blockTotalHeight;
-                } else {
-                    const remainingSpace = CONTENT_HEIGHT_LIMIT - currentHeight;
-                    const spaceForBlockContent = remainingSpace - block.marginTop;
+                return limit - currentY;
+            };
 
-                    if (block.isSplittable && spaceForBlockContent >= MIN_SPLIT_HEIGHT) {
-                        const visibleHeightOnPage1 = spaceForBlockContent;
-                        addDataToPage(currentPageData, block);
-                        if (!currentPageData.continuation) currentPageData.continuation = {};
-                        currentPageData.continuation[block.id] = { offset: 0, totalHeight: block.height, visibleHeight: visibleHeightOnPage1 };
-                        
-                        startNewPage();
-                        
-                        addDataToPage(currentPageData, block);
-                        if (!currentPageData.continuation) currentPageData.continuation = {};
-                        currentPageData.continuation[block.id] = { offset: visibleHeightOnPage1, totalHeight: block.height };
-                        
-                        currentHeight += (block.height - visibleHeightOnPage1);
-                    } else {
-                        startNewPage();
-                        addDataToPage(currentPageData, block);
-                        currentHeight += blockTotalHeight;
+            for (const block of blocks) {
+                // Caso especial: Títulos
+                if (block.id.endsWith('-title')) {
+                    // Verifica se tem espaço para o título + pelo menos 40px do próximo conteúdo
+                    // Se não tiver, joga o título para a próxima página
+                    if (getAvailableSpace() < (block.height + 40)) {
+                        createNewPage();
                     }
+                    // Títulos não são dados, são renderizados automaticamente se houver dados daquele tipo na página
+                    // Mas precisamos somar a altura dele no cursor Y para saber onde o próximo item vai entrar
+                    // O componente ResumePreview é inteligente: se houver items de 'experience' na página, ele renderiza o título.
+                    // Então, se acabamos de criar uma página, o título vai ser renderizado lá.
+                    // Nós apenas somamos a altura SE ele for ser renderizado (ou seja, se já não criamos uma pag nova para ele)
+                    
+                    // Pequena correção: Se o título "caber", nós somamos a altura. Se jogamos pra próxima pag, resetamos Y e somamos lá.
+                    currentY += block.height; 
+                    continue; 
+                }
+
+                // Blocos de Dados (Experiência, Resumo, etc)
+                const spaceNeeded = block.height;
+                const available = getAvailableSpace();
+
+                if (spaceNeeded <= available) {
+                    // Cabe na página
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                         // Skills/Languages vêm como bloco único ou array, dependendo da extração.
+                         // Na extração simplificada acima, tratei como bloco único se for lista simples
+                         currentPageData[block.type] = block.data;
+                    }
+                    currentY += spaceNeeded;
+                } else {
+                    // Não cabe. Tentar quebrar ou mover para próxima?
+                    // Estratégia Segura: Mover para próxima página (evita cortes feios no meio do texto)
+                    
+                    // Se o item for MAIOR que uma página inteira (muito raro, mas possível em descrições gigantes)
+                    // Aí sim precisaríamos de lógica de "continuation" (quebrar texto).
+                    // Para simplificar e garantir estabilidade, vamos mover para a próxima página.
+                    
+                    createNewPage();
+                    
+                    // Adiciona na nova página
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    }
+                    
+                    // Se for a nova página, temos que considerar que o título da seção será renderizado novamente
+                    // Então somamos a altura de um título "virtual"
+                    const titleHeight = 40; 
+                    currentY += titleHeight + spaceNeeded;
                 }
             }
 
-            if (Object.keys(currentPageData).length > 1) {
+            // Adiciona a última página
+            if (Object.keys(currentPageData).length > 0) {
                pages.push(currentPageData);
             }
             
-            const finalPages = pages.filter(p => Object.keys(p).some(k => k !== 'style' && k !== 'continuation' && (!Array.isArray((p as any)[k]) || (p as any)[k].length > 0)));
+            // Filtra páginas vazias (safety check)
+            const finalPages = pages.filter(p => {
+                const hasData = p.summary || 
+                                (p.experiences && p.experiences.length > 0) || 
+                                (p.education && p.education.length > 0) ||
+                                (p.courses && p.courses.length > 0) ||
+                                (p.skills && p.skills.length > 0);
+                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
+            });
+
             setPaginatedData(finalPages);
             return finalPages;
 
         } catch (error) {
             console.error("Pagination failed:", error);
+            // Fallback: mostra tudo numa página só se der erro
             setPaginatedData([dataToPaginate]);
             return [dataToPaginate];
         }
