@@ -322,7 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V4 (Com Correção de Viúvas e QR Code) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V6 (Correção Final de Layout) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -347,7 +347,8 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
-            // Renderizamos o currículo inteiro SEM paginação para medir os blocos
+            // Renderizamos o currículo inteiro SEM paginação para medir os blocos.
+            // Aqui usamos isMeasurement={true} para que ele não tenha altura fixa e expanda.
             measurementRootRef.current.render(
                 <ResumePreview data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />
             );
@@ -361,8 +362,8 @@ const App: React.FC = () => {
             // Definições Rígidas de Tamanho A4 (em pixels a 96DPI)
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
-            const MARGIN_BOTTOM = 60; // Margem de segurança no fundo
-            const QR_CODE_RESERVED_HEIGHT = 160; // Aumentei um pouco para segurança
+            const MARGIN_BOTTOM = 100; 
+            const QR_CODE_RESERVED_HEIGHT = 180; 
 
             // Função para pegar altura com margens do elemento
             const getElementHeight = (element: HTMLElement) => {
@@ -532,12 +533,6 @@ const App: React.FC = () => {
                 } else {
                     // Não cabe. Move para a próxima.
                     
-                    // SE acabamos de colocar um título (pendingTitleHeight > 0), 
-                    // significa que o título ficou na página anterior "sozinho" (viúva de cabeçalho).
-                    // Neste caso, seria ideal remover o título da página anterior?
-                    // Como não podemos "apagar" o que já foi processado facilmente,
-                    // a verificação no passo "Títulos" acima (block.height + nextItemHeight) já deve prevenir isso na maioria dos casos.
-                    
                     createNewPage();
                     
                     if (block.type === 'summary') {
@@ -548,9 +543,6 @@ const App: React.FC = () => {
                         currentPageData[block.type] = block.data;
                     }
                     
-                    // Na nova página, o título da seção será renderizado automaticamente pelo componente
-                    // se houver itens. Precisamos contabilizar o espaço desse título "implícito".
-                    // Usamos a altura do último título processado ou um padrão de 40px.
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
                     currentY += titleHeight + spaceNeeded;
                     pendingTitleHeight = 0;
@@ -640,7 +632,6 @@ const App: React.FC = () => {
         }
 
         // 2. Aguardar Renderização de SVGs e Imagens (Crítico para Mobile)
-        // Damos 1s para o navegador "desenhar" os SVGs dentro do #print-container invisível
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
@@ -661,24 +652,38 @@ const App: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
+                // **** CORREÇÃO FINAL: Forçar Altura para Evitar Ícones Dançantes ****
+                // Forçamos a altura via style inline para garantir que o html-to-image capture
+                // o fundo completo da página A4, mantendo os ícones no lugar certo (rodapé).
+                const originalHeight = pageEl.style.height;
+                const originalMinHeight = pageEl.style.minHeight;
+                pageEl.style.height = '1123px';
+                pageEl.style.minHeight = '1123px';
+
                 let imgData;
                 try {
-                    // Tenta gerar em alta qualidade (2x)
                     imgData = await toPng(pageEl, {
                         quality: 0.95,
                         pixelRatio: 2, 
-                        cacheBust: true, // Força recarregamento de imagens
-                        backgroundColor: '#ffffff'
+                        cacheBust: true, 
+                        backgroundColor: '#ffffff',
+                        height: 1123, // Reforço na config da lib
+                        width: 794    // Reforço na config da lib
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
-                    // Fallback para dispositivos com pouca memória (Mobile)
                     imgData = await toPng(pageEl, {
                         quality: 0.9,
-                        pixelRatio: 1, // Reduz resolução para evitar crash
-                        backgroundColor: '#ffffff'
+                        pixelRatio: 1, 
+                        backgroundColor: '#ffffff',
+                        height: 1123,
+                        width: 794
                     });
                 }
+
+                // Restaurar estilos originais (opcional, mas boa prática)
+                pageEl.style.height = originalHeight;
+                pageEl.style.minHeight = originalMinHeight;
 
                 if (i > 0) pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
@@ -823,12 +828,15 @@ const App: React.FC = () => {
         <div id="print-container">
              <div id="print-area">
                 {paginatedData.map((pageData, index) => (
-                    <div key={index} className="resume-page">
+                    <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px' }}>
                         <ResumePreview 
                             data={pageData} 
                             isDemoMode={false} 
                             isFirstPage={index === 0} 
-                            isMeasurement={true}
+                            // **** CORREÇÃO CRUCIAL AQUI: isMeasurement={false} ****
+                            // Isso garante que o componente tenha a altura fixa de 1123px (A4)
+                            // durante a geração da imagem, fixando os QR Codes no rodapé.
+                            isMeasurement={false} 
                         />
                     </div>
                 ))}
