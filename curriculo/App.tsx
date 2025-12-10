@@ -325,7 +325,9 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V8 (Correção de Layout QR Code) ---
+// (Mantém todo o código até a função paginateResume)
+
+    // --- NOVO SISTEMA DE PAGINAÇÃO V8 (Correção de Layout QR Code e Altura) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -363,8 +365,8 @@ const App: React.FC = () => {
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 100; 
-            // 180px é a altura aproximada da área do QR Code
-            const QR_CODE_ZONE_HEIGHT = 180; 
+            // 140px é altura suficiente para o QR Code + padding, permitindo mais conteúdo na página
+            const QR_CODE_ZONE_HEIGHT = 140; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -482,7 +484,6 @@ const App: React.FC = () => {
             };
 
             const getAvailableSpace = () => {
-                // NÃO subtraímos mais a altura do QR Code aqui.
                 // Deixamos a página fluir até ao limite normal da margem.
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
@@ -496,7 +497,7 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE OVERLAP ---
+                // --- LÓGICA DE OVERLAP CORRIGIDA ---
                 // Se estamos na primeira página, temos QR codes, e o bloco está entrando na "Zona de Perigo"
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
@@ -507,9 +508,9 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // Aumentamos a "altura projetada" porque ao estreitar o texto (70%), ele vai crescer verticalmente.
-                    // Estimativa conservadora de +20% de altura.
-                    effectiveHeight = block.height * 1.2; 
+                    // Ajuste no cálculo de altura projetada para ser menos agressivo
+                    // 1.35x considera o estreitamento, mas evita jogar conteúdo para a pág 2 prematuramente
+                    effectiveHeight = block.height * 1.35; 
                 }
 
                 if (block.id.endsWith('-title')) {
@@ -540,8 +541,7 @@ const App: React.FC = () => {
                 } else {
                     createNewPage();
                     
-                    // Na nova página, o bloco deixa de ser restrito (pois não há QR Code na pag 2)
-                    // Mas precisamos garantir que ele é adicionado corretamente.
+                    // Na nova página, o bloco deixa de ser restrito
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
@@ -551,7 +551,7 @@ const App: React.FC = () => {
                     }
                     
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                    currentY += titleHeight + effectiveHeight; // Usa height original na nova pagina, mas simplificado aqui
+                    currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 }
             }
@@ -579,10 +579,11 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    const scalePreview = useCallback(() => {
-        const previewColumn = previewWrapperRef.current?.parentElement;
-        const previewElement = previewRef.current?.getElement();
-        
+// (Mantém o scalePreview e efeitos)
+
+    // ... (exportToPdf e resto do componente) ...
+    // Apenas a seção de renderização foi ajustada para passar isPrint
+    
         if (!previewColumn || !previewElement) return;
 
         const columnWidth = previewColumn.offsetWidth;
@@ -827,9 +828,8 @@ const App: React.FC = () => {
                             data={pageData} 
                             isDemoMode={false} 
                             isFirstPage={index === 0} 
-                            // **** AQUI ESTÁ A CHAVE: Passamos hideEmptySections={true} ****
-                            // Isso garante que títulos sem conteúdo não apareçam no PDF final.
-                            isMeasurement={true}
+                            isMeasurement={false} // Desativa modo medição para aplicar estilos
+                            isPrint={true} // Ativa modo impressão para forçar altura e remover sombras
                             hideEmptySections={true}
                         />
                     </div>
@@ -837,6 +837,7 @@ const App: React.FC = () => {
              </div>
         </div>
 
+        {/* ... Resto do JSX mantido ... */}
         {toast && (
             <div
                 role="alert"
@@ -851,6 +852,8 @@ const App: React.FC = () => {
                 {toast.message}
             </div>
         )}
+        
+        {/* ... Modais e Botões ... */}
         {isPixModalOpen && pixPaymentData && (
             <PixModal
                 isOpen={isPixModalOpen}
