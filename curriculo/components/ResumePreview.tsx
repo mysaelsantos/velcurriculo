@@ -64,15 +64,20 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     return content;
   };
   
-  // Helper para verificar se devemos mostrar uma secção
+  // Lógica aprimorada para decidir se mostra a seção
   const shouldShowSection = (content: any, isArray = false) => {
-      if (isMeasurement) return true; // Sempre mostra na medição
-      if (hideEmptySections) {
-          // Se estamos escondendo vazios (PDF final), só mostra se tiver dados
-          if (isArray) return content && content.length > 0;
+      // Se for medição, mostra tudo para calcular alturas
+      if (isMeasurement && !hideEmptySections) return true;
+
+      // Se tiver hideEmptySections (PDF Final), ou se não for a primeira página
+      if (hideEmptySections || !isFirstPage) {
+          if (isArray) {
+              return content && content.length > 0;
+          }
           return !!content;
       }
-      // Comportamento padrão (Edição/Demo): mostra se tem dados OU se é demo/medição
+
+      // No modo de edição (Página 1), mostra placeholders se não tiver conteúdo
       return content || !isDemoMode; 
   };
 
