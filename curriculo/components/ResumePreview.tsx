@@ -43,8 +43,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   // Helper para verificar se um bloco específico está na zona de perigo (QR Code)
   const getRestrictionClass = (blockId: string) => {
-      // Se estiver na lista de restritos, limita a 60% da largura para dar espaço ao QR Code
-      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
+      // Se estiver na lista de restritos, limita a largura para dar espaço ao QR Code
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[65%]' : '';
   };
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
@@ -231,6 +231,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section" className={getRestrictionClass('skills-block')}>
             <h3 className="section-title">Habilidades e Competências</h3>
+            {/* CORREÇÃO: Layout Flexbox para as pílulas */}
             <div id="resume-skills" className="flex flex-wrap gap-2">
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
