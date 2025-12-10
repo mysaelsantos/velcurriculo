@@ -18,8 +18,10 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
+    restrictedBlockIds?: string[]; // Novo campo para o App.tsx também
 }
 
+// ... (Resto das constantes e imports iniciais mantidos iguais) ...
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
@@ -35,7 +37,7 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Solteiro(a)',
         cnh: 'B',
         linkedin: 'linkedin.com/in/ana-silva-demo',
-        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM5Q0EzQUYiIGNsYXNzPSJ3LWZ1bGwgaC1mdWxsIHBhZGRpbmciPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDEuNzkgNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4='
+        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM5Q0EzQUYiIGNsYXNzPSJ3LWZ1bGwgaC1mdWxsIHBhZGRpbmciPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4='
     },
     summary: 'Desenvolvedora front-end proativa com 3+ anos de experiência na criação de interfaces de usuário responsivas e performáticas com React e Vue.js. Apaixonada por design limpo e em busca de novos desafios para aplicar minhas habilidades em UI/UX. Histórico comprovado na otimização de performance, resultando em melhorias significativas no Core Web Vitals e na satisfação do cliente. Proficiente em metodologias ágeis e ferramentas de versionamento como Git.',
     experiences: [
@@ -73,6 +75,7 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true, showLinkedinQr: true }
 };
 
+// ... (Testimonials e helpers mantidos) ...
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está a começar a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -322,7 +325,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V7 (Correção de Placeholders e Layout) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V8 (Correção de Layout QR Code) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -347,9 +350,6 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
-            // Renderizamos o currículo para medição
-            // IMPORTANTE: isDemoMode=false e isMeasurement=true para que os placeholders NÃO apareçam
-            // e os cálculos de altura sejam reais (sem textos de exemplo vazios ocupando espaço).
             measurementRootRef.current.render(
                 <ResumePreview data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />
             );
@@ -360,13 +360,12 @@ const App: React.FC = () => {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            // Definições Rígidas de Tamanho A4 (em pixels a 96DPI)
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 100; 
-            const QR_CODE_RESERVED_HEIGHT = 180; 
+            // 180px é a altura aproximada da área do QR Code
+            const QR_CODE_ZONE_HEIGHT = 180; 
 
-            // Função para pegar altura com margens do elemento
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
                 const style = window.getComputedStyle(element);
@@ -383,7 +382,6 @@ const App: React.FC = () => {
             const headerHeight = getElementHeight(headerEl);
             const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
 
-            // Preparação dos Blocos de Conteúdo
             interface ContentBlock {
                 id: string;
                 type: keyof ResumeData; 
@@ -394,7 +392,6 @@ const App: React.FC = () => {
 
             const blocks: ContentBlock[] = [];
 
-            // Helper para extrair blocos de uma seção
             const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
                 const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
                 if (!sectionEl) return;
@@ -454,7 +451,6 @@ const App: React.FC = () => {
                 }
             };
 
-            // Extrair todos os blocos na ordem
             if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
             if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
             if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
@@ -462,13 +458,13 @@ const App: React.FC = () => {
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            // Lógica de Distribuição nas Páginas
             const pages: PageData[] = [];
             
             let currentPageData: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
-                experiences: [], education: [], courses: [], languages: [], skills: []
+                experiences: [], education: [], courses: [], languages: [], skills: [],
+                restrictedBlockIds: []
             };
             
             let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
@@ -478,45 +474,60 @@ const App: React.FC = () => {
                 pages.push(currentPageData);
                 currentPageData = { 
                     style: dataToPaginate.style,
-                    experiences: [], education: [], courses: [], languages: [], skills: []
+                    experiences: [], education: [], courses: [], languages: [], skills: [],
+                    restrictedBlockIds: []
                 };
                 currentPageIndex++;
                 currentY = MARGIN_TOP + 30; 
             };
 
             const getAvailableSpace = () => {
-                let limit = A4_HEIGHT - MARGIN_BOTTOM;
-                if (currentPageIndex === 0 && (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr)) {
-                    limit -= QR_CODE_RESERVED_HEIGHT;
-                }
-                return limit - currentY;
+                // NÃO subtraímos mais a altura do QR Code aqui.
+                // Deixamos a página fluir até ao limite normal da margem.
+                return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
+
+            // Ponto onde começa a área do QR Code (de baixo para cima)
+            const dangerZoneStart = A4_HEIGHT - MARGIN_BOTTOM - QR_CODE_ZONE_HEIGHT;
 
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
+                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // Lógica Especial para Títulos
+                // --- LÓGICA DE OVERLAP ---
+                // Se estamos na primeira página, temos QR codes, e o bloco está entrando na "Zona de Perigo"
+                const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                
+                let effectiveHeight = block.height;
+
+                if (isInDangerZone) {
+                    // Se entrar na zona, adicionamos aos IDs restritos
+                    if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
+                    currentPageData.restrictedBlockIds.push(block.id);
+                    
+                    // Aumentamos a "altura projetada" porque ao estreitar o texto (70%), ele vai crescer verticalmente.
+                    // Estimativa conservadora de +20% de altura.
+                    effectiveHeight = block.height * 1.2; 
+                }
+
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
-                    if (getAvailableSpace() < (block.height + nextItemHeight)) {
+                    if (getAvailableSpace() < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
                     }
                     
-                    currentY += block.height;
-                    pendingTitleHeight = block.height; 
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = effectiveHeight; 
                     continue; 
                 }
 
-                // Blocos de Dados
-                const spaceNeeded = block.height;
                 const available = getAvailableSpace();
 
-                if (spaceNeeded <= available) {
-                    // Cabe na página
+                if (effectiveHeight <= available) {
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
@@ -524,12 +535,13 @@ const App: React.FC = () => {
                     } else if (block.type === 'skills' || block.type === 'languages') {
                          currentPageData[block.type] = block.data;
                     }
-                    currentY += spaceNeeded;
+                    currentY += effectiveHeight;
                     pendingTitleHeight = 0; 
                 } else {
-                    // Não cabe. Move para a próxima.
                     createNewPage();
                     
+                    // Na nova página, o bloco deixa de ser restrito (pois não há QR Code na pag 2)
+                    // Mas precisamos garantir que ele é adicionado corretamente.
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
@@ -539,7 +551,7 @@ const App: React.FC = () => {
                     }
                     
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                    currentY += titleHeight + spaceNeeded;
+                    currentY += titleHeight + effectiveHeight; // Usa height original na nova pagina, mas simplificado aqui
                     pendingTitleHeight = 0;
                 }
             }
@@ -607,14 +619,11 @@ const App: React.FC = () => {
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
-    // =========================================================================
-    //  GERAÇÃO DE PDF BLINDADA (SNAPSHOT HÍBRIDO)
-    // =========================================================================
+    // ... (exportToPdf e resto do componente mantido igual) ...
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
         
-        // 1. Garantir Fontes
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -626,7 +635,6 @@ const App: React.FC = () => {
             return;
         }
 
-        // 2. Aguardar Renderização de SVGs e Imagens (Crítico para Mobile)
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
@@ -647,8 +655,6 @@ const App: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
-                // **** CORREÇÃO FINAL: Garantir que o CSS do index.html esteja atuando ****
-                // Se o style inline já está no JSX, isso é redundante mas seguro.
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
 
@@ -659,8 +665,8 @@ const App: React.FC = () => {
                         pixelRatio: 2, 
                         cacheBust: true, 
                         backgroundColor: '#ffffff',
-                        height: 1123, // Reforço na config da lib
-                        width: 794    // Reforço na config da lib
+                        height: 1123, 
+                        width: 794    
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
