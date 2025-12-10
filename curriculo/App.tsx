@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
+// @ts-ignore
+import { toPng } from 'html-to-image';
+// @ts-ignore
+import { jsPDF } from 'jspdf';
 import ResumeForm from './components/ResumeForm';
 import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
@@ -111,7 +115,6 @@ const calculateCurrentGenerated = (base: number) => {
   const now = new Date();
   const hour = now.getHours();
   
-  // Antes das 9h, exibe apenas o número base do dia.
   if (hour < 9) return base;
   
   const startOfDayCount = new Date();
@@ -120,25 +123,21 @@ const calculateCurrentGenerated = (base: number) => {
   const endOfDayCount = new Date();
   endOfDayCount.setHours(19, 0, 0, 0);
   
-  // Após as 19h, exibe o total do dia (10 horas de contagem).
   if (now > endOfDayCount) {
     const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
     return base + Math.floor(totalSecondsInWorkDay / 20);
   }
   
-  // Durante o dia (9h às 19h), calcula com base no tempo decorrido.
   const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
   return base + Math.floor(secondsElapsed / 20);
 };
 
-// FIX: Changed paymentIntentId to paymentId to match the expected prop in PixModal and backend response.
 interface PixPaymentData {
     qrCodeUrl: string;
     copyPasteCode: string;
     paymentId: string;
 }
 
-// --- COMPONENTES ISOLADOS PARA EVITAR RE-RENDER DA ANIMAÇÃO ---
 const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => (
     <li className="flex flex-col flex-shrink-0 w-80 bg-white p-6 rounded-lg shadow-lg" aria-hidden={ariaHidden}>
         <div className="flex-grow">
@@ -158,14 +157,12 @@ const TestimonialsSection = React.memo(() => {
                 <div className="scroller px-4 py-4" data-animated="true">
                     <ul className="scroller__inner list-none p-0">
                         {TESTIMONIALS_1.map((item, index) => <TestimonialCard key={index} item={item} />)}
-                        {/* Duplicata para animação infinita */}
                         {TESTIMONIALS_1.map((item, index) => <TestimonialCard key={`dupe-${index}`} item={item} ariaHidden={true} />)}
                     </ul>
                 </div>
                 <div className="scroller px-4 py-4" data-direction="right" data-animated="true">
                      <ul className="scroller__inner list-none p-0">
                         {TESTIMONIALS_2.map((item, index) => <TestimonialCard key={index} item={item} />)}
-                        {/* Duplicata para animação infinita */}
                         {TESTIMONIALS_2.map((item, index) => <TestimonialCard key={`dupe-${index}`} item={item} ariaHidden={true} />)}
                     </ul>
                 </div>
@@ -173,13 +170,9 @@ const TestimonialsSection = React.memo(() => {
         </section>
     );
 });
-// --------------------------------------------------------------
 
 const App: React.FC = () => {
-    // --- PRODUCTION MODE ---
-    // This is now set to 'false' to use the real Stripe API.
     const isPixTestMode = false;
-    // ------------------------
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
@@ -192,13 +185,13 @@ const App: React.FC = () => {
     const [resumesGenerated, setResumesGenerated] = useState(() => calculateCurrentGenerated(calculateTodaysBase()));
     const [isPixModalOpen, setIsPixModalOpen] = useState(false);
     const [pixPaymentData, setPixPaymentData] = useState<PixPaymentData | null>(null);
-    // FIX: Add state to hold the payment amount for the PixModal.
     const [paymentAmount, setPaymentAmount] = useState(5.00);
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     const [fontsLoaded, setFontsLoaded] = useState(false);
+    const [generatingStatus, setGeneratingStatus] = useState<string>('');
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
@@ -214,8 +207,6 @@ const App: React.FC = () => {
     const measurementRootRef = useRef<any>(null);
     
     useEffect(() => {
-        // This effect ensures that the main app content only renders after custom fonts are ready.
-        // This prevents layout shifts and ensures that PDF generation captures the correct styling.
         const loadFonts = async () => {
             try {
                 await document.fonts.ready;
@@ -230,9 +221,8 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const interval = setInterval(() => {
-            // Recalcula o valor com base na hora atual para garantir que todos os usuários vejam o mesmo número.
             setResumesGenerated(calculateCurrentGenerated(calculateTodaysBase()));
-        }, 5000); // Atualiza a cada 5 segundos para uma sensação mais "ao vivo".
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -242,6 +232,8 @@ const App: React.FC = () => {
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
+        // Garantir largura para medição correta
+        measurementNode.style.width = '794px'; 
         document.body.appendChild(measurementNode);
         measurementRootRef.current = ReactDOM.createRoot(measurementNode);
     
@@ -253,10 +245,8 @@ const App: React.FC = () => {
         };
     }, []);
     
-    // Load data from localStorage on initial render
     useEffect(() => {
         try {
-            // Load in-progress resume
             const savedProgress = localStorage.getItem('inProgressResume');
             if (savedProgress) {
                 const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = JSON.parse(savedProgress);
@@ -266,7 +256,6 @@ const App: React.FC = () => {
                 setIsDemoMode(false);
             }
 
-            // Load saved (paid) resumes
             const storedResumes = localStorage.getItem('savedResumes');
             if (storedResumes) {
                 setSavedResumes(JSON.parse(storedResumes));
@@ -276,9 +265,8 @@ const App: React.FC = () => {
         }
     }, []);
 
-    // Save progress to localStorage whenever it changes
     useEffect(() => {
-        if (!isDemoMode) { // Don't save if in demo mode
+        if (!isDemoMode) { 
             try {
                 const progress = { resumeData, currentStep, isFinished };
                 localStorage.setItem('inProgressResume', JSON.stringify(progress));
@@ -339,7 +327,6 @@ const App: React.FC = () => {
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
             const root = measurementRootRef.current;
-            // Aumentado tempo de timeout para evitar erros em conexões lentas ou com muitas imagens
             const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
     
             const checkRender = async () => {
@@ -530,7 +517,7 @@ const App: React.FC = () => {
 
     useEffect(() => {
         const handler = setTimeout(() => {
-            if (fontsLoaded) { // Only paginate after fonts are loaded
+            if (fontsLoaded) { 
                 paginateResume(resumeData);
             }
         }, 300);
@@ -542,31 +529,91 @@ const App: React.FC = () => {
 
 
     useEffect(() => {
-        if(fontsLoaded){ // Only scale after fonts are loaded
+        if(fontsLoaded){ 
             scalePreview();
             window.addEventListener('resize', scalePreview);
             return () => window.removeEventListener('resize', scalePreview);
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
+    // =========================================================================
+    //  GERAÇÃO DE PDF BLINDADA (SNAPSHOT HÍBRIDO)
+    // =========================================================================
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
+        setGeneratingStatus('Preparando documento...');
         
-        // 1. Aguardar carregamento de fontes explicitamente
+        // 1. Garantir Fontes
         if (document.fonts) {
             await document.fonts.ready;
         }
-        
-        // 2. Pequeno delay para garantir que o React renderizou qualquer estado pendente
-        // e que o CSS de impressão será aplicado corretamente.
-        setTimeout(() => {
-            window.print();
+
+        const printArea = document.getElementById('print-area');
+        if (!printArea) {
+            console.error("Print area not found");
             setIsPaymentProcessing(false);
-        }, 500);
+            return;
+        }
+
+        // 2. Aguardar Renderização de SVGs e Imagens (Crítico para Mobile)
+        // Damos 1s para o navegador "desenhar" os SVGs dentro do #print-container invisível
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        try {
+            setGeneratingStatus('Gerando imagens...');
+            const pages = Array.from(printArea.querySelectorAll('.resume-page')) as HTMLElement[];
+            
+            if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
+
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+
+            for (let i = 0; i < pages.length; i++) {
+                const pageEl = pages[i];
+                
+                let imgData;
+                try {
+                    // Tenta gerar em alta qualidade (2x)
+                    imgData = await toPng(pageEl, {
+                        quality: 0.95,
+                        pixelRatio: 2, 
+                        cacheBust: true, // Força recarregamento de imagens
+                        backgroundColor: '#ffffff'
+                    });
+                } catch (firstError) {
+                    console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
+                    // Fallback para dispositivos com pouca memória (Mobile)
+                    imgData = await toPng(pageEl, {
+                        quality: 0.9,
+                        pixelRatio: 1, // Reduz resolução para evitar crash
+                        backgroundColor: '#ffffff'
+                    });
+                }
+
+                if (i > 0) pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            }
+
+            setGeneratingStatus('Finalizando PDF...');
+            const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
+            pdf.save(fileName);
+
+        } catch (error) {
+            console.error("Erro ao gerar PDF:", error);
+            showToast("Erro ao gerar PDF. Tente usar um computador se persistir.", "error");
+        } finally {
+            setIsPaymentProcessing(false);
+            setGeneratingStatus('');
+        }
         
     }, []);
 
-    // FIX: Update to use paymentId and set payment amount for the modal.
     const handlePaymentRequest = async () => {
         if(hasPaidInSession) {
             exportToPdf(resumeData);
@@ -662,7 +709,6 @@ const App: React.FC = () => {
             setIsDemoMode(false);
             setHasPaidInSession(false);
             setIsMyResumesModalOpen(false);
-            // Scroll to form
             document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
         }
     };
@@ -689,18 +735,20 @@ const App: React.FC = () => {
 
     return (
         <>
-        {/* Hidden Print Area */}
-        <div id="print-area">
-             {paginatedData.map((pageData, index) => (
-                 <div key={index} className="resume-page">
-                    <ResumePreview 
-                        data={pageData} 
-                        isDemoMode={false} 
-                        isFirstPage={index === 0} 
-                        isMeasurement={true} // Removes UI shadows and rounded corners
-                    />
-                 </div>
-             ))}
+        {/* --- ÁREA DE IMPRESSÃO BLINDADA (SNAPSHOT) --- */}
+        <div id="print-container">
+             <div id="print-area">
+                {paginatedData.map((pageData, index) => (
+                    <div key={index} className="resume-page">
+                        <ResumePreview 
+                            data={pageData} 
+                            isDemoMode={false} 
+                            isFirstPage={index === 0} 
+                            isMeasurement={true}
+                        />
+                    </div>
+                ))}
+             </div>
         </div>
 
         {toast && (
@@ -717,7 +765,6 @@ const App: React.FC = () => {
                 {toast.message}
             </div>
         )}
-        {/* FIX: Pass the missing 'amount' prop to the PixModal component. */}
         {isPixModalOpen && pixPaymentData && (
             <PixModal
                 isOpen={isPixModalOpen}
@@ -754,7 +801,7 @@ const App: React.FC = () => {
                 </div>
             </div>
         )}
-        {/* Floating Test Button */}
+        {/* Botão de Teste (Visível apenas em Dev/Teste) */}
         <button
             type="button"
             onClick={() => exportToPdf(resumeData)}
@@ -805,7 +852,6 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* FIX: Add the missing 'onRequestImport' prop to satisfy the component's interface. */}
                     <ResumeForm 
                         data={resumeData} 
                         setData={setResumeData} 
@@ -873,7 +919,6 @@ const App: React.FC = () => {
                 </div>
             </section>
 
-            {/* TESTIMONIALS SECTION REFATORADA USANDO MEMO */}
             <TestimonialsSection />
             
              <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
