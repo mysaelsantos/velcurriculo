@@ -18,7 +18,7 @@ interface ResumeFormProps {
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
   isFinished: boolean;
   setIsFinished: React.Dispatch<React.SetStateAction<boolean>>;
-  onRequestImport: () => void; // A prop ainda existe, mas não será chamada
+  onRequestImport: () => void;
 }
 
 const WIZARD_STEPS = [
@@ -135,8 +135,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
-  // SOLUÇÃO: Estado local para controlar o input de habilidades e evitar conflito de formatação enquanto digita
-  // Inicializa com a string correta baseada no array
+  // SOLUÇÃO: Estado local para controlar o input de habilidades
   const [skillsInput, setSkillsInput] = useState(data.skills.join(', '));
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
@@ -149,21 +148,14 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             stepsContainerRef.current.style.height = `${activeStepNode.scrollHeight}px`;
         }
     }
-  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary]);
+  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, skillsInput]);
   
-  // SOLUÇÃO V2 (Mais Robusta): Sincroniza o input local APENAS se os dados mudarem DE FORA (ex: sugestão clicada, IA).
-  // Se a mudança veio da digitação (skillsInput), não faz nada para não mover o cursor ou apagar texto.
+  // SOLUÇÃO V2 (Mais Robusta): Sincroniza o input local se os dados mudarem externamente
   useEffect(() => {
-    // Reconstrói a string a partir do array atual para comparação
     const skillsStringFromArray = data.skills.join(', ');
+    const currentInputParsed = skillsInput.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
     
-    // Parsa o input atual para ver se é semanticamente igual ao array
-    // Isso evita re-setar o input só porque tem um espaço a mais ou uma vírgula no final que o usuário está digitando
-    const currentInputParsed = skillsInput.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-    
-    // Se o array de dados tem um número diferente de itens, ou itens diferentes,
-    // significa que uma ação externa (clique em sugestão, IA) alterou os dados.
-    // Nesse caso, atualizamos o input visual.
+    // Verifica se houve mudança real nos dados (ex: sugestão clicada)
     const arraysAreDifferent = 
         data.skills.length !== currentInputParsed.length ||
         !data.skills.every((val, index) => val === currentInputParsed[index]);
@@ -171,7 +163,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     if (arraysAreDifferent) {
          setSkillsInput(skillsStringFromArray);
     }
-  }, [data.skills]); // Dependência apenas em data.skills, não em skillsInput para evitar loop
+  }, [data.skills]); 
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -180,18 +172,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     setOpenAccordion(prev => ({...prev, course: newId}));
   };
 
-  useEffect(() => {
-    // FIX: Remover a auto-criação de curso para permitir lista vazia
-    // if (currentStep === 5 && data.courses.length === 0) {
-    //   addCourse();
-    // }
-  }, [currentStep, data.courses.length]);
-
-
   const handleNext = () => {
-    // **** Modal de Importação está DESATIVADO ****
-    // O botão "Começar" (no modo demo, passo 0) agora apenas limpa o formulário
-    // e sai do modo demo, como era originalmente.
     if (isDemoMode && currentStep === 0) {
       onStartEditing(); 
       setCurrentStep(currentStep + 1); 
@@ -302,28 +283,42 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }));
   };
 
+  // --- LÓGICA DE HABILIDADES CORRIGIDA ---
   const handleAddSkill = (skill: string) => {
     // Normaliza para evitar duplicatas (case insensitive)
     if (!data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())) {
         const newSkills = [...data.skills, skill];
         handleDataChange('skills', newSkills);
-        // O useEffect cuidará de atualizar o skillsInput
+        // O useEffect cuidará de atualizar o visual do input com a vírgula correta
     }
   };
 
   const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setSkillsInput(val); // Atualiza o texto local imediatamente (permite digitar livremente)
+    setSkillsInput(val); // Atualiza visualmente o que o usuário digita
     
-    // Atualiza o estado global dividindo por vírgula ou ponto-e-vírgula
-    // Importante: filter(Boolean) remove strings vazias resultantes de "React, "
-    const skillsArray = val.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    // Divide por vírgula, ponto e vírgula OU quebra de linha
+    const skillsArray = val.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
     
-    // Só atualiza o estado global se houver mudança real nos itens para evitar re-renders excessivos
     if (JSON.stringify(skillsArray) !== JSON.stringify(data.skills)) {
         handleDataChange('skills', skillsArray);
     }
   };
+
+  // Garante a formatação bonita (com vírgula e espaço) quando o usuário sai do campo
+  const handleSkillsBlur = () => {
+    const formatted = data.skills.join(', ');
+    setSkillsInput(formatted);
+  };
+
+  // Permite usar ENTER para separar habilidades
+  const handleSkillsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Evita submit do form se houver
+      setSkillsInput(prev => prev + ', '); // Adiciona vírgula visual
+    }
+  };
+  // ----------------------------------------
   
   const handleAddSummarySuggestion = (suggestion: string) => {
       const textarea = document.getElementById('summary-textarea') as HTMLTextAreaElement;
@@ -704,7 +699,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                                     <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50" onClick={() => handleAccordionToggle('course', course.id)}>
                                         <h4 className="font-semibold text-gray-800">{course.name || 'Novo Curso'}</h4>
                                         <div className="flex items-center gap-2">
-                                            <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: course.id, type: 'course' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: course.id, type: 'course' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
                                             <svg className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                                         </div>
                                     </div>
@@ -775,11 +770,13 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             content = (
                 <>
                     <input type="text" placeholder="Ex: HTML, CSS, Liderança" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
-                        value={skillsInput} // USA O ESTADO LOCAL AQUI
-                        onChange={handleSkillsInputChange} 
+                        value={skillsInput} 
+                        onChange={handleSkillsInputChange}
+                        onBlur={handleSkillsBlur}
+                        onKeyDown={handleSkillsKeyDown}
                         maxLength={CHAR_LIMITS.skills}
                         />
-                    <p className="text-xs text-gray-500 mt-1">Separe as habilidades por vírgula.</p>
+                    <p className="text-xs text-gray-500 mt-1">Separe as habilidades por vírgula ou pressione Enter.</p>
                     
                     <div className="mt-4 mb-2">
                       <label className="block text-sm font-medium text-gray-700">Sugestões:</label>
@@ -875,8 +872,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                   <div className="p-5 border-b border-gray-200 flex justify-between items-center">
                       <h3 id="tutorial-title" className="text-xl font-bold gradient-text">Como Baixar seu Histórico de Trabalho</h3>
                       
-                      {/* --- O BOTÃO "X" FOI REMOVIDO DAQUI --- */}
-
                   </div>
                   
                   <div className="p-6">
