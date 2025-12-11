@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { ResumeData, Experience, Education, Course, Language } from '../types';
 import { enhanceText, suggestSkills, analyzeWorkExperiencePDF } from '../services/geminiService';
@@ -33,7 +32,6 @@ const WIZARD_STEPS = [
   "Habilidades e Competências",
 ];
 
-// ... (Restante das constantes SKILL_SUGGESTIONS, LANGUAGE_SUGGESTIONS, etc. mantido, sem alteração) ...
 const SKILL_SUGGESTIONS = [
     "Pacote Office", "Excel Avançado", "Comunicação Efetiva", "Trabalho em Equipa",
     "Liderança", "Proatividade", "Organização", "Atendimento ao Cliente", "Gestão de Tempo"
@@ -285,7 +283,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   };
 
   const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const skillsArray = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+    // ATUALIZAÇÃO: Agora aceita vírgula (,) ou ponto-e-vírgula (;) para separar as habilidades
+    const skillsArray = e.target.value.split(/[,;]/).map(s => s.trim()).filter(Boolean);
     handleDataChange('skills', skillsArray);
   };
   
