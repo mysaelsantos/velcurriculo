@@ -41,15 +41,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // Helper para verificar se um bloco específico está na zona de perigo (QR Code)
+  // SOLUÇÃO V11: Restrição Determinística
+  // Garante que o CSS respeita o mesmo cálculo da paginação (max-w-[60%])
   const getRestrictionClass = (blockId: string) => {
-      // Se estiver na lista de restritos, limita a 60% da largura para dar espaço ao QR Code
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
   };
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
     const continuationInfo = continuation?.[itemId];
-    // Verifica restrição também para itens individuais (como experiências longas)
     const restrictionClass = getRestrictionClass(itemId);
 
     if (continuationInfo) {
@@ -74,7 +73,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       );
     }
     
-    // Se não for continuação mas for restrito (ex: item curto na zona do QR Code)
     if (restrictionClass) {
         return <div className={restrictionClass}>{content}</div>;
     }
@@ -129,6 +127,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
+                    {/* SOLUÇÃO V11: Removido sufixo (CONTINUAÇÃO) se existia */}
                     <h3 className="section-title">Resumo Profissional</h3>
                      {renderWithContinuation('summary-text',
                         <p id="resume-summary" className="text-gray-700 leading-relaxed">
@@ -231,7 +230,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section" className={getRestrictionClass('skills-block')}>
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* CORREÇÃO: Layout Flexbox para as pílulas */}
+            {/* SOLUÇÃO V11: Layout Flexbox melhorado para evitar colapso visual */}
             <div id="resume-skills" className="flex flex-wrap gap-2">
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
