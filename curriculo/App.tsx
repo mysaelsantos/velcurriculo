@@ -324,7 +324,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO V12 (Margem + Correção de Duplicados) ---
+    // --- LÓGICA DE PAGINAÇÃO V13 (Ajuste da Zona de QR Code) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -361,10 +361,9 @@ const App: React.FC = () => {
             
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
-            // AUMENTO DA MARGEM PARA CRIAR AREA SEGURA
             const MARGIN_BOTTOM = 130; 
-            // Altura da Zona de Perigo (onde está o QR Code)
-            const QR_CODE_ZONE_HEIGHT = 220; 
+            // SOLUÇÃO V13: Reduzido drasticamente para 100px para corresponder à realidade
+            const QR_CODE_ZONE_HEIGHT = 100; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -817,7 +816,7 @@ const App: React.FC = () => {
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
                             isPrint={true} 
-                            hideEmptySections={true}
+                            hideEmptySections={paginatedData.length > 1} 
                         />
                     </div>
                 ))}
