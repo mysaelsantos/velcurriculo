@@ -135,6 +135,9 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
+  // SOLUÇÃO: Estado local para controlar o input de habilidades e evitar conflito de formatação enquanto digita
+  const [skillsInput, setSkillsInput] = useState(data.skills.join(', '));
+
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -147,6 +150,15 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary]);
   
+  // SOLUÇÃO: Sincroniza o input local se as habilidades mudarem externamente (ex: IA ou sugestões)
+  // mas NÃO sobrescreve se o que está digitado for "equivalente" ao dado real (evita apagar vírgulas enquanto digita)
+  useEffect(() => {
+    const currentParsed = skillsInput.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+    if (JSON.stringify(currentParsed) !== JSON.stringify(data.skills)) {
+         setSkillsInput(data.skills.join(', '));
+    }
+  }, [data.skills, skillsInput]);
+
   const addCourse = () => {
     const newId = Date.now().toString();
     const newCourse: Course = { id: newId, name: '', institution: '', completionDate: '' };
@@ -283,8 +295,11 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   };
 
   const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // ATUALIZAÇÃO: Agora aceita vírgula (,) ou ponto-e-vírgula (;) para separar as habilidades
-    const skillsArray = e.target.value.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+    const val = e.target.value;
+    setSkillsInput(val); // Atualiza o texto local imediatamente (permite digitar vírgulas)
+    
+    // Atualiza o estado global dividindo por vírgula ou ponto-e-vírgula
+    const skillsArray = val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
     handleDataChange('skills', skillsArray);
   };
   
@@ -738,7 +753,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             content = (
                 <>
                     <input type="text" placeholder="Ex: HTML, CSS, Liderança" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
-                        value={data.skills.join(', ')}
+                        value={skillsInput} // USA O ESTADO LOCAL AQUI
                         onChange={handleSkillsInputChange} 
                         maxLength={CHAR_LIMITS.skills}
                         />
