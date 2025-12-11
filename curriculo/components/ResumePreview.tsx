@@ -43,8 +43,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   // Helper para verificar se um bloco específico está na zona de perigo (QR Code)
   const getRestrictionClass = (blockId: string) => {
-      // Se estiver na lista de restritos, limita a largura para dar espaço ao QR Code
-      return restrictedBlockIds.includes(blockId) ? 'max-w-[65%]' : '';
+      // Se estiver na lista de restritos, limita a 60% da largura para dar espaço ao QR Code
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
   };
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
