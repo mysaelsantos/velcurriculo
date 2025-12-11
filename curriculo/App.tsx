@@ -1021,7 +1021,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
                         <div>
-                            <h4 className="font-bold text-lg mb-4">Contacto</h4>
+                            <h4 className="font-bold text-lg mb-4">Contato</h4>
                             <ul className="space-y-2">
                                 <li className="text-gray-400">(37) 98416-9386</li>
                                 <li className="text-gray-400">contato@velsites.com.br</li>
