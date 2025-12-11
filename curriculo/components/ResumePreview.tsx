@@ -211,9 +211,11 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(languages, true) && (
-        <section id="languages-section" className={getRestrictionClass('languages-block')}>
+        // Correção V13: Remover getRestrictionClass do section para não afetar o título
+        <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className="flex flex-wrap gap-x-4 gap-y-1">
+            {/* Correção V13: Aplicar getRestrictionClass ao container flex */}
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="flex items-baseline">
@@ -228,10 +230,11 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(skills, true) && (
-        <section id="skills-section" className={getRestrictionClass('skills-block')}>
+        // Correção V13: Remover getRestrictionClass do section para não afetar o título
+        <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* SOLUÇÃO V11: Layout Flexbox melhorado para evitar colapso visual */}
-            <div id="resume-skills" className="flex flex-wrap gap-2">
+            {/* Correção V13: Aplicar getRestrictionClass ao container flex */}
+            <div id="resume-skills" className={`flex flex-wrap gap-2 ${getRestrictionClass('skills-block')}`}>
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
                         <span key={index} className="inline-block bg-gray-200 rounded-full px-3 py-1 text-xs font-semibold text-gray-700">
