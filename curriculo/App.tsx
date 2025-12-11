@@ -361,6 +361,7 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 100; 
             // Altura da Zona de Perigo (onde está o QR Code)
+            // SOLUÇÃO V11: Reduzido de 280px para 220px para ganhar espaço
             const QR_CODE_ZONE_HEIGHT = 220; 
 
             const getElementHeight = (element: HTMLElement) => {
@@ -491,7 +492,7 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE OVERLAP CORRIGIDA ---
+                // --- LÓGICA DE OVERLAP CORRIGIDA (V11) ---
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
@@ -500,7 +501,8 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // Multiplicador 1.2x: Menor penalidade para encorajar o conteúdo a ficar na primeira página
+                    // SOLUÇÃO V11: Multiplicador ajustado para 1.2x (era 1.8x)
+                    // Menor penalidade para encorajar o conteúdo a ficar na primeira página em 'L'
                     effectiveHeight = block.height * 1.2; 
                 }
 
@@ -649,8 +651,7 @@ const App: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
-                // **** CORREÇÃO FINAL: Garantir que o CSS do index.html esteja atuando ****
-                // Se o style inline já está no JSX, isso é redundante mas seguro.
+                // SOLUÇÃO V11: Garantir consistência CSS forçada
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
 
@@ -661,8 +662,8 @@ const App: React.FC = () => {
                         pixelRatio: 2, 
                         cacheBust: true, 
                         backgroundColor: '#ffffff',
-                        height: 1123, // Reforço na config da lib
-                        width: 794    // Reforço na config da lib
+                        height: 1123, 
+                        width: 794
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
