@@ -324,7 +324,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO V13 (Ajuste da Zona de QR Code) ---
+    // --- LÓGICA DE PAGINAÇÃO V14 (Zona de Perigo Fixa e Margem Ajustada) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -361,9 +361,11 @@ const App: React.FC = () => {
             
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
-            const MARGIN_BOTTOM = 130; 
-            // SOLUÇÃO V13: Reduzido drasticamente para 100px para corresponder à realidade
-            const QR_CODE_ZONE_HEIGHT = 100; 
+            // AJUSTE CRÍTICO: Margem reduzida para permitir conteúdo até mais embaixo
+            const MARGIN_BOTTOM = 50; 
+            
+            // AJUSTE CRÍTICO: Ponto Y FIXO onde começa visualmente o QR Code
+            const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -484,8 +486,8 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
-            // Zona de perigo calculada de baixo para cima
-            const dangerZoneStart = A4_HEIGHT - MARGIN_BOTTOM - QR_CODE_ZONE_HEIGHT;
+            // Zona de perigo definida pelo ponto visual fixo
+            const dangerZoneStart = QR_CODE_START_Y;
 
             let pendingTitleHeight = 0;
 
@@ -493,6 +495,7 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
+                // Lógica refinada: Só é zona de perigo se o bloco realmente invadir o espaço visual do QR Code (Y > 930)
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
