@@ -135,23 +135,11 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
-  // SOLUÇÃO DEFINITIVA PARA HABILIDADES
-  // Estado local que controla o input visualmente
-  const [skillsInput, setSkillsInput] = useState('');
-  
-  // Ref para saber se o usuário está digitando. Se estiver, NÃO atualizamos o input com dados externos para não quebrar a digitação.
-  const isTypingRef = useRef(false);
+  // SOLUÇÃO: Estado para o input atual de habilidade (que ainda não foi adicionada)
+  const [currentSkillInput, setCurrentSkillInput] = useState('');
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Inicializa o input apenas uma vez ou quando há uma mudança drástica (como importação/reset)
-  useEffect(() => {
-    // Se não estiver digitando, sincroniza o input com os dados reais
-    if (!isTypingRef.current) {
-        setSkillsInput(data.skills.join(', '));
-    }
-  }, [data.skills]);
 
   useEffect(() => {
     if (!isFinished && stepsContainerRef.current) {
@@ -160,7 +148,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             stepsContainerRef.current.style.height = `${activeStepNode.scrollHeight}px`;
         }
     }
-  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, skillsInput]);
+  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills]);
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -280,53 +268,33 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }));
   };
 
-  // --- LÓGICA DE HABILIDADES CORRIGIDA E ROBUSTA ---
+  // --- NOVA LÓGICA DE HABILIDADES (TAGS/CHIPS) ---
   
-  // 1. Adicionar via sugestão
-  const handleAddSkill = (skill: string) => {
-    // Normaliza para evitar duplicatas (case insensitive)
-    if (!data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())) {
-        const newSkills = [...data.skills, skill];
-        
-        // Atualiza os dados globais
+  // Função para adicionar uma habilidade (manual ou via sugestão)
+  const addSkill = (skillName: string) => {
+    const trimmedSkill = skillName.trim();
+    if (!trimmedSkill) return;
+
+    // Evita duplicatas (case insensitive)
+    if (!data.skills.some(s => s.toLowerCase() === trimmedSkill.toLowerCase())) {
+        const newSkills = [...data.skills, trimmedSkill];
         handleDataChange('skills', newSkills);
-        
-        // Atualiza o input visual MANUALMENTE para refletir a nova habilidade imediatamente
-        // Isso garante que o input mostre a nova habilidade mesmo que isTypingRef estivesse true
-        setSkillsInput(newSkills.join(', '));
     }
+    setCurrentSkillInput(''); // Limpa o input
   };
 
-  // 2. Controlar digitação
-  const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    isTypingRef.current = true; // Marca que o usuário começou a digitar
-    const val = e.target.value;
-    setSkillsInput(val); // Atualiza visualmente o que o usuário vê (não mexe na vírgula)
-    
-    // Processa para salvar no estado global (sem atrapalhar o input)
-    // Divide por vírgula, ponto e vírgula OU quebra de linha
-    const skillsArray = val.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
-    
-    if (JSON.stringify(skillsArray) !== JSON.stringify(data.skills)) {
-        handleDataChange('skills', skillsArray);
-    }
-  };
-
-  // 3. Ao sair do campo (Blur)
-  const handleSkillsBlur = () => {
-    isTypingRef.current = false; // Usuário parou de digitar
-    // Formata o texto bonito (com vírgula e espaço) para a próxima vez
-    const formatted = data.skills.join(', ');
-    setSkillsInput(formatted);
-  };
-
-  // 4. Tecla Enter para facilitar separação
-  const handleSkillsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handler para tecla Enter no input
+  const handleSkillInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); 
-      // Apenas adiciona a vírgula visualmente para o usuário continuar digitando
-      setSkillsInput(prev => prev + ', '); 
+      e.preventDefault();
+      addSkill(currentSkillInput);
     }
+  };
+
+  // Handler para remover uma habilidade específica
+  const removeSkill = (skillToRemove: string) => {
+    const newSkills = data.skills.filter(s => s !== skillToRemove);
+    handleDataChange('skills', newSkills);
   };
   // ----------------------------------------
   
@@ -564,7 +532,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                 </div>
 
                 <button type="button" onClick={handleEnhanceSummary} disabled={aiLoading.summary} className="mt-6 w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full hover:bg-indigo-700 transition-colors disabled:bg-indigo-400">
-                    {aiLoading.summary ? <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>}
+                    {aiLoading.summary ? <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>}
                     {aiLoading.summary ? 'Escrevendo...' : 'Aprimorar com IA'}
                 </button>
                 <p className="text-xs text-gray-500 mt-2 text-center">Escreva um pouco sobre você e use as sugestões ou a IA para melhorar.</p>
@@ -779,23 +747,57 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
           case 7:
             content = (
                 <>
-                    <input type="text" placeholder="Ex: HTML, CSS, Liderança" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
-                        value={skillsInput} 
-                        onChange={handleSkillsInputChange}
-                        onBlur={handleSkillsBlur}
-                        onKeyDown={handleSkillsKeyDown}
-                        maxLength={CHAR_LIMITS.skills}
+                    {/* --- ÁREA DE INPUT --- */}
+                    <div className="flex gap-2 mb-2">
+                        <input 
+                            type="text" 
+                            placeholder="Ex: HTML, CSS, Liderança" 
+                            className="flex-1 p-2 border rounded-md bg-white border-gray-300 text-gray-900"
+                            value={currentSkillInput} 
+                            onChange={(e) => setCurrentSkillInput(e.target.value)}
+                            onKeyDown={handleSkillInputKeyDown}
+                            maxLength={CHAR_LIMITS.skills}
                         />
-                    <p className="text-xs text-gray-500 mt-1">Separe as habilidades por vírgula ou pressione Enter.</p>
+                        <button 
+                            type="button"
+                            onClick={() => addSkill(currentSkillInput)}
+                            className="bg-indigo-600 text-white font-medium px-4 rounded-md hover:bg-indigo-700"
+                        >
+                            Adicionar
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 mb-4">Digite uma habilidade e clique em adicionar.</p>
                     
-                    <div className="mt-4 mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Sugestões:</label>
+                    {/* --- LISTA DE TAGS JÁ ADICIONADAS --- */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        {data.skills.length > 0 ? (
+                            data.skills.map((skill, index) => (
+                                <span key={index} className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">
+                                    {skill}
+                                    <button 
+                                        type="button" 
+                                        onClick={() => removeSkill(skill)}
+                                        className="text-indigo-600 hover:text-red-500 ml-1 focus:outline-none"
+                                        title="Remover habilidade"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </span>
+                            ))
+                        ) : (
+                            <p className="text-gray-400 italic text-sm w-full text-center">Nenhuma habilidade adicionada.</p>
+                        )}
+                    </div>
+
+                    {/* --- SUGESTÕES --- */}
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Sugestões rápidas:</label>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                         {SKILL_SUGGESTIONS.map(skill => (
                             <button key={skill} type="button"
-                                onClick={() => handleAddSkill(skill)}
+                                onClick={() => addSkill(skill)}
                                 disabled={data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())}
                                 className="py-1 px-3 rounded-full text-xs font-medium transition-all bg-gray-200 text-gray-800 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {skill}
@@ -805,11 +807,11 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
                     {aiSkillSuggestions.length > 0 && (
                       <>
-                        <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">Sugestões da IA (clique para adicionar):</label>
+                        <label className="block text-sm font-medium text-gray-700 mt-4 mb-2">Sugestões da IA:</label>
                         <div className="flex flex-wrap gap-2">
                             {aiSkillSuggestions.map(skill => (
                                 <button key={skill} type="button"
-                                    onClick={() => handleAddSkill(skill)}
+                                    onClick={() => addSkill(skill)}
                                     disabled={data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())}
                                     className="py-1 px-3 rounded-full text-xs font-medium transition-all bg-indigo-100 text-indigo-700 hover:bg-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed">
                                     {skill}
