@@ -42,14 +42,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   }, [style?.color]);
 
   // SOLUÇÃO V11: Restrição Determinística
-  // Garante que o CSS respeita o mesmo cálculo da paginação (max-w-[60%])
   const getRestrictionClass = (blockId: string) => {
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
   };
 
-  const renderWithContinuation = (itemId: string, content: React.ReactNode) => {
+  // Alteração V11.1: Adicionado parâmetro skipRestriction para evitar dupla aplicação
+  const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
-    const restrictionClass = getRestrictionClass(itemId);
+    const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
 
     if (continuationInfo) {
       const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
@@ -127,7 +127,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
-                    {/* SOLUÇÃO V11: Removido sufixo (CONTINUAÇÃO) se existia */}
                     <h3 className="section-title">Resumo Profissional</h3>
                      {renderWithContinuation('summary-text',
                         <p id="resume-summary" className="text-gray-700 leading-relaxed">
@@ -144,7 +143,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                     experiences.map(exp => {
                         const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
                         return (
-                            <div key={exp.id}>
+                            <div key={exp.id} className={getRestrictionClass(exp.id)}>
                                 {!isContinuation && (
                                     <div className="flex justify-between items-baseline flex-wrap">
                                         <div className="pr-4">
@@ -155,7 +154,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                     </div>
                                 )}
                                 {exp.description && renderWithContinuation(exp.id, 
-                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />
+                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
+                                    true // Skip applying class again since parent wrapper has it
                                 )}
                             </div>
                         )
@@ -172,7 +172,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    <div key={edu.id}>
+                    <div key={edu.id} className={getRestrictionClass(edu.id)}>
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
@@ -194,7 +194,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
-                    <div key={course.id}>
+                    <div key={course.id} className={getRestrictionClass(course.id)}>
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
