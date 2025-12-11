@@ -135,11 +135,23 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
-  // SOLUÇÃO: Estado local para controlar o input de habilidades
-  const [skillsInput, setSkillsInput] = useState(data.skills.join(', '));
+  // SOLUÇÃO DEFINITIVA PARA HABILIDADES
+  // Estado local que controla o input visualmente
+  const [skillsInput, setSkillsInput] = useState('');
+  
+  // Ref para saber se o usuário está digitando. Se estiver, NÃO atualizamos o input com dados externos para não quebrar a digitação.
+  const isTypingRef = useRef(false);
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Inicializa o input apenas uma vez ou quando há uma mudança drástica (como importação/reset)
+  useEffect(() => {
+    // Se não estiver digitando, sincroniza o input com os dados reais
+    if (!isTypingRef.current) {
+        setSkillsInput(data.skills.join(', '));
+    }
+  }, [data.skills]);
 
   useEffect(() => {
     if (!isFinished && stepsContainerRef.current) {
@@ -149,21 +161,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
         }
     }
   }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, skillsInput]);
-  
-  // SOLUÇÃO V2 (Mais Robusta): Sincroniza o input local se os dados mudarem externamente
-  useEffect(() => {
-    const skillsStringFromArray = data.skills.join(', ');
-    const currentInputParsed = skillsInput.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
-    
-    // Verifica se houve mudança real nos dados (ex: sugestão clicada)
-    const arraysAreDifferent = 
-        data.skills.length !== currentInputParsed.length ||
-        !data.skills.every((val, index) => val === currentInputParsed[index]);
-
-    if (arraysAreDifferent) {
-         setSkillsInput(skillsStringFromArray);
-    }
-  }, [data.skills]); 
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -283,20 +280,30 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }));
   };
 
-  // --- LÓGICA DE HABILIDADES CORRIGIDA ---
+  // --- LÓGICA DE HABILIDADES CORRIGIDA E ROBUSTA ---
+  
+  // 1. Adicionar via sugestão
   const handleAddSkill = (skill: string) => {
     // Normaliza para evitar duplicatas (case insensitive)
     if (!data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())) {
         const newSkills = [...data.skills, skill];
+        
+        // Atualiza os dados globais
         handleDataChange('skills', newSkills);
-        // O useEffect cuidará de atualizar o visual do input com a vírgula correta
+        
+        // Atualiza o input visual MANUALMENTE para refletir a nova habilidade imediatamente
+        // Isso garante que o input mostre a nova habilidade mesmo que isTypingRef estivesse true
+        setSkillsInput(newSkills.join(', '));
     }
   };
 
+  // 2. Controlar digitação
   const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isTypingRef.current = true; // Marca que o usuário começou a digitar
     const val = e.target.value;
-    setSkillsInput(val); // Atualiza visualmente o que o usuário digita
+    setSkillsInput(val); // Atualiza visualmente o que o usuário vê (não mexe na vírgula)
     
+    // Processa para salvar no estado global (sem atrapalhar o input)
     // Divide por vírgula, ponto e vírgula OU quebra de linha
     const skillsArray = val.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
     
@@ -305,17 +312,20 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
-  // Garante a formatação bonita (com vírgula e espaço) quando o usuário sai do campo
+  // 3. Ao sair do campo (Blur)
   const handleSkillsBlur = () => {
+    isTypingRef.current = false; // Usuário parou de digitar
+    // Formata o texto bonito (com vírgula e espaço) para a próxima vez
     const formatted = data.skills.join(', ');
     setSkillsInput(formatted);
   };
 
-  // Permite usar ENTER para separar habilidades
+  // 4. Tecla Enter para facilitar separação
   const handleSkillsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); // Evita submit do form se houver
-      setSkillsInput(prev => prev + ', '); // Adiciona vírgula visual
+      e.preventDefault(); 
+      // Apenas adiciona a vírgula visualmente para o usuário continuar digitando
+      setSkillsInput(prev => prev + ', '); 
     }
   };
   // ----------------------------------------
