@@ -116,7 +116,7 @@ const calculateCurrentGenerated = (base: number) => {
   const now = new Date();
   const hour = now.getHours();
   
-  if (hour < 9) return base;
+  if (hour < 0) return base; // Prevent error if hour check fails logic
   
   const startOfDayCount = new Date();
   startOfDayCount.setHours(9, 0, 0, 0);
@@ -124,9 +124,11 @@ const calculateCurrentGenerated = (base: number) => {
   const endOfDayCount = new Date();
   endOfDayCount.setHours(19, 0, 0, 0);
   
+  // Logic simplified for robustness
+  if (hour < 9) return base;
   if (now > endOfDayCount) {
-    const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
-    return base + Math.floor(totalSecondsInWorkDay / 20);
+      const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
+      return base + Math.floor(totalSecondsInWorkDay / 20);
   }
   
   const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
@@ -322,7 +324,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V11 (Ajuste Fino de Zona de Perigo) ---
+    // --- LÓGICA DE PAGINAÇÃO V12 (Margem + Correção de Duplicados) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -359,9 +361,9 @@ const App: React.FC = () => {
             
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
-            const MARGIN_BOTTOM = 100; 
+            // AUMENTO DA MARGEM PARA CRIAR AREA SEGURA
+            const MARGIN_BOTTOM = 130; 
             // Altura da Zona de Perigo (onde está o QR Code)
-            // SOLUÇÃO V11: Reduzido de 280px para 220px para ganhar espaço
             const QR_CODE_ZONE_HEIGHT = 220; 
 
             const getElementHeight = (element: HTMLElement) => {
@@ -492,7 +494,6 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE OVERLAP CORRIGIDA (V11) ---
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
@@ -500,9 +501,6 @@ const App: React.FC = () => {
                 if (isInDangerZone) {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
-                    
-                    // SOLUÇÃO V11: Multiplicador ajustado para 1.2x (era 1.8x)
-                    // Menor penalidade para encorajar o conteúdo a ficar na primeira página em 'L'
                     effectiveHeight = block.height * 1.2; 
                 }
 
@@ -611,14 +609,10 @@ const App: React.FC = () => {
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
-    // =========================================================================
-    //  GERAÇÃO DE PDF BLINDADA (SNAPSHOT HÍBRIDO)
-    // =========================================================================
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
         
-        // 1. Garantir Fontes
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -630,7 +624,6 @@ const App: React.FC = () => {
             return;
         }
 
-        // 2. Aguardar Renderização de SVGs e Imagens (Crítico para Mobile)
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
@@ -651,7 +644,6 @@ const App: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
-                // SOLUÇÃO V11: Garantir consistência CSS forçada
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
 
@@ -815,7 +807,6 @@ const App: React.FC = () => {
 
     return (
         <>
-        {/* --- ÁREA DE IMPRESSÃO BLINDADA (SNAPSHOT) --- */}
         <div id="print-container">
              <div id="print-area">
                 {paginatedData.map((pageData, index) => (
@@ -883,7 +874,6 @@ const App: React.FC = () => {
                 </div>
             </div>
         )}
-        {/* Botão de Teste (Visível apenas em Dev/Teste) */}
         <button
             type="button"
             onClick={() => exportToPdf(resumeData)}
@@ -959,6 +949,7 @@ const App: React.FC = () => {
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
                                 isFirstPage={currentPage === 1}
+                                hideEmptySections={paginatedData.length > 1} 
                              />
                            )}
                         </div>
@@ -1021,7 +1012,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
                         <div>
-                            <h4 className="font-bold text-lg mb-4">Contato</h4>
+                            <h4 className="font-bold text-lg mb-4">Contacto</h4>
                             <ul className="space-y-2">
                                 <li className="text-gray-400">(37) 98416-9386</li>
                                 <li className="text-gray-400">contato@velsites.com.br</li>
