@@ -322,7 +322,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- NOVO SISTEMA DE PAGINAÇÃO V10 (Calibrado para Layout em L) ---
+    // --- NOVO SISTEMA DE PAGINAÇÃO V11 (Ajuste Fino de Zona de Perigo) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -360,8 +360,8 @@ const App: React.FC = () => {
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 100; 
-            // Altura reservada para a zona do QR Code (ajustada para 160px para ser menos agressiva)
-            const QR_CODE_ZONE_HEIGHT = 160; 
+            // Altura da Zona de Perigo (onde está o QR Code)
+            const QR_CODE_ZONE_HEIGHT = 220; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -491,7 +491,7 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // Verifica se o bloco entra na zona do QR Code
+                // --- LÓGICA DE OVERLAP CORRIGIDA ---
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
@@ -500,8 +500,8 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // Multiplicador 1.3x: Mais permissivo para permitir encaixe na página 1
-                    effectiveHeight = block.height * 1.3; 
+                    // Multiplicador 1.2x: Menor penalidade para encorajar o conteúdo a ficar na primeira página
+                    effectiveHeight = block.height * 1.2; 
                 }
 
                 if (block.id.endsWith('-title')) {
