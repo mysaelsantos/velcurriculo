@@ -211,10 +211,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(languages, true) && (
-        // Correção V13: Remover getRestrictionClass do section para não afetar o título
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* Correção V13: Aplicar getRestrictionClass ao container flex */}
             <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
@@ -230,10 +228,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(skills, true) && (
-        // Correção V13: Remover getRestrictionClass do section para não afetar o título
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* Correção V13: Aplicar getRestrictionClass ao container flex */}
             <div id="resume-skills" className={`flex flex-wrap gap-2 ${getRestrictionClass('skills-block')}`}>
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
