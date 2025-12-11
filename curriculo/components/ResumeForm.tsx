@@ -136,6 +136,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
   // SOLUÇÃO: Estado local para controlar o input de habilidades e evitar conflito de formatação enquanto digita
+  // Inicializa com a string correta baseada no array
   const [skillsInput, setSkillsInput] = useState(data.skills.join(', '));
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
@@ -150,14 +151,27 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary]);
   
-  // SOLUÇÃO: Sincroniza o input local se as habilidades mudarem externamente (ex: IA ou sugestões)
-  // mas NÃO sobrescreve se o que está digitado for "equivalente" ao dado real (evita apagar vírgulas enquanto digita)
+  // SOLUÇÃO V2 (Mais Robusta): Sincroniza o input local APENAS se os dados mudarem DE FORA (ex: sugestão clicada, IA).
+  // Se a mudança veio da digitação (skillsInput), não faz nada para não mover o cursor ou apagar texto.
   useEffect(() => {
-    const currentParsed = skillsInput.split(/[,;]/).map(s => s.trim()).filter(Boolean);
-    if (JSON.stringify(currentParsed) !== JSON.stringify(data.skills)) {
-         setSkillsInput(data.skills.join(', '));
+    // Reconstrói a string a partir do array atual para comparação
+    const skillsStringFromArray = data.skills.join(', ');
+    
+    // Parsa o input atual para ver se é semanticamente igual ao array
+    // Isso evita re-setar o input só porque tem um espaço a mais ou uma vírgula no final que o usuário está digitando
+    const currentInputParsed = skillsInput.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    
+    // Se o array de dados tem um número diferente de itens, ou itens diferentes,
+    // significa que uma ação externa (clique em sugestão, IA) alterou os dados.
+    // Nesse caso, atualizamos o input visual.
+    const arraysAreDifferent = 
+        data.skills.length !== currentInputParsed.length ||
+        !data.skills.every((val, index) => val === currentInputParsed[index]);
+
+    if (arraysAreDifferent) {
+         setSkillsInput(skillsStringFromArray);
     }
-  }, [data.skills, skillsInput]);
+  }, [data.skills]); // Dependência apenas em data.skills, não em skillsInput para evitar loop
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -289,18 +303,26 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   };
 
   const handleAddSkill = (skill: string) => {
+    // Normaliza para evitar duplicatas (case insensitive)
     if (!data.skills.map(s => s.toLowerCase()).includes(skill.toLowerCase())) {
-        handleDataChange('skills', [...data.skills, skill]);
+        const newSkills = [...data.skills, skill];
+        handleDataChange('skills', newSkills);
+        // O useEffect cuidará de atualizar o skillsInput
     }
   };
 
   const handleSkillsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    setSkillsInput(val); // Atualiza o texto local imediatamente (permite digitar vírgulas)
+    setSkillsInput(val); // Atualiza o texto local imediatamente (permite digitar livremente)
     
     // Atualiza o estado global dividindo por vírgula ou ponto-e-vírgula
-    const skillsArray = val.split(/[,;]/).map(s => s.trim()).filter(Boolean);
-    handleDataChange('skills', skillsArray);
+    // Importante: filter(Boolean) remove strings vazias resultantes de "React, "
+    const skillsArray = val.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    
+    // Só atualiza o estado global se houver mudança real nos itens para evitar re-renders excessivos
+    if (JSON.stringify(skillsArray) !== JSON.stringify(data.skills)) {
+        handleDataChange('skills', skillsArray);
+    }
   };
   
   const handleAddSummarySuggestion = (suggestion: string) => {
