@@ -41,7 +41,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   }, [style?.color]);
 
   const getRestrictionClass = (blockId: string) => {
-      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
+      // Se o bloco estiver na área de restrição (perto do QR Code), limitamos a largura
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
@@ -227,18 +228,20 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            <ul id="resume-skills" className={`grid grid-cols-2 gap-x-4 gap-y-1 list-none ${getRestrictionClass('skills-block')}`}>
+            {/* CORREÇÃO AQUI: Usando Flex Wrap com larguras fixas de 50% para garantir separação visual */}
+            <div id="resume-skills" className={`flex flex-wrap ${getRestrictionClass('skills-block')}`}>
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
-                        <li key={index} className="text-gray-700 text-sm flex items-center">
-                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>
-                            {skill}
-                        </li>
+                        // w-1/2 força 2 colunas. pr-2 adiciona respiro na direita. mb-1 separa as linhas.
+                        <div key={index} className="w-1/2 pr-2 mb-1 flex items-start">
+                             <span className="font-bold text-gray-400 mr-2">•</span>
+                             <span className="text-gray-700 text-sm">{skill}</span>
+                        </div>
                     ))
                 ) : (
-                    <li className="text-gray-400 italic text-sm col-span-2">Suas habilidades aparecerão aqui...</li>
+                    <p className="text-gray-400 italic text-sm w-full">Suas habilidades aparecerão aqui...</p>
                 )}
-            </ul>
+            </div>
         </section>
         )}
       </main>
