@@ -10,6 +10,7 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
+    // Lista de IDs que devem ser estreitados para não bater no QR Code
     restrictedBlockIds?: string[];
 }
 
@@ -40,11 +41,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
+  // SOLUÇÃO V11: Restrição Determinística
   const getRestrictionClass = (blockId: string) => {
-      // Se o bloco estiver na área de restrição (perto do QR Code), limitamos a largura
-      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
   };
 
+  // Alteração V11.1: Adicionado parâmetro skipRestriction para evitar dupla aplicação
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
     const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
@@ -153,7 +155,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 )}
                                 {exp.description && renderWithContinuation(exp.id, 
                                     <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
-                                    true
+                                    true // Skip applying class again since parent wrapper has it
                                 )}
                             </div>
                         )
@@ -209,9 +211,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(languages, true) && (
-        <section id="languages-section">
+        <section id="languages-section" className={getRestrictionClass('languages-block')}>
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
+            <div id="resume-languages-list" className="flex flex-wrap gap-x-4 gap-y-1">
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="flex items-baseline">
@@ -226,20 +228,18 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(skills, true) && (
-        <section id="skills-section">
+        <section id="skills-section" className={getRestrictionClass('skills-block')}>
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* CORREÇÃO AQUI: Usando Flex Wrap com larguras fixas de 50% para garantir separação visual */}
-            <div id="resume-skills" className={`flex flex-wrap ${getRestrictionClass('skills-block')}`}>
+            {/* SOLUÇÃO V11: Layout Flexbox melhorado para evitar colapso visual */}
+            <div id="resume-skills" className="flex flex-wrap gap-2">
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
-                        // w-1/2 força 2 colunas. pr-2 adiciona respiro na direita. mb-1 separa as linhas.
-                        <div key={index} className="w-1/2 pr-2 mb-1 flex items-start">
-                             <span className="font-bold text-gray-400 mr-2">•</span>
-                             <span className="text-gray-700 text-sm">{skill}</span>
-                        </div>
+                        <span key={index} className="inline-block bg-gray-200 rounded-full px-3 py-1 text-xs font-semibold text-gray-700">
+                        {skill}
+                        </span>
                     ))
                 ) : (
-                    <p className="text-gray-400 italic text-sm w-full">Suas habilidades aparecerão aqui...</p>
+                    <p className="text-gray-400 italic text-sm">Suas habilidades aparecerão aqui...</p>
                 )}
             </div>
         </section>
