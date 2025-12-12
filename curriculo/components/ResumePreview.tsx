@@ -10,7 +10,6 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
-    // Lista de IDs que devem ser estreitados para não bater no QR Code
     restrictedBlockIds?: string[];
 }
 
@@ -41,12 +40,10 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // SOLUÇÃO V11: Restrição Determinística
   const getRestrictionClass = (blockId: string) => {
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : '';
   };
 
-  // Alteração V11.1: Adicionado parâmetro skipRestriction para evitar dupla aplicação
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
     const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
@@ -155,7 +152,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 )}
                                 {exp.description && renderWithContinuation(exp.id, 
                                     <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
-                                    true // Skip applying class again since parent wrapper has it
+                                    true
                                 )}
                             </div>
                         )
@@ -230,17 +227,18 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            <div id="resume-skills" className={`flex flex-wrap gap-2 ${getRestrictionClass('skills-block')}`}>
+            <ul id="resume-skills" className={`grid grid-cols-2 gap-x-4 gap-y-1 list-none ${getRestrictionClass('skills-block')}`}>
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
-                        <span key={index} className="inline-block bg-gray-200 rounded-full px-3 py-1 text-xs font-semibold text-gray-700">
-                        {skill}
-                        </span>
+                        <li key={index} className="text-gray-700 text-sm flex items-center">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>
+                            {skill}
+                        </li>
                     ))
                 ) : (
-                    <p className="text-gray-400 italic text-sm">Suas habilidades aparecerão aqui...</p>
+                    <li className="text-gray-400 italic text-sm col-span-2">Suas habilidades aparecerão aqui...</li>
                 )}
-            </div>
+            </ul>
         </section>
         )}
       </main>
