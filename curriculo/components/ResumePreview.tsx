@@ -44,22 +44,34 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
+  // --- NOVO MOTOR DE CORREÇÃO DE TEXTO ---
+  // Esta função detecta textos colados (ex: "ProatividadeTrabalho") e separa forçadamente
+  const cleanAndSplitSkills = (rawSkills: string[] | undefined): string[] => {
+    if (!rawSkills || rawSkills.length === 0) return [];
+
+    // 1. Junta tudo numa string só para garantir, depois re-processa
+    // Isso resolve casos onde o array tem 1 item gigante ou vários itens misturados
+    return rawSkills.flatMap(skill => {
+        // Regex Mágica: Procura uma letra minúscula seguida IMEDIATAMENTE de uma Maiúscula
+        // Ex: "EquipaExcel" -> Separa em "Equipa", "Excel"
+        // Mantém espaços normais como "Excel Avançado" intocados.
+        return skill.split(/(?<=[a-zà-ÿ])(?=[A-Z])/g);
+    }).map(s => s.trim()).filter(s => s.length > 0); // Remove vazios
+  };
+
+  const processedSkills = cleanAndSplitSkills(skills);
+  // ----------------------------------------
+
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
     const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
 
     if (continuationInfo) {
       const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
-
-      const visibleHeight = isFirstPageOfSplit
-        ? continuationInfo.visibleHeight
-        : continuationInfo.totalHeight - continuationInfo.offset;
-      
+      const visibleHeight = isFirstPageOfSplit ? continuationInfo.visibleHeight : continuationInfo.totalHeight - continuationInfo.offset;
       const topPosition = continuationInfo.offset > 0 ? `-${continuationInfo.offset}px` : '0px';
 
-      if (visibleHeight <= 0) {
-        return null; 
-      }
+      if (visibleHeight <= 0) return null; 
 
       return (
         <div className={restrictionClass} style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
@@ -70,10 +82,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       );
     }
     
-    if (restrictionClass) {
-        return <div className={restrictionClass}>{content}</div>;
-    }
-
+    if (restrictionClass) return <div className={restrictionClass}>{content}</div>;
     return content;
   };
   
@@ -225,50 +234,37 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO REESCRITA COM SISTEMA HÍBRIDO --- */}
-        {shouldShowSection(skills, true) && (
+        {/* --- SESSÃO REESCRITA COM SISTEMA ANTI-AGLUTINAÇÃO --- */}
+        {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
-                {/* LÓGICA HÍBRIDA:
-                    1. Clássico/Minimalista: Renderiza como texto corrido separado por BOLINHAS (•).
-                       Isso garante que é impossível o texto colar, pois existe um caractere físico no meio.
-                    
-                    2. Moderno: Renderiza como Pílulas com MARGEM explícita.
-                */}
-                
+                {/* Agora usamos 'processedSkills' que foi limpo pelo motor acima */}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
-                        {skills && skills.length > 0 ? (
-                            skills.map((skill, index) => (
-                                <span key={index}>
-                                    {skill}
-                                    {/* Adiciona separador visual se não for o último */}
-                                    {index < skills.length - 1 && (
-                                        <span className="mx-2 font-bold text-gray-400">•</span>
-                                    )}
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-gray-400 italic">Suas habilidades aparecerão aqui...</span>
-                        )}
+                        {processedSkills.map((skill, index) => (
+                            <span key={index}>
+                                {skill}
+                                {/* Separador visual */}
+                                {index < processedSkills.length - 1 && (
+                                    <span className="mx-2 font-bold text-gray-400">•</span>
+                                )}
+                            </span>
+                        ))}
                     </div>
                 ) : (
+                    /* MODO PÍLULAS */
                     <div className="flex flex-wrap gap-2">
-                        {skills && skills.length > 0 ? (
-                            skills.map((skill, index) => (
-                                <span 
-                                    key={index} 
-                                    className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-md mb-1 mr-2 inline-block border border-gray-200"
-                                >
-                                    {skill}
-                                </span>
-                            ))
-                        ) : (
-                            <span className="text-gray-400 italic w-full">Suas habilidades aparecerão aqui...</span>
-                        )}
+                        {processedSkills.map((skill, index) => (
+                            <span 
+                                key={index} 
+                                className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-md mb-1 mr-2 inline-block border border-gray-200"
+                            >
+                                {skill}
+                            </span>
+                        ))}
                     </div>
                 )}
             </div>
