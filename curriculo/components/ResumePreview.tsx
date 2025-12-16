@@ -225,23 +225,59 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
+        
+        {/* --- SESSÃO REESCRITA COM SISTEMA HÍBRIDO (Texto Separado ou Pílulas) --- */}
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            <ul id="resume-skills" className={`flex flex-wrap gap-x-6 gap-y-2 list-none ${getRestrictionClass('skills-block')}`}>
-                {skills && skills.length > 0 ? (
-                    skills.map((skill, index) => (
-                        <li key={index} className="text-gray-700 text-sm flex items-center min-w-[fit-content]">
-                             <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>
-                             <span className="break-words">{skill}</span>
-                        </li>
-                    ))
+            
+            <div id="resume-skills" className={getRestrictionClass('skills-block')}>
+                
+                {/* LÓGICA HÍBRIDA:
+                    1. Se for template Clássico/Minimalista: Usa texto corrido separado por BOLINHAS (•).
+                       Isso garante que é IMPOSSÍVEL o texto colar, pois existe um caractere físico entre eles.
+                    
+                    2. Se for template Moderno: Usa as Pílulas (Tags) com MARGEM explícita.
+                */}
+                
+                {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
+                    /* MODO TEXTO (Para layouts clássicos) */
+                    <div className="text-gray-700 text-sm leading-relaxed">
+                        {skills && skills.length > 0 ? (
+                            skills.map((skill, index) => (
+                                <span key={index}>
+                                    {skill}
+                                    {/* Adiciona separador visual se não for o último */}
+                                    {index < skills.length - 1 && (
+                                        <span className="mx-2 font-bold text-gray-400">•</span>
+                                    )}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-gray-400 italic">Suas habilidades aparecerão aqui...</span>
+                        )}
+                    </div>
                 ) : (
-                    <li className="text-gray-400 italic text-sm w-full">Suas habilidades aparecerão aqui...</li>
+                    /* MODO PÍLULAS (Para layouts modernos) - Com margem para evitar colagem */
+                    <div className="flex flex-wrap gap-2">
+                        {skills && skills.length > 0 ? (
+                            skills.map((skill, index) => (
+                                <span 
+                                    key={index} 
+                                    className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-md mb-1 mr-2 inline-block border border-gray-200"
+                                >
+                                    {skill}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="text-gray-400 italic w-full">Suas habilidades aparecerão aqui...</span>
+                        )}
+                    </div>
                 )}
-            </ul>
+            </div>
         </section>
         )}
+        
       </main>
       {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
     </div>
