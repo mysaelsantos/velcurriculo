@@ -44,21 +44,20 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  // --- NOVO MOTOR DE CORREÇÃO DE TEXTO ---
-  // Esta função detecta textos colados (ex: "ProatividadeTrabalho") e separa forçadamente
+  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO ---
+  // Função que detecta e repara textos aglutinados (Ex: "EquipaExcel" -> "Equipa", "Excel")
   const cleanAndSplitSkills = (rawSkills: string[] | undefined): string[] => {
     if (!rawSkills || rawSkills.length === 0) return [];
 
-    // 1. Junta tudo numa string só para garantir, depois re-processa
-    // Isso resolve casos onde o array tem 1 item gigante ou vários itens misturados
     return rawSkills.flatMap(skill => {
-        // Regex Mágica: Procura uma letra minúscula seguida IMEDIATAMENTE de uma Maiúscula
-        // Ex: "EquipaExcel" -> Separa em "Equipa", "Excel"
-        // Mantém espaços normais como "Excel Avançado" intocados.
+        // Regex Inteligente: Separa quando uma letra minúscula ou acentuada
+        // é seguida imediatamente por uma Letra Maiúscula.
+        // Ex: "oT" em "TrabalhoTrabalho" vira "Trabalho", "Trabalho"
         return skill.split(/(?<=[a-zà-ÿ])(?=[A-Z])/g);
-    }).map(s => s.trim()).filter(s => s.length > 0); // Remove vazios
+    }).map(s => s.trim()).filter(s => s.length > 0);
   };
 
+  // Processa as habilidades antes de renderizar
   const processedSkills = cleanAndSplitSkills(skills);
   // ----------------------------------------
 
@@ -234,20 +233,23 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO REESCRITA COM SISTEMA ANTI-AGLUTINAÇÃO --- */}
+        {/* --- SESSÃO CORRIGIDA COM MOTOR DE SEPARAÇÃO --- */}
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
-                {/* Agora usamos 'processedSkills' que foi limpo pelo motor acima */}
+                {/* Agora usamos 'processedSkills' que já foi separado pelo motor.
+                   Se o usuário estiver usando um layout Moderno, renderizamos Chips.
+                   Se for Clássico, renderizamos Texto com separadores.
+                */}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
                             <span key={index}>
                                 {skill}
-                                {/* Separador visual */}
+                                {/* Adiciona separador visual se não for o último */}
                                 {index < processedSkills.length - 1 && (
                                     <span className="mx-2 font-bold text-gray-400">•</span>
                                 )}
@@ -255,7 +257,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS */
+                    /* MODO PÍLULAS (CHIPS) - Ideal para Moderno e para evitar colagens */
                     <div className="flex flex-wrap gap-2">
                         {processedSkills.map((skill, index) => (
                             <span 
