@@ -228,23 +228,16 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* CORREÇÃO DEFINITIVA: 
-                1. Removida a classe 'flex' que causava colisão.
-                2. Adicionado 'grid grid-cols-2' para forçar estrutura de tabela.
-                3. Adicionado 'gap-x-4' para separação horizontal segura.
-                4. Usando lista (ul/li) para semântica correta.
-            */}
-            <ul id="resume-skills" className={`grid grid-cols-2 gap-x-8 gap-y-2 list-none ${getRestrictionClass('skills-block')}`}>
+            <ul id="resume-skills" className={`flex flex-wrap gap-x-6 gap-y-2 list-none ${getRestrictionClass('skills-block')}`}>
                 {skills && skills.length > 0 ? (
                     skills.map((skill, index) => (
-                        <li key={index} className="text-gray-700 text-sm flex items-center">
-                             {/* Marcador personalizado para garantir que apareça no PDF */}
+                        <li key={index} className="text-gray-700 text-sm flex items-center min-w-[fit-content]">
                              <span className="inline-block w-1.5 h-1.5 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>
-                             <span>{skill}</span>
+                             <span className="break-words">{skill}</span>
                         </li>
                     ))
                 ) : (
-                    <li className="text-gray-400 italic text-sm col-span-2">Suas habilidades aparecerão aqui...</li>
+                    <li className="text-gray-400 italic text-sm w-full">Suas habilidades aparecerão aqui...</li>
                 )}
             </ul>
         </section>
