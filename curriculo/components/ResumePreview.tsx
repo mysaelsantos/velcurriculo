@@ -1,4 +1,4 @@
-import React, { useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import type { ResumeData } from '../types';
 import QRCodeComponent from './QRCode';
 
@@ -27,7 +27,10 @@ export interface ResumePreviewRef {
 }
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
-  const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation, restrictedBlockIds = [] } = data;
+  // Garante que data existe para evitar crashes
+  const safeData = data || {};
+  const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation, restrictedBlockIds = [] } = safeData;
+  
   const previewRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -44,43 +47,34 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO (VERSÃO BLINDADA) ---
-  // Esta versão usa Javascript básico (ES5) para garantir compatibilidade total
-  // e evitar telas brancas ou erros silenciosos.
-  const cleanAndSplitSkills = (rawSkills: string[] | undefined): string[] => {
-    // 1. Verificação de segurança: se não houver dados, retorna vazio
-    if (!rawSkills || !Array.isArray(rawSkills) || rawSkills.length === 0) return [];
+  // --- MOTOR DE CORREÇÃO (USANDO useMemo PARA PERFORMANCE E SEGURANÇA) ---
+  const processedSkills = useMemo(() => {
+      // 1. Se não houver skills, retorna array vazio imediatamente
+      if (!skills || !Array.isArray(skills)) return [];
 
-    const processed: string[] = [];
+      try {
+          // 2. Usamos reduce para criar um novo array limpo (funciona em qualquer navegador)
+          return skills.reduce((acc: string[], skill) => {
+              if (typeof skill !== 'string') return acc;
+              const trimmed = skill.trim();
+              if (!trimmed) return acc;
 
-    try {
-        rawSkills.forEach(skill => {
-            if (typeof skill !== 'string' || !skill.trim()) return;
-
-            // 2. Lógica Segura: Insere um separador '|' entre minúscula e Maiúscula
-            // Ex: "PowerBI" -> "Power|BI" | "EquipaExcel" -> "Equipa|Excel"
-            // Usa regex simples ([a-z])([A-Z]) para máxima compatibilidade
-            const separated = skill.replace(/([a-z])([A-Z])/g, '$1|$2');
-            
-            // 3. Divide e limpa
-            const parts = separated.split('|');
-            parts.forEach(part => {
-                const cleanPart = part.trim();
-                if (cleanPart) processed.push(cleanPart);
-            });
-        });
-    } catch (error) {
-        console.error("Erro ao processar habilidades:", error);
-        // Fallback: Se der erro, retorna a lista original para não ficar em branco
-        return rawSkills.filter(s => typeof s === 'string');
-    }
-
-    return processed;
-  };
-
-  // Processa as habilidades
-  const processedSkills = cleanAndSplitSkills(skills);
-  // ----------------------------------------
+              // 3. Tenta separar texto colado (Ex: "EquipeExcel" -> "Equipe", "Excel")
+              // A Regex procura: letra minúscula ([a-z]) seguida de Maiúscula ([A-Z])
+              // E insere um espaço entre elas.
+              const separated = trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
+              
+              // Adiciona ao resultado final
+              acc.push(separated);
+              return acc;
+          }, []);
+      } catch (e) {
+          // Fallback de segurança: Se algo der errado, retorna o original para não ficar branco
+          console.error("Erro ao processar skills:", e);
+          return skills.filter(s => typeof s === 'string');
+      }
+  }, [skills]);
+  // -----------------------------------------------------------------------
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
@@ -254,14 +248,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO CORRIGIDA: HÍBRIDA E SEGURA --- */}
+        {/* --- SESSÃO CORRIGIDA: Exibe sempre algo se houver skills --- */}
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
-                {/* Lógica: Se for Clássico/Minimalista, usa Texto com Bolinhas. Se for Moderno, usa Pílulas. */}
+                {/* Lógica Híbrida Simplificada */}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
@@ -275,7 +269,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS (CHIPS) */
+                    /* MODO PÍLULAS (CHIPS) - Ideal para Moderno e para evitar colagens */
                     <div className="flex flex-wrap gap-2">
                         {processedSkills.map((skill, index) => (
                             <span 
