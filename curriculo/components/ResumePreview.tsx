@@ -44,16 +44,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO ---
-  // Função que detecta e repara textos aglutinados (Ex: "EquipaExcel" -> "Equipa", "Excel")
+  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO (VERSÃO SEGURA) ---
+  // Substituída a regex moderna por uma compatível com todos os navegadores (evita tela branca)
   const cleanAndSplitSkills = (rawSkills: string[] | undefined): string[] => {
-    if (!rawSkills || rawSkills.length === 0) return [];
+    if (!rawSkills || !Array.isArray(rawSkills) || rawSkills.length === 0) return [];
 
     return rawSkills.flatMap(skill => {
-        // Regex Inteligente: Separa quando uma letra minúscula ou acentuada
-        // é seguida imediatamente por uma Letra Maiúscula.
-        // Ex: "oT" em "TrabalhoTrabalho" vira "Trabalho", "Trabalho"
-        return skill.split(/(?<=[a-zà-ÿ])(?=[A-Z])/g);
+        if (typeof skill !== 'string') return [];
+        // Lógica segura: Encontra (letra minúscula) seguida de (Letra Maiúscula)
+        // E insere um caractere separador '|' entre elas, depois divide.
+        // Funciona em todos os browsers.
+        return skill
+            .replace(/([a-zà-ÿ])([A-Z])/g, '$1|$2') 
+            .split('|');
     }).map(s => s.trim()).filter(s => s.length > 0);
   };
 
