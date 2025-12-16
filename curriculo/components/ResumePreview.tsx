@@ -41,7 +41,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   }, [style?.color]);
 
   const getRestrictionClass = (blockId: string) => {
-      // Se o bloco estiver na área de restrição (perto do QR Code), limitamos a largura
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
@@ -226,7 +225,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO REESCRITA COM SISTEMA HÍBRIDO (Texto Separado ou Pílulas) --- */}
+        {/* --- SESSÃO REESCRITA COM SISTEMA HÍBRIDO --- */}
         {shouldShowSection(skills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
@@ -234,14 +233,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
                 {/* LÓGICA HÍBRIDA:
-                    1. Se for template Clássico/Minimalista: Usa texto corrido separado por BOLINHAS (•).
-                       Isso garante que é IMPOSSÍVEL o texto colar, pois existe um caractere físico entre eles.
+                    1. Clássico/Minimalista: Renderiza como texto corrido separado por BOLINHAS (•).
+                       Isso garante que é impossível o texto colar, pois existe um caractere físico no meio.
                     
-                    2. Se for template Moderno: Usa as Pílulas (Tags) com MARGEM explícita.
+                    2. Moderno: Renderiza como Pílulas com MARGEM explícita.
                 */}
                 
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
-                    /* MODO TEXTO (Para layouts clássicos) */
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {skills && skills.length > 0 ? (
                             skills.map((skill, index) => (
@@ -258,7 +256,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         )}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS (Para layouts modernos) - Com margem para evitar colagem */
                     <div className="flex flex-wrap gap-2">
                         {skills && skills.length > 0 ? (
                             skills.map((skill, index) => (
