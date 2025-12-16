@@ -29,7 +29,8 @@ export interface ResumePreviewRef {
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   // Garante que data existe para evitar crashes
   const safeData = data || {};
-  const { personalInfo, summary, experiences, education, courses, languages, skills, style, continuation, restrictedBlockIds = [] } = safeData;
+  // CORREÇÃO 1: Adicionado valor padrão para skills = []
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, restrictedBlockIds = [] } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -49,29 +50,24 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   // --- MOTOR DE CORREÇÃO (USANDO useMemo PARA PERFORMANCE E SEGURANÇA) ---
   const processedSkills = useMemo(() => {
-      // 1. Se não houver skills, retorna array vazio imediatamente
+      // 1. Verificação de segurança
       if (!skills || !Array.isArray(skills)) return [];
 
       try {
-          // 2. Usamos reduce para criar um novo array limpo (funciona em qualquer navegador)
-          return skills.reduce((acc: string[], skill) => {
-              if (typeof skill !== 'string') return acc;
-              const trimmed = skill.trim();
-              if (!trimmed) return acc;
-
-              // 3. Tenta separar texto colado (Ex: "EquipeExcel" -> "Equipe", "Excel")
-              // A Regex procura: letra minúscula ([a-z]) seguida de Maiúscula ([A-Z])
-              // E insere um espaço entre elas.
-              const separated = trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
-              
-              // Adiciona ao resultado final
-              acc.push(separated);
-              return acc;
-          }, []);
+          // CORREÇÃO 2: Lógica simplificada e mais segura usando map + filter
+          return skills
+              .map(skill => {
+                  if (typeof skill !== 'string') return '';
+                  const trimmed = skill.trim();
+                  if (!trimmed) return '';
+                  
+                  // Separa texto colado (Ex: "EquipeExcel" -> "Equipe Excel")
+                  return trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
+              })
+              .filter(skill => skill.length > 0); // Remove strings vazias
       } catch (e) {
-          // Fallback de segurança: Se algo der errado, retorna o original para não ficar branco
           console.error("Erro ao processar skills:", e);
-          return skills.filter(s => typeof s === 'string');
+          return [];
       }
   }, [skills]);
   // -----------------------------------------------------------------------
