@@ -268,16 +268,27 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }));
   };
 
-  // --- NOVA LÓGICA DE HABILIDADES (TAGS/CHIPS) ---
+  // --- NOVA LÓGICA DE HABILIDADES (CORRIGIDA PARA FORMATAR O TEXTO) ---
+  
+  // Função auxiliar para Title Case (Excel avançado -> Excel Avançado)
+  const toTitleCase = (str: string) => {
+    return str.replace(
+      /\w\S*/g,
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
+  };
   
   // Função para adicionar uma habilidade (manual ou via sugestão)
   const addSkill = (skillName: string) => {
     const trimmedSkill = skillName.trim();
     if (!trimmedSkill) return;
 
+    // Aplica a formatação ANTES de verificar duplicatas e salvar
+    const formattedSkill = toTitleCase(trimmedSkill);
+
     // Evita duplicatas (case insensitive)
-    if (!data.skills.some(s => s.toLowerCase() === trimmedSkill.toLowerCase())) {
-        const newSkills = [...data.skills, trimmedSkill];
+    if (!data.skills.some(s => s.toLowerCase() === formattedSkill.toLowerCase())) {
+        const newSkills = [...data.skills, formattedSkill];
         handleDataChange('skills', newSkills);
     }
     setCurrentSkillInput(''); // Limpa o input
