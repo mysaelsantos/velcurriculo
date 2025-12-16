@@ -44,23 +44,41 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO (VERSÃO SEGURA) ---
-  // Substituída a regex moderna por uma compatível com todos os navegadores (evita tela branca)
+  // --- MOTOR DE HIGIENIZAÇÃO DE TEXTO (VERSÃO BLINDADA) ---
+  // Esta versão usa Javascript básico (ES5) para garantir compatibilidade total
+  // e evitar telas brancas ou erros silenciosos.
   const cleanAndSplitSkills = (rawSkills: string[] | undefined): string[] => {
+    // 1. Verificação de segurança: se não houver dados, retorna vazio
     if (!rawSkills || !Array.isArray(rawSkills) || rawSkills.length === 0) return [];
 
-    return rawSkills.flatMap(skill => {
-        if (typeof skill !== 'string') return [];
-        // Lógica segura: Encontra (letra minúscula) seguida de (Letra Maiúscula)
-        // E insere um caractere separador '|' entre elas, depois divide.
-        // Funciona em todos os browsers.
-        return skill
-            .replace(/([a-zà-ÿ])([A-Z])/g, '$1|$2') 
-            .split('|');
-    }).map(s => s.trim()).filter(s => s.length > 0);
+    const processed: string[] = [];
+
+    try {
+        rawSkills.forEach(skill => {
+            if (typeof skill !== 'string' || !skill.trim()) return;
+
+            // 2. Lógica Segura: Insere um separador '|' entre minúscula e Maiúscula
+            // Ex: "PowerBI" -> "Power|BI" | "EquipaExcel" -> "Equipa|Excel"
+            // Usa regex simples ([a-z])([A-Z]) para máxima compatibilidade
+            const separated = skill.replace(/([a-z])([A-Z])/g, '$1|$2');
+            
+            // 3. Divide e limpa
+            const parts = separated.split('|');
+            parts.forEach(part => {
+                const cleanPart = part.trim();
+                if (cleanPart) processed.push(cleanPart);
+            });
+        });
+    } catch (error) {
+        console.error("Erro ao processar habilidades:", error);
+        // Fallback: Se der erro, retorna a lista original para não ficar em branco
+        return rawSkills.filter(s => typeof s === 'string');
+    }
+
+    return processed;
   };
 
-  // Processa as habilidades antes de renderizar
+  // Processa as habilidades
   const processedSkills = cleanAndSplitSkills(skills);
   // ----------------------------------------
 
@@ -236,17 +254,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO CORRIGIDA COM MOTOR DE SEPARAÇÃO --- */}
+        {/* --- SESSÃO CORRIGIDA: HÍBRIDA E SEGURA --- */}
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
-                {/* Agora usamos 'processedSkills' que já foi separado pelo motor.
-                   Se o usuário estiver usando um layout Moderno, renderizamos Chips.
-                   Se for Clássico, renderizamos Texto com separadores.
-                */}
+                {/* Lógica: Se for Clássico/Minimalista, usa Texto com Bolinhas. Se for Moderno, usa Pílulas. */}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
@@ -260,7 +275,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS (CHIPS) - Ideal para Moderno e para evitar colagens */
+                    /* MODO PÍLULAS (CHIPS) */
                     <div className="flex flex-wrap gap-2">
                         {processedSkills.map((skill, index) => (
                             <span 
