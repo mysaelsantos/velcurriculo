@@ -265,12 +265,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS (CHIPS) - Ideal para Moderno e para evitar colagens */
+                    /* MODO PÍLULAS (CHIPS) - Estilo atualizado para formato Pílula (Imagem de referência) */
                     <div className="flex flex-wrap gap-2">
                         {processedSkills.map((skill, index) => (
                             <span 
                                 key={index} 
-                                className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-md mb-1 mr-2 inline-block border border-gray-200"
+                                className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1"
                             >
                                 {skill}
                             </span>
