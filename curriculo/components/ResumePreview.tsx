@@ -1,263 +1,290 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect, useState } from 'react';
-import QRCodeComponent from './QRCode';
+import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import type { ResumeData } from '../types';
+import QRCodeComponent from './QRCode';
+
+interface PageData extends Partial<ResumeData> {
+    continuation?: {
+        [itemId: string]: {
+            offset: number;
+            totalHeight: number;
+            visibleHeight?: number;
+        };
+    };
+    restrictedBlockIds?: string[];
+}
 
 interface ResumePreviewProps {
-    data: ResumeData;
-    isDemoMode: boolean;
-    isFirstPage?: boolean;
-    isMeasurement?: boolean;
-    isPrint?: boolean;
-    hideEmptySections?: boolean;
+  data: PageData;
+  isDemoMode: boolean;
+  isFirstPage: boolean;
+  isMeasurement?: boolean;
+  hideEmptySections?: boolean;
+  isPrint?: boolean;
 }
 
 export interface ResumePreviewRef {
-    getElement: () => HTMLDivElement | null;
+  getElement: () => HTMLDivElement | null;
 }
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage = true, isMeasurement = false, isPrint = false, hideEmptySections = false }, ref) => {
-    const previewRef = useRef<HTMLDivElement>(null);
-    const [isReady, setIsReady] = useState(false);
+const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
+  // Garante que data existe para evitar crashes
+  const safeData = data || {};
+  // CORREÇÃO 1: Adicionado valor padrão para skills = []
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, restrictedBlockIds = [] } = safeData;
+  
+  const previewRef = useRef<HTMLDivElement>(null);
 
-    useImperativeHandle(ref, () => ({
-        getElement: () => previewRef.current,
-    }));
+  useImperativeHandle(ref, () => ({
+    getElement: () => previewRef.current,
+  }));
 
-    useEffect(() => {
-      if (isMeasurement) {
-          setIsReady(true);
-          return;
+  useEffect(() => {
+    if (style?.color) {
+        document.documentElement.style.setProperty('--theme-color', style.color);
+    }
+  }, [style?.color]);
+
+  const getRestrictionClass = (blockId: string) => {
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
+  };
+
+  // --- MOTOR DE CORREÇÃO (USANDO useMemo PARA PERFORMANCE E SEGURANÇA) ---
+  const processedSkills = useMemo(() => {
+      // 1. Verificação de segurança
+      if (!skills || !Array.isArray(skills)) return [];
+
+      try {
+          // CORREÇÃO 2: Lógica simplificada e mais segura usando map + filter
+          return skills
+              .map(skill => {
+                  if (typeof skill !== 'string') return '';
+                  const trimmed = skill.trim();
+                  if (!trimmed) return '';
+                  
+                  // Separa texto colado (Ex: "EquipeExcel" -> "Equipe Excel")
+                  return trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
+              })
+              .filter(skill => skill.length > 0); // Remove strings vazias
+      } catch (e) {
+          console.error("Erro ao processar skills:", e);
+          return [];
       }
-      
-      const timer = setTimeout(() => {
-        setIsReady(true);
-      }, isPrint ? 1000 : 500); 
+  }, [skills]);
+  // -----------------------------------------------------------------------
 
-      return () => clearTimeout(timer);
-    }, [isMeasurement, isPrint, data]);
+  const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
+    const continuationInfo = continuation?.[itemId];
+    const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
 
+    if (continuationInfo) {
+      const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
+      const visibleHeight = isFirstPageOfSplit ? continuationInfo.visibleHeight : continuationInfo.totalHeight - continuationInfo.offset;
+      const topPosition = continuationInfo.offset > 0 ? `-${continuationInfo.offset}px` : '0px';
 
-    const formatDate = (dateString: string) => {
-        if (!dateString) return '';
-        if (dateString.toLowerCase() === 'atual') return 'Atual';
-        try {
-            const [year, month] = dateString.split('-');
-            if (!year || !month) return dateString;
-            const date = new Date(parseInt(year), parseInt(month) - 1);
-            return date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
-        } catch (e) {
-            return dateString;
-        }
-    };
+      if (visibleHeight <= 0) return null; 
 
-    const ModernTemplate: React.FC = () => {
-        const isRestricted = (blockId: string) => {
-            return (data as any).restrictedBlockIds?.includes(blockId);
-        };
+      return (
+        <div className={restrictionClass} style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
+            {content}
+          </div>
+        </div>
+      );
+    }
+    
+    if (restrictionClass) return <div className={restrictionClass}>{content}</div>;
+    return content;
+  };
+  
+  const shouldShowSection = (content: any, isArray = false) => {
+      const hasContent = isArray 
+          ? (Array.isArray(content) && content.length > 0)
+          : (content && typeof content === 'string' && content.trim().length > 0);
 
-        return (
-            <div className={`font-sans text-gray-800 h-full bg-white relative ${isMeasurement ? 'overflow-hidden' : ''}`}>
-                {isFirstPage && (
-                    <header className="bg-gray-100 p-8 flex items-center border-b-4 border-blue-500" style={{ borderColor: data.style.color }}>
-                        {data.personalInfo.profilePicture && (
-                            <img
-                                src={data.personalInfo.profilePicture}
-                                alt="Foto de Perfil"
-                                className="w-24 h-24 rounded-full mr-6 object-cover border-2 border-white shadow-md"
-                                style={{ borderColor: data.style.color }}
-                            />
-                        )}
-                        <div className="flex-grow">
-                            <h1 className="text-3xl font-extrabold uppercase tracking-wide" style={{ color: data.style.color }}>{data.personalInfo.name}</h1>
-                            <p className="text-lg font-semibold text-gray-600 mt-1">{data.personalInfo.jobTitle}</p>
-                        </div>
-                    </header>
-                 )}
+      if (hideEmptySections) return hasContent;
+      if (isMeasurement) return true;
+      if (!isFirstPage) return hasContent;
+      return true; 
+  };
 
-                <main className={`p-8 relative ${!isFirstPage ? 'pt-8' : ''}`}>
-                    {isFirstPage && (
-                        <section className="mb-6 flex flex-wrap text-sm text-gray-600 border-b border-gray-200 pb-6">
-                            {data.personalInfo.email && (
-                                <div className="flex items-center mr-4 mb-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                    {data.personalInfo.email}
-                                </div>
-                            )}
-                            {data.personalInfo.phone && (
-                                <div className="flex items-center mr-4 mb-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-3a15.3 15.3 0 01-6-6z" /></svg>
-                                    {data.personalInfo.phone}
-                                </div>
-                            )}
-                            {data.personalInfo.address && (
-                                <div className="flex items-center mr-4 mb-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    {data.personalInfo.address}
-                                </div>
-                            )}
-                             {data.personalInfo.linkedin && (
-                                <div className="flex items-center mr-4 mb-2">
-                                   <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
-                                    {data.personalInfo.linkedin.replace(/(https?:\/\/)?(www\.)?linkedin\.com\/in\//, '')}
-                                </div>
-                            )}
-                             {(data.personalInfo.age || data.personalInfo.maritalStatus || data.personalInfo.cnh) && (
-                                <div className="flex items-center mr-4 mb-2 text-gray-500">
-                                    <span>
-                                        {data.personalInfo.age && `${data.personalInfo.age} anos`}
-                                        {data.personalInfo.age && data.personalInfo.maritalStatus && ' | '}
-                                        {data.personalInfo.maritalStatus}
-                                        {(data.personalInfo.age || data.personalInfo.maritalStatus) && data.personalInfo.cnh && ' | '}
-                                        {data.personalInfo.cnh && `CNH: ${data.personalInfo.cnh}`}
-                                    </span>
-                                </div>
-                            )}
-                        </section>
+  const containerClasses = [
+      'resume-preview bg-white text-gray-900',
+      style?.template,
+      (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
+      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div id="resume-preview" ref={previewRef} className={containerClasses}>
+      {isFirstPage && personalInfo && (
+        <>
+            <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
+                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
+            </div>
+            <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
+                <div className="flex justify-between items-start">
+                    <div className="pr-4" style={{ maxWidth: personalInfo.profilePicture ? 'calc(100% - 170px)' : '100%' }}>
+                        <h1 id="resume-name" className="font-bold">{personalInfo.name || (isDemoMode ? '' : 'Seu Nome')}</h1>
+                        <h2 id="resume-job-title" className="font-medium text-gray-600 mt-1">{personalInfo.jobTitle || (isDemoMode ? '' : 'Cargo Desejado')}</h2>
+                    </div>
+                </div>
+
+                <div id="contact-info" className="mt-3">
+                    {personalInfo.email && <a href={`mailto:${personalInfo.email}`} id="resume-email-container" className="text-gray-700 hover:text-blue-600 transition-colors flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span id="resume-email" className="leading-none pt-0.5">{personalInfo.email}</span></a>}
+                    {personalInfo.phone && <a href={`tel:${personalInfo.phone}`} id="resume-phone-container" className="text-gray-700 hover:text-blue-600 transition-colors flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span id="resume-phone" className="leading-none pt-0.5">{personalInfo.phone}</span></a>}
+                    {personalInfo.address && <div id="resume-address-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="resume-address" className="leading-none pt-0.5">{personalInfo.address}</span></div>}
+                    {personalInfo.age && <div id="resume-age-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg><span id="resume-age" className="leading-none pt-0.5">{personalInfo.age} anos</span></div>}
+                    {personalInfo.maritalStatus && <div id="resume-marital-status-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span id="resume-marital-status" className="leading-none pt-0.5">{personalInfo.maritalStatus}</span></div>}
+                    {personalInfo.cnh && personalInfo.cnh !== 'Não possuo' && <div id="resume-cnh-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9L1 16v5c0 .6.4 1 1 1h3c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1zM2 16l1.5-4.5h11L16 16H2zm13 1v-1H5v1h10zm-1-4h.5c.3 0 .5-.2.5-.5s-.2-.5-.5-.5H14v1z"/></svg><span id="resume-cnh" className="leading-none pt-0.5">CNH: {personalInfo.cnh}</span></div>}
+                </div>
+            </header>
+        </>
+      )}
+      <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
+        {shouldShowSection(summary) && (
+                <section id="summary-section">
+                    <h3 className="section-title">Resumo Profissional</h3>
+                     {renderWithContinuation('summary-text',
+                        <p id="resume-summary" className="text-gray-700 leading-relaxed">
+                            {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                        </p>
                     )}
-
-                    {data.summary && (
-                        <section id="summary-section" className={`mb-6 ${hideEmptySections && !data.summary ? 'hidden' : ''}`}>
-                            <h2 className="section-title text-xl font-bold text-gray-800 mb-3 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Resumo Profissional</h2>
-                            <p className="text-gray-700 leading-relaxed text-justify">{data.summary}</p>
-                        </section>
-                    )}
-
-                    {data.experiences.length > 0 && (
-                        <section id="experience-section" className={`mb-6 ${hideEmptySections && data.experiences.length === 0 ? 'hidden' : ''}`}>
-                            <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Experiência Profissional</h2>
-                             <div id="resume-experience-list" className="space-y-5">
-                                {data.experiences.map((exp) => (
-                                    <div key={exp.id} className={`relative ${isRestricted(exp.id) ? 'break-inside-avoid' : ''}`}>
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <h3 className="text-lg font-bold text-gray-800" style={{ color: data.style.color }}>{exp.jobTitle}</h3>
-                                            <span className="text-sm text-gray-600 font-medium whitespace-nowrap ml-4">
-                                                {formatDate(exp.startDate)} - {formatDate(exp.endDate)}
-                                            </span>
+                </section>
+        )}
+        {shouldShowSection(experiences, true) && (
+        <section id="experience-section">
+            <h3 className="section-title">Experiência Profissional</h3>
+            <div id="resume-experience-list" className="space-y-4">
+                {experiences && experiences.length > 0 ? (
+                    experiences.map(exp => {
+                        const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
+                        return (
+                            <div key={exp.id} className={getRestrictionClass(exp.id)}>
+                                {!isContinuation && (
+                                    <div className="flex justify-between items-baseline flex-wrap">
+                                        <div className="pr-4">
+                                            <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
+                                            <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
                                         </div>
-                                        <div className="flex items-center text-sm text-gray-600 mb-2">
-                                             <span className="font-semibold mr-2">{exp.company}</span>
-                                             {exp.location && (
-                                                 <>
-                                                     <span>|</span>
-                                                     <span className="ml-2">{exp.location}</span>
-                                                 </>
-                                             )}
-                                        </div>
-                                        {exp.description && <p className="text-gray-700 text-sm leading-relaxed text-justify whitespace-pre-line">{exp.description}</p>}
+                                        <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                                     </div>
-                                ))}
+                                )}
+                                {exp.description && renderWithContinuation(exp.id, 
+                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
+                                    true
+                                )}
                             </div>
-                        </section>
-                    )}
-
-                    {data.education.length > 0 && (
-                        <section id="education-section" className={`mb-6 ${hideEmptySections && data.education.length === 0 ? 'hidden' : ''}`}>
-                            <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Formação Acadêmica</h2>
-                            <div id="resume-education-list" className="space-y-4">
-                                {data.education.map((edu) => (
-                                    <div key={edu.id} className={`relative ${isRestricted(edu.id) ? 'break-inside-avoid' : ''}`}>
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <h3 className="text-lg font-bold text-gray-800" style={{ color: data.style.color }}>{edu.degree}</h3>
-                                            <span className="text-sm text-gray-600 font-medium whitespace-nowrap ml-4">
-                                                {edu.startDate} - {edu.endDate}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-700 font-medium">{edu.institution}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                    
-                    {data.courses.length > 0 && (
-                        <section id="courses-section" className={`mb-6 ${hideEmptySections && data.courses.length === 0 ? 'hidden' : ''}`}>
-                             <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Cursos e Certificações</h2>
-                             <div id="resume-courses-list" className="space-y-3">
-                                {data.courses.map((course) => (
-                                    <div key={course.id} className={`relative flex justify-between items-baseline ${isRestricted(course.id) ? 'break-inside-avoid' : ''}`}>
-                                        <div>
-                                             <h3 className="text-base font-bold text-gray-800" style={{ color: data.style.color }}>{course.name}</h3>
-                                             <p className="text-sm text-gray-600">{course.institution}</p>
-                                        </div>
-                                        <span className="text-sm text-gray-600 font-medium whitespace-nowrap ml-4">{course.completionDate}</span>
-                                    </div>
-                                ))}
-                             </div>
-                        </section>
-                    )}
-
-                    {data.languages.length > 0 && (
-                        <section id="languages-section" className={`mb-6 ${hideEmptySections && data.languages.length === 0 ? 'hidden' : ''}`}>
-                            <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Idiomas</h2>
-                            <div id="resume-languages-list" className="grid grid-cols-2 gap-y-2 gap-x-4">
-                                {data.languages.map((lang) => (
-                                    <div key={lang.id} className="flex justify-between items-center border-b border-gray-100 pb-1">
-                                        <span className="text-gray-800 font-medium">{lang.language}</span>
-                                        <span className="text-sm text-gray-600">{lang.proficiency}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {data.skills.length > 0 && (
-                        <section id="skills-section" className={`mb-6 ${hideEmptySections && data.skills.length === 0 ? 'hidden' : ''}`}>
-                             <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Habilidades e Competências</h2>
-                             <div id="resume-skills" className="flex flex-wrap gap-2">
-                                {data.skills.map((skill, index) => (
-                                    <span 
-                                        key={index}
-                                        className="bg-gray-50 border border-gray-300 text-gray-700 text-sm font-medium px-4 py-1.5 rounded-lg"
-                                        style={{ display: 'inline-block' }} 
-                                    >
-                                        {skill}
-                                    </span>
-                                ))}
-                             </div>
-                        </section>
-                    )}
-                </main>
-                
-                 {/* QR Code Usando Componente Existente do Projeto */}
-                 {isFirstPage && (
-                    <QRCodeComponent 
-                        phone={data.personalInfo.phone} 
-                        show={data.style.showQRCode} 
-                        linkedin={data.personalInfo.linkedin} 
-                        showLinkedin={data.style.showLinkedinQr} 
-                    />
+                        )
+                    })
+                ) : (
+                    <p className="text-gray-400 italic text-sm">Suas experiências profissionais aparecerão aqui...</p>
                 )}
             </div>
-        );
-    };
-
-    // Placeholder for other templates if they were implemented
-    const ClassicTemplate: React.FC = () => <div className="p-8 text-center">Template Clássico (Em desenvolvimento)</div>;
-    const MinimalistTemplate: React.FC = () => <div className="p-8 text-center">Template Minimalista (Em desenvolvimento)</div>;
-
-    let TemplateComponent = ModernTemplate;
-    if (data.style.template === 'template-classic') TemplateComponent = ClassicTemplate;
-    if (data.style.template === 'template-minimalist') TemplateComponent = MinimalistTemplate;
-
-    return (
-        <div 
-            ref={previewRef} 
-            className={`resume-preview-container bg-gray-200 mx-auto rounded-lg shadow-2xl overflow-hidden origin-top ${!isReady && !isMeasurement ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-            style={{ 
-                width: '210mm', 
-                minHeight: '297mm',
-                height: isPrint ? '297mm' : 'auto',
-                transform: isMeasurement ? 'scale(1)' : undefined 
-            }}
-        >
-            <TemplateComponent />
-            {isDemoMode && !isPrint && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    <p className="text-4xl font-bold text-gray-300 opacity-20 transform -rotate-45 select-none">PREVISÃO DE DEMONSTRAÇÃO</p>
-                </div>
+        </section>
+        )}
+        {shouldShowSection(education, true) && (
+        <section id="education-section">
+            <h3 className="section-title">Formação Acadêmica</h3>
+            <div id="resume-education-list" className="space-y-2">
+            {education && education.length > 0 ? (
+                education.map(edu => (
+                    <div key={edu.id} className={getRestrictionClass(edu.id)}>
+                        <div className="flex justify-between items-baseline flex-wrap">
+                            <div className="pr-4">
+                                <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
+                                <p className="text-gray-700">{edu.institution || 'Instituição'}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{edu.startDate} {edu.startDate && edu.endDate ? ' - ' : ''} {edu.endDate}</p>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Sua formação acadêmica aparecerá aqui...</p>
             )}
-        </div>
-    );
+            </div>
+        </section>
+        )}
+        {shouldShowSection(courses, true) && (
+        <section id="courses-section" className={getRestrictionClass('courses-block')}>
+            <h3 className="section-title">Cursos Complementares</h3>
+            <div id="resume-courses-list" className="space-y-2">
+            {courses && courses.length > 0 ? (
+                courses.map(course => (
+                    <div key={course.id} className={getRestrictionClass(course.id)}>
+                        <div className="flex justify-between items-baseline flex-wrap">
+                            <div className="pr-4">
+                                <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
+                                <p className="text-gray-700">{course.institution || 'Instituição'}</p>
+                            </div>
+                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{course.completionDate}</p>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Seus cursos complementares aparecerão aqui...</p>
+            )}
+            </div>
+        </section>
+        )}
+        {shouldShowSection(languages, true) && (
+        <section id="languages-section">
+            <h3 className="section-title">Idiomas</h3>
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
+            {languages && languages.length > 0 ? (
+                languages.map(lang => (
+                    <div key={lang.id} className="flex items-baseline">
+                        <h4 className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</h4>
+                        <p className="text-gray-700">{lang.proficiency || 'Nível'}</p>
+                    </div>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
+            )}
+            </div>
+        </section>
+        )}
+        
+        {/* --- SESSÃO CORRIGIDA: Exibe sempre algo se houver skills --- */}
+        {shouldShowSection(processedSkills, true) && (
+        <section id="skills-section">
+            <h3 className="section-title">Habilidades e Competências</h3>
+            
+            <div id="resume-skills" className={getRestrictionClass('skills-block')}>
+                
+                {/* Lógica Híbrida Simplificada */}
+                {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
+                    <div className="text-gray-700 text-sm leading-relaxed">
+                        {processedSkills.map((skill, index) => (
+                            <span key={index}>
+                                {skill}
+                                {/* Adiciona separador visual se não for o último */}
+                                {index < processedSkills.length - 1 && (
+                                    <span className="mx-2 font-bold text-gray-400">•</span>
+                                )}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    /* MODO PÍLULAS (CHIPS) - Ideal para Moderno e para evitar colagens */
+                    <div className="flex flex-wrap gap-2">
+                        {processedSkills.map((skill, index) => (
+                            <span 
+                                key={index} 
+                                className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-md mb-1 mr-2 inline-block border border-gray-200"
+                            >
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </section>
+        )}
+        
+      </main>
+      {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
+    </div>
+  );
 });
 
 export default ResumePreview;
