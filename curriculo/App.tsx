@@ -8,6 +8,7 @@ import ResumeForm from './components/ResumeForm';
 import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
+import ContinueProgressModal from './components/ContinueProgressModal'; // Importação adicionada
 import type { ResumeData } from './types';
 
 interface PageData extends Partial<ResumeData> {
@@ -36,7 +37,7 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Solteiro(a)',
         cnh: 'B',
         linkedin: 'linkedin.com/in/ana-silva-demo',
-        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM5Q0EzQUYiIGNsYXNzPSJ3LWZ1bGwgaC1mdWxsIHBhZGRpbmciPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDEuNzkgNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4='
+        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM5Q0EzQUYiIGNsYXNzPSJ3LWZ1bGwgaC1mdWxsIHBhZGRpbmciPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDEuNzkgNCA0IDEuNzkgNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4='
     },
     summary: 'Desenvolvedora front-end proativa com 3+ anos de experiência na criação de interfaces de usuário responsivas e performáticas com React e Vue.js. Apaixonada por design limpo e em busca de novos desafios para aplicar minhas habilidades em UI/UX. Histórico comprovado na otimização de performance, resultando em melhorias significativas no Core Web Vitals e na satisfação do cliente. Proficiente em metodologias ágeis e ferramentas de versionamento como Git.',
     experiences: [
@@ -116,7 +117,7 @@ const calculateCurrentGenerated = (base: number) => {
   const now = new Date();
   const hour = now.getHours();
   
-  if (hour < 0) return base; // Prevent error if hour check fails logic
+  if (hour < 0) return base; 
   
   const startOfDayCount = new Date();
   startOfDayCount.setHours(9, 0, 0, 0);
@@ -124,7 +125,6 @@ const calculateCurrentGenerated = (base: number) => {
   const endOfDayCount = new Date();
   endOfDayCount.setHours(19, 0, 0, 0);
   
-  // Logic simplified for robustness
   if (hour < 9) return base;
   if (now > endOfDayCount) {
       const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
@@ -196,6 +196,10 @@ const App: React.FC = () => {
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
 
+    // --- NOVOS ESTADOS PARA O MODAL DE CONTINUAÇÃO ---
+    const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
+    const [pendingSavedData, setPendingSavedData] = useState<any>(null);
+
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
@@ -247,17 +251,19 @@ const App: React.FC = () => {
         };
     }, []);
     
+    // --- LÓGICA DE RECUPERAÇÃO DO LOCALSTORAGE ALTERADA ---
     useEffect(() => {
         try {
+            // Verificar progresso não salvo (rascunho)
             const savedProgress = localStorage.getItem('inProgressResume');
             if (savedProgress) {
-                const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = JSON.parse(savedProgress);
-                setResumeData(savedData);
-                setCurrentStep(savedStep);
-                setIsFinished(savedIsFinished);
-                setIsDemoMode(false);
+                const parsedProgress = JSON.parse(savedProgress);
+                setPendingSavedData(parsedProgress);
+                setIsContinueModalOpen(true);
+                // Não setamos o resumeData automaticamente aqui. Esperamos o usuário decidir.
             }
 
+            // Verificar currículos finalizados e salvos (lista)
             const storedResumes = localStorage.getItem('savedResumes');
             if (storedResumes) {
                 setSavedResumes(JSON.parse(storedResumes));
@@ -277,6 +283,32 @@ const App: React.FC = () => {
             }
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
+
+    // --- FUNÇÕES PARA O MODAL DE CONTINUAÇÃO ---
+    const handleContinueProgress = () => {
+        if (pendingSavedData) {
+            const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = pendingSavedData;
+            setResumeData(savedData);
+            setCurrentStep(savedStep);
+            setIsFinished(savedIsFinished);
+            setIsDemoMode(false); // Importante: Sair do modo demo
+        }
+        setIsContinueModalOpen(false);
+        setPendingSavedData(null);
+    };
+
+    const handleStartNew = () => {
+        // Limpa apenas o progresso em andamento
+        try {
+            localStorage.removeItem('inProgressResume');
+        } catch (error) {
+            console.error("Error removing localStorage item", error);
+        }
+        setIsContinueModalOpen(false);
+        setPendingSavedData(null);
+        // O estado já é o inicial (DEMO_DATA) por padrão, então não precisamos resetar
+    };
+    // ---------------------------------------------
 
 
     const handleStartEditing = () => {
@@ -361,10 +393,7 @@ const App: React.FC = () => {
             
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 50;
-            // AJUSTE CRÍTICO: Margem reduzida para permitir conteúdo até mais embaixo
             const MARGIN_BOTTOM = 50; 
-            
-            // AJUSTE CRÍTICO: Ponto Y FIXO onde começa visualmente o QR Code
             const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
@@ -486,7 +515,6 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
-            // Zona de perigo definida pelo ponto visual fixo
             const dangerZoneStart = QR_CODE_START_Y;
 
             let pendingTitleHeight = 0;
@@ -495,7 +523,6 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // Lógica refinada: Só é zona de perigo se o bloco realmente invadir o espaço visual do QR Code (Y > 930)
                 const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
@@ -525,7 +552,6 @@ const App: React.FC = () => {
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
-                        // CORREÇÃO AQUI: Verificamos o tipo ESPECÍFICO antes do Array genérico
                         currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
@@ -538,7 +564,6 @@ const App: React.FC = () => {
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
-                        // CORREÇÃO AQUI TAMBÉM: Verificamos o tipo ESPECÍFICO antes do Array genérico
                         currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
@@ -842,6 +867,12 @@ const App: React.FC = () => {
                 {toast.message}
             </div>
         )}
+        {/* --- MODAL DE CONTINUAÇÃO ADICIONADO AQUI --- */}
+        <ContinueProgressModal 
+            isOpen={isContinueModalOpen}
+            onContinue={handleContinueProgress}
+            onStartNew={handleStartNew}
+        />
         {isPixModalOpen && pixPaymentData && (
             <PixModal
                 isOpen={isPixModalOpen}
