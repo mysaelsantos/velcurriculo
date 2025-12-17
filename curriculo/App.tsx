@@ -524,11 +524,12 @@ const App: React.FC = () => {
                 if (effectiveHeight <= available) {
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        // CORREÇÃO AQUI: Verificamos o tipo ESPECÍFICO antes do Array genérico
+                        currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                         currentPageData[block.type] = block.data;
-                    }
+                    } 
                     currentY += effectiveHeight;
                     pendingTitleHeight = 0; 
                 } else {
@@ -536,11 +537,12 @@ const App: React.FC = () => {
                     
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        // CORREÇÃO AQUI TAMBÉM: Verificamos o tipo ESPECÍFICO antes do Array genérico
+                        currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    }
+                    } 
                     
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
                     currentY += titleHeight + effectiveHeight; 
