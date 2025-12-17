@@ -8,7 +8,7 @@ import ResumeForm from './components/ResumeForm';
 import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
-import ContinueProgressModal from './components/ContinueProgressModal'; // Importação adicionada
+import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData } from './types';
 
 interface PageData extends Partial<ResumeData> {
@@ -26,6 +26,7 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
+// --- CORREÇÃO DA IMAGEM DEMO AQUI ---
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Ana Maria Silva',
@@ -37,7 +38,8 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Solteiro(a)',
         cnh: 'B',
         linkedin: 'linkedin.com/in/ana-silva-demo',
-        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiM5Q0EzQUYiIGNsYXNzPSJ3LWZ1bGwgaC1mdWxsIHBhZGRpbmciPjxwYXRoIGQ9Ik0xMiAxMmMyLjIxIDAgNC0xLjc5IDQtNHMtMS43OS00LTQtNC00IDEuNzktNCA0IDEuNzkgNCA0IDEuNzkgNCA0IDR6bTAgMmMtMi42NyAwLTggMS4zNC04IDR2MmgxNnYtMmMwLTIuNjYtNS4zMy00LTgtNHoiLz48L3N2Zz4='
+        // String base64 corrigida e completa:
+        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzlDQTNBRiI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg=='
     },
     summary: 'Desenvolvedora front-end proativa com 3+ anos de experiência na criação de interfaces de usuário responsivas e performáticas com React e Vue.js. Apaixonada por design limpo e em busca de novos desafios para aplicar minhas habilidades em UI/UX. Histórico comprovado na otimização de performance, resultando em melhorias significativas no Core Web Vitals e na satisfação do cliente. Proficiente em metodologias ágeis e ferramentas de versionamento como Git.',
     experiences: [
@@ -63,6 +65,7 @@ const DEMO_DATA: ResumeData = {
         showLinkedinQr: true
     }
 };
+// ------------------------------------
 
 const INITIAL_DATA: ResumeData = {
     personalInfo: { name: '', jobTitle: '', email: '', phone: '', address: '', age: '', maritalStatus: '', cnh: '', linkedin: '', profilePicture: '' },
@@ -196,7 +199,6 @@ const App: React.FC = () => {
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
 
-    // --- NOVOS ESTADOS PARA O MODAL DE CONTINUAÇÃO ---
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
 
@@ -251,19 +253,15 @@ const App: React.FC = () => {
         };
     }, []);
     
-    // --- LÓGICA DE RECUPERAÇÃO DO LOCALSTORAGE ALTERADA ---
     useEffect(() => {
         try {
-            // Verificar progresso não salvo (rascunho)
             const savedProgress = localStorage.getItem('inProgressResume');
             if (savedProgress) {
                 const parsedProgress = JSON.parse(savedProgress);
                 setPendingSavedData(parsedProgress);
                 setIsContinueModalOpen(true);
-                // Não setamos o resumeData automaticamente aqui. Esperamos o usuário decidir.
             }
 
-            // Verificar currículos finalizados e salvos (lista)
             const storedResumes = localStorage.getItem('savedResumes');
             if (storedResumes) {
                 setSavedResumes(JSON.parse(storedResumes));
@@ -284,21 +282,19 @@ const App: React.FC = () => {
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
 
-    // --- FUNÇÕES PARA O MODAL DE CONTINUAÇÃO ---
     const handleContinueProgress = () => {
         if (pendingSavedData) {
             const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = pendingSavedData;
             setResumeData(savedData);
             setCurrentStep(savedStep);
             setIsFinished(savedIsFinished);
-            setIsDemoMode(false); // Importante: Sair do modo demo
+            setIsDemoMode(false);
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
     };
 
     const handleStartNew = () => {
-        // Limpa apenas o progresso em andamento
         try {
             localStorage.removeItem('inProgressResume');
         } catch (error) {
@@ -306,10 +302,7 @@ const App: React.FC = () => {
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
-        // O estado já é o inicial (DEMO_DATA) por padrão, então não precisamos resetar
     };
-    // ---------------------------------------------
-
 
     const handleStartEditing = () => {
         setIsDemoMode(false);
@@ -356,7 +349,6 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO V14 (Zona de Perigo Fixa e Margem Ajustada) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -867,7 +859,6 @@ const App: React.FC = () => {
                 {toast.message}
             </div>
         )}
-        {/* --- MODAL DE CONTINUAÇÃO ADICIONADO AQUI --- */}
         <ContinueProgressModal 
             isOpen={isContinueModalOpen}
             onContinue={handleContinueProgress}
