@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef, useEffect, useState } from 'react';
-import QRCode from 'react-qr-code';
+import QRCodeComponent from './QRCode';
 import type { ResumeData } from '../types';
 
 interface ResumePreviewProps {
@@ -51,7 +51,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     };
 
     const ModernTemplate: React.FC = () => {
-        const showQr = (data.style.showQRCode || data.style.showLinkedinQr) && isFirstPage;
         const isRestricted = (blockId: string) => {
             return (data as any).restrictedBlockIds?.includes(blockId);
         };
@@ -201,7 +200,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         </section>
                     )}
 
-                    {/* --- SEÇÃO DE HABILIDADES ESTILO DA IMAGEM 2 (NEUTRO COM BORDA) --- */}
                     {data.skills.length > 0 && (
                         <section id="skills-section" className={`mb-6 ${hideEmptySections && data.skills.length === 0 ? 'hidden' : ''}`}>
                              <h2 className="section-title text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2" style={{ color: data.style.color, borderColor: data.style.color }}>Habilidades e Competências</h2>
@@ -219,31 +217,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         </section>
                     )}
                 </main>
-
-                {/* QR Code Section - Fixed Position Bottom Right */}
-                {showQr && (
-                    <div className="absolute bottom-8 right-8 flex flex-col items-center print:fixed print:bottom-8 print:right-8">
-                        {data.style.showQRCode && data.personalInfo.linkedin && (
-                            <div className="mb-4 flex flex-col items-center">
-                                <QRCode
-                                    value={data.personalInfo.linkedin.startsWith('http') ? data.personalInfo.linkedin : `https://${data.personalInfo.linkedin}`}
-                                    size={80}
-                                    fgColor={data.style.color}
-                                />
-                                <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider font-medium">LinkedIn</span>
-                            </div>
-                        )}
-                         {data.style.showLinkedinQr && data.personalInfo.phone && (
-                            <div className="flex flex-col items-center">
-                                <QRCode
-                                    value={`https://wa.me/55${data.personalInfo.phone.replace(/\D/g, '')}`}
-                                    size={80}
-                                    fgColor={data.style.color}
-                                />
-                                <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider font-medium">WhatsApp</span>
-                            </div>
-                        )}
-                    </div>
+                
+                 {/* QR Code Usando Componente Existente do Projeto */}
+                 {isFirstPage && (
+                    <QRCodeComponent 
+                        phone={data.personalInfo.phone} 
+                        show={data.style.showQRCode} 
+                        linkedin={data.personalInfo.linkedin} 
+                        showLinkedin={data.style.showLinkedinQr} 
+                    />
                 )}
             </div>
         );
