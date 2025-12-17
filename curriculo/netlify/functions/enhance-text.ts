@@ -1,11 +1,17 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import fetch from 'node-fetch';
+
+// REMOVIDO: import fetch from 'node-fetch'; 
+// O Node.js 18+ (padrão do Netlify) já possui 'fetch' nativo. 
+// Remover isso evita erros de "require is not defined" ou conflitos de ESM/CommonJS.
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-2.0-flash";
+
+// ALTERADO: Usando o modelo estável 1.5, pois o 2.0 pode estar instável ou restrito.
+const MODEL_NAME = "gemini-1.5-flash"; 
+
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
-// --- NOVA LÓGICA DE TENTATIVAS ---
+// --- LÓGICA DE TENTATIVAS (MANTIDA) ---
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
@@ -13,7 +19,9 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
   for (let i = 0; i < maxTries; i++) {
     try {
+      // Usando o fetch nativo global
       const response = await fetch(url, options);
+      
       if (response.ok) return response;
 
       if (response.status === 429) {
@@ -27,7 +35,9 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
       } else {
         console.error(`Tentativa ${i + 1} falhou com status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
-        lastError = new Error(errorBody.message || `Erro da API: ${response.statusText}`);
+        // @ts-ignore
+        const errorMessage = errorBody.message || errorBody.error?.message || `Erro da API: ${response.statusText}`;
+        lastError = new Error(errorMessage);
         break; 
       }
     } catch (fetchError) {
@@ -41,11 +51,22 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 // --- FIM DA LÓGICA DE TENTATIVAS ---
 
 const handler: Handler = async (event: HandlerEvent) => {
+  // 1. Verificação de Método
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
+  // 2. DIAGNÓSTICO DE API KEY (Novo)
+  console.log(`[enhance-text] Iniciando função. Modelo: ${MODEL_NAME}`);
   if (!API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ message: "Chave da API do Gemini não configurada." }) };
+    console.error("[enhance-text] ERRO CRÍTICO: GEMINI_API_KEY não encontrada nas variáveis de ambiente.");
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ message: "Configuração de servidor inválida (API Key ausente)." }) 
+    };
+  } else {
+    // Log de segurança: mostra apenas os 4 primeiros caracteres para confirmar que leu a chave correta
+    console.log(`[enhance-text] API Key carregada com sucesso. Inicia com: ${API_KEY.substring(0, 4)}...`);
   }
 
   try {
@@ -71,7 +92,8 @@ const handler: Handler = async (event: HandlerEvent) => {
       ],
     };
 
-    // USA O NOVO FETCH COM TENTATIVAS
+    console.log("[enhance-text] Enviando requisição para o Gemini...");
+
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,12 +102,14 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     const result: any = await apiResponse.json();
     
+    // Verificação robusta da resposta
     if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-      console.error("Resposta inesperada da API:", result);
-      throw new Error("A API da IA retornou uma resposta inválida.");
+      console.error("[enhance-text] Resposta inesperada da API:", JSON.stringify(result));
+      throw new Error("A API da IA retornou uma resposta em formato inesperado.");
     }
 
     const text = result.candidates[0].content.parts[0].text;
+    console.log("[enhance-text] Sucesso! Texto gerado.");
 
     return {
       statusCode: 200,
@@ -95,14 +119,16 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     const err = error as Error;
-    // --- MUDANÇA PRINCIPAL AQUI ---
+    
+    // Tratamento de erro 429
     if (err.message === "RESOURCE_EXHAUSTED") {
       return {
         statusCode: 429,
-        body: JSON.stringify({ message: "Ops! Prometemos que não é drama, é só um bugzinho do nosso lado. Por favor, tente novamente em 1 minuto ou atualize a página." })
+        body: JSON.stringify({ message: "Muitas requisições. Por favor, tente novamente em 1 minuto." })
       };
     }
-    console.error("Error calling Gemini API:", err);
+
+    console.error("[enhance-text] Erro final:", err);
     return { 
       statusCode: 500, 
       body: JSON.stringify({ message: err.message || "Falha ao aprimorar o texto com a IA." }) 
