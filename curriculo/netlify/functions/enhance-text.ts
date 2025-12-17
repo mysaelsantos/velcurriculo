@@ -1,10 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// REMOVIDO: import fetch from 'node-fetch';
-
+// Configuração corrigida para versão LITE (Evita erro 429)
 const API_KEY = process.env.GEMINI_API_KEY;
-// CORREÇÃO FINAL: Usando o modelo confirmado na sua lista
-const MODEL_NAME = "gemini-2.0-flash"; 
+const MODEL_NAME = "gemini-2.0-flash-lite-preview-02-05"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
