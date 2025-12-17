@@ -26,37 +26,75 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
+// DADOS DE DEMONSTRAÇÃO ATUALIZADOS (SEU PERFIL)
 const DEMO_DATA: ResumeData = {
     personalInfo: {
-        name: 'Ana Maria Silva',
-        jobTitle: 'Desenvolvedora Front-End',
-        email: 'ana.silva@email.com',
-        phone: '(11) 98765-4321',
-        address: 'São Paulo, SP',
-        age: '29',
-        maritalStatus: 'Solteiro(a)',
-        cnh: 'B',
-        linkedin: 'linkedin.com/in/ana-silva-demo',
-        // Imagem otimizada (SVG) para evitar erros de carregamento
-        profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzlDQTNBRiI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg=='
+        name: 'Marcos MJ Santos',
+        jobTitle: 'Desenvolvedor Full Stack & Criador de Soluções',
+        email: 'l.mysaelsantos@gmail.com',
+        phone: '(37) 98416-9386',
+        address: 'Nova Serrana, MG',
+        age: '22',
+        maritalStatus: 'Casado',
+        cnh: 'A',
+        linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
+        profilePicture: 'https://i.postimg.cc/c4k45kS3/Gemini-Generated-Image-igzfl4igzfl4igzf.png'
     },
-    summary: 'Desenvolvedora front-end proativa com 3+ anos de experiência na criação de interfaces de usuário responsivas e performáticas com React e Vue.js. Apaixonada por design limpo e em busca de novos desafios para aplicar minhas habilidades em UI/UX. Histórico comprovado na otimização de performance e na satisfação do cliente.',
+    summary: 'Desenvolvedor Full Stack apaixonado por transformar ideias complexas em produtos digitais funcionais. Fundador do "VelCurrículo", uma plataforma SaaS inovadora que integra Inteligência Artificial (Google Gemini) para otimização de conteúdo e pagamentos instantâneos via Pix. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Com 22 anos, combino agilidade técnica com visão de produto, focado em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o utilizador final.',
     experiences: [
-        { id: '1', jobTitle: 'Desenvolvedora Front-End Pleno', company: 'Tech Solutions', location: 'São Paulo, SP', startDate: 'Jan 2022', endDate: 'Atual', description: 'Liderança no desenvolvimento do novo portal do cliente usando React, resultando em um aumento de 25% na retenção de usuários. Otimização de performance (Core Web Vitals) e mentoria de desenvolvedores júnior. Colaboração com equipes de UI/UX para garantir a fidelidade do design e a melhor experiência do usuário.' },
-        { id: '2', jobTitle: 'Desenvolvedora Front-End Júnior', company: 'Web Agil', location: 'Remoto', startDate: 'Mar 2020', endDate: 'Dez 2021', description: 'Desenvolvimento e manutenção de landing pages e e-commerces em Vue.js, garantindo total responsividade e acessibilidade (WCAG).' }
+        { 
+            id: '1', 
+            jobTitle: 'Fundador & Desenvolvedor Lead', 
+            company: 'Vel Sites / VelCurrículo', 
+            location: 'Nova Serrana, MG', 
+            startDate: 'Jan 2023', 
+            endDate: 'Atual', 
+            description: 'Liderança técnica e desenvolvimento completo da plataforma VelCurrículo.\n• Arquitetura Frontend: Construída com React, TypeScript e Vite para máxima performance e SEO.\n• Backend Serverless: Implementação de Netlify Functions para orquestrar chamadas de API seguras e escaláveis.\n• Integração de IA: Utilização avançada da Google Gemini API para reescrita de textos, sugestão de habilidades contextuais e análise de PDFs.\n• Sistema de Pagamentos: Integração completa com API do Mercado Pago para geração e validação de QR Codes Pix em tempo real.\n• Geração de Documentos: Algoritmo customizado para renderização e exportação de currículos em PDF de alta qualidade via HTML Canvas.' 
+        },
+        { 
+            id: '2', 
+            jobTitle: 'Desenvolvedor Front-End Pleno', 
+            company: 'Tech Solutions (Remoto)', 
+            location: 'São Paulo, SP', 
+            startDate: 'Mar 2021', 
+            endDate: 'Dez 2022', 
+            description: 'Atuação no desenvolvimento de interfaces complexas para sistemas de gestão empresarial (ERP), focando na experiência do usuário.\n• Migração de sistemas legados para React.js, reduzindo o tempo de carregamento em 40% e melhorando a manutenibilidade do código.\n• Implementação de Design Systems utilizando Tailwind CSS para garantir consistência visual em múltiplos projetos da empresa.\n• Colaboração em metodologia Ágil (Scrum), realizando code reviews rigorosos e mentoria técnica para desenvolvedores júnior.' 
+        },
+        { 
+            id: '3', 
+            jobTitle: 'Freelancer Full Stack', 
+            company: 'Autônomo', 
+            location: 'Minas Gerais', 
+            startDate: 'Jan 2020', 
+            endDate: 'Fev 2021', 
+            description: 'Desenvolvimento de landing pages de alta conversão e e-commerces para comércios locais, focando em presença digital.\n• Configuração completa de ambientes: servidores, domínios e hospedagem.\n• Otimização de SEO e performance web (Core Web Vitals) para melhor ranqueamento no Google.\n• Desenvolvimento de automações simples utilizando Node.js para integração de leads com WhatsApp.' 
+        }
     ],
     education: [
-        { id: '1', degree: 'Análise e Desenvolvimento de Sistemas', institution: 'Universidade Estácio de Sá', startDate: '2018', endDate: '2020' }
+        { 
+            id: '1', 
+            degree: 'Análise e Desenvolvimento de Sistemas', 
+            institution: 'Faculdade Tecnológica', 
+            startDate: '2021', 
+            endDate: '2023' 
+        }
     ],
     courses: [
-        { id: '1', name: 'React Avançado', institution: 'Udemy', completionDate: '2023' },
-        { id: '2', name: 'UI/UX Design Principles', institution: 'Coursera', completionDate: '2022' }
+        { id: '1', name: 'Arquitetura de Software e Cloud Computing', institution: 'AWS Training', completionDate: '2024' },
+        { id: '2', name: 'Domínio de React, Redux e Next.js', institution: 'Code Academy', completionDate: '2023' },
+        { id: '3', name: 'Integrações de API e Microsserviços', institution: 'Alura', completionDate: '2022' },
+        { id: '4', name: 'UX/UI Design para Desenvolvedores', institution: 'Origamid', completionDate: '2021' }
     ],
     languages: [
         { id: '1', language: 'Português', proficiency: 'Fluente' },
-        { id: '2', language: 'Inglês', proficiency: 'Avançado' }
+        { id: '2', language: 'Inglês', proficiency: 'Avançado (Leitura Técnica)' }
     ],
-    skills: ['React', 'JavaScript (ES6+)', 'TypeScript', 'Vue.js', 'Tailwind CSS', 'Metodologias Ágeis'],
+    skills: [
+        'React.js', 'TypeScript', 'Node.js', 'Netlify Functions', 
+        'Google Gemini AI', 'Tailwind CSS', 'Integração de Pagamentos', 
+        'Git/GitHub', 'Arquitetura Serverless', 'UI/UX Design', 
+        'Resolução de Problemas', 'Liderança Técnica'
+    ],
     style: {
         template: 'template-modern',
         color: '#002e9e',
