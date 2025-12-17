@@ -758,12 +758,12 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
           case 7:
             content = (
                 <>
-                    {/* --- ÁREA DE INPUT --- */}
+                    {/* --- ÁREA DE INPUT COM FIX PARA MOBILE (min-w-0) --- */}
                     <div className="flex gap-2 mb-2">
                         <input 
                             type="text" 
                             placeholder="Ex: HTML, CSS, Liderança" 
-                            className="flex-1 p-2 border rounded-md bg-white border-gray-300 text-gray-900"
+                            className="flex-1 min-w-0 p-2 border rounded-md bg-white border-gray-300 text-gray-900"
                             value={currentSkillInput} 
                             onChange={(e) => setCurrentSkillInput(e.target.value)}
                             onKeyDown={handleSkillInputKeyDown}
@@ -845,17 +845,18 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                                 Atualizar
                             </button>
                         )}
+                        {/* --- BOTÃO IA COM ALTURA REDUZIDA (py-2) --- */}
                         <button 
                             type="button" 
                             onClick={handleSuggestSkills} 
                             disabled={aiLoading.skills || !data.personalInfo.jobTitle}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-full hover:bg-indigo-700 transition-colors disabled:bg-indigo-400"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold py-2 px-6 rounded-full hover:bg-indigo-700 transition-colors disabled:bg-indigo-400"
                             title={!data.personalInfo.jobTitle ? "Preencha o seu Cargo Desejado primeiro" : "Sugerir habilidades com Inteligência Artificial"}
                         >
                             {aiLoading.skills ? (
                                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                             ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
                             )}
                             {aiSkillSuggestions.length > 0 ? 'Sugerir Mais' : 'Sugerir com IA'}
                         </button>
