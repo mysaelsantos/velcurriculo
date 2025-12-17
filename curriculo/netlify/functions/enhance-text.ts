@@ -1,8 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// Configuração corrigida para versão LITE (Evita erro 429)
+// Configuração para o modelo mais estável e com maior limite de uso
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-2.0-flash-lite-preview-02-05"; 
+const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -12,27 +12,30 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
   for (let i = 0; i < maxTries; i++) {
     try {
+      // Usando fetch nativo do Node 18+
       const response = await fetch(url, options);
+      
       if (response.ok) return response;
 
       if (response.status === 429) {
-        console.warn(`Tentativa ${i + 1}/${maxTries} falhou: Erro 429 (Resource Exhausted).`);
+        console.warn(`[enhance-text] Tentativa ${i + 1}/${maxTries} falhou: 429 Resource Exhausted.`);
         lastError = new Error("RESOURCE_EXHAUSTED");
         if (i < maxTries - 1) {
-          const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+          // Backoff exponencial: espera 2s, 4s, 8s...
+          const delay = Math.pow(2, i + 1) * 1000;
           await sleep(delay);
           continue; 
         }
       } else {
-        console.error(`Tentativa ${i + 1} falhou com status ${response.status}.`);
+        console.error(`[enhance-text] Tentativa ${i + 1} falhou: Status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
         // @ts-ignore
-        const errorMessage = errorBody.message || errorBody.error?.message || `Erro da API: ${response.statusText}`;
-        lastError = new Error(errorMessage);
+        const msg = errorBody.message || errorBody.error?.message || response.statusText;
+        lastError = new Error(msg);
         break; 
       }
     } catch (fetchError) {
-      console.error(`Tentativa ${i + 1} falhou com erro de rede:`, fetchError);
+      console.error(`[enhance-text] Erro de rede na tentativa ${i + 1}:`, fetchError);
       lastError = fetchError as Error;
       if (i < maxTries - 1) await sleep(1000);
     }
@@ -45,26 +48,27 @@ const handler: Handler = async (event: HandlerEvent) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  console.log(`[enhance-text] Iniciando função. Modelo: ${MODEL_NAME}`);
+  console.log(`[enhance-text] Iniciando. Modelo: ${MODEL_NAME}`);
+  
   if (!API_KEY) {
-    console.error("[enhance-text] ERRO CRÍTICO: GEMINI_API_KEY não encontrada.");
-    return { statusCode: 500, body: JSON.stringify({ message: "Configuração de servidor inválida." }) };
+    console.error("[enhance-text] ERRO: Chave API não configurada.");
+    return { statusCode: 500, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
   try {
     const { prompt } = JSON.parse(event.body || '{}');
     if (!prompt) {
-      return { statusCode: 400, body: JSON.stringify({ message: "Prompt é obrigatório." }) };
+      return { statusCode: 400, body: JSON.stringify({ message: "Prompt obrigatório." }) };
     }
 
     const payload = {
       contents: [
-        { role: "user", parts: [{ text: "Você é um especialista em RH. Reescreva o texto para ser profissional e impactante. Apenas o texto reescrito:" }] },
+        { role: "user", parts: [{ text: "Você é um especialista em RH. Reescreva o texto abaixo para ser mais profissional, corrigindo erros e melhorando a clareza. Retorne apenas o texto reescrito:" }] },
         { role: "model", parts: [{ text: "Entendido." }] },
         { role: "user", parts: [{ text: prompt }] }
       ],
       generationConfig: {
-        temperature: 0.9, topK: 1, topP: 1, maxOutputTokens: 2048,
+        temperature: 0.7, topK: 40, topP: 0.95, maxOutputTokens: 2048,
       },
     };
 
@@ -76,13 +80,13 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     const result: any = await apiResponse.json();
     
-    if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-      console.error("[enhance-text] Resposta inesperada:", JSON.stringify(result));
-      throw new Error("A API da IA retornou uma resposta inválida.");
+    if (!result.candidates || !result.candidates[0]?.content?.parts?.[0]?.text) {
+      console.error("[enhance-text] Resposta inválida da IA:", JSON.stringify(result));
+      throw new Error("A IA não retornou um texto válido.");
     }
 
     const text = result.candidates[0].content.parts[0].text;
-    console.log("[enhance-text] Sucesso!");
+    console.log("[enhance-text] Sucesso.");
 
     return {
       statusCode: 200,
@@ -95,11 +99,11 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (err.message === "RESOURCE_EXHAUSTED") {
       return {
         statusCode: 429,
-        body: JSON.stringify({ message: "Muitas requisições. Tente novamente em 1 minuto." })
+        body: JSON.stringify({ message: "O sistema está sobrecarregado. Tente novamente em alguns segundos." })
       };
     }
-    console.error("[enhance-text] Erro:", err);
-    return { statusCode: 500, body: JSON.stringify({ message: err.message || "Falha na IA." }) };
+    console.error("[enhance-text] Erro final:", err);
+    return { statusCode: 500, body: JSON.stringify({ message: "Não foi possível melhorar o texto agora." }) };
   }
 };
 
