@@ -27,9 +27,7 @@ export interface ResumePreviewRef {
 }
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
-  // Garante que data existe para evitar crashes
   const safeData = data || {};
-  // CORREÇÃO 1: Adicionado valor padrão para skills = []
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, restrictedBlockIds = [] } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
@@ -48,29 +46,22 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  // --- MOTOR DE CORREÇÃO (USANDO useMemo PARA PERFORMANCE E SEGURANÇA) ---
   const processedSkills = useMemo(() => {
-      // 1. Verificação de segurança
       if (!skills || !Array.isArray(skills)) return [];
-
       try {
-          // CORREÇÃO 2: Lógica simplificada e mais segura usando map + filter
           return skills
               .map(skill => {
                   if (typeof skill !== 'string') return '';
                   const trimmed = skill.trim();
                   if (!trimmed) return '';
-                  
-                  // Separa texto colado (Ex: "EquipeExcel" -> "Equipe Excel")
                   return trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
               })
-              .filter(skill => skill.length > 0); // Remove strings vazias
+              .filter(skill => skill.length > 0);
       } catch (e) {
           console.error("Erro ao processar skills:", e);
           return [];
       }
   }, [skills]);
-  // -----------------------------------------------------------------------
 
   const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
@@ -107,6 +98,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return true; 
   };
 
+  // --- CORREÇÃO 1: Lógica inteligente para largura do cabeçalho ---
+  // Se for Template Moderno E tiver foto, precisamos restringir a largura manualmente.
+  // Se for Clássico ou Minimalista, o CSS já faz o padding, então usamos 100% para não espremer o texto.
+  const isModern = style?.template === 'template-modern';
+  const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
+      ? { maxWidth: 'calc(100% - 170px)' } 
+      : { maxWidth: '100%' };
+
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
       style?.template,
@@ -123,7 +122,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
-                    <div className="pr-4" style={{ maxWidth: personalInfo.profilePicture ? 'calc(100% - 170px)' : '100%' }}>
+                    {/* AQUI APLICAMOS A CORREÇÃO DE LARGURA DO NOME */}
+                    <div className="pr-4" style={headerNameWidthStyle}>
                         <h1 id="resume-name" className="font-bold">{personalInfo.name || (isDemoMode ? '' : 'Seu Nome')}</h1>
                         <h2 id="resume-job-title" className="font-medium text-gray-600 mt-1">{personalInfo.jobTitle || (isDemoMode ? '' : 'Cargo Desejado')}</h2>
                     </div>
@@ -140,7 +140,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </header>
         </>
       )}
-      <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '56px' } : undefined}>
+      
+      {/* --- CORREÇÃO 2: Margem superior das páginas seguintes reduzida para 10px --- */}
+      <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '10px' } : undefined}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional</h3>
@@ -244,20 +246,17 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         
-        {/* --- SESSÃO CORRIGIDA: Exibe sempre algo se houver skills --- */}
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
                 
-                {/* Lógica Híbrida Simplificada */}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
                             <span key={index}>
                                 {skill}
-                                {/* Adiciona separador visual se não for o último */}
                                 {index < processedSkills.length - 1 && (
                                     <span className="mx-2 font-bold text-gray-400">•</span>
                                 )}
@@ -265,7 +264,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    /* MODO PÍLULAS (CHIPS) - Estilo atualizado para formato Pílula (Imagem de referência) */
                     <div className="flex flex-wrap gap-2">
                         {processedSkills.map((skill, index) => (
                             <span 
