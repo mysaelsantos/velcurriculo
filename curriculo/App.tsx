@@ -250,6 +250,7 @@ const App: React.FC = () => {
     
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
+    // CRUCIAL: Referência segura para o container de medição (evita erros do React)
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
@@ -412,12 +413,14 @@ const App: React.FC = () => {
     
                 await Promise.all(imagePromises);
                 
+                // Delay para garantir que o layout estabilizou antes de medir
                 await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
             };
             
+            // Key dinâmica força o React a remontar o componente quando o template muda
             measurementRootRef.current.render(
                 <ResumePreview 
                     key={`${dataToPaginate.style.template}-${Date.now()}`}
@@ -438,8 +441,11 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // --- AJUSTE: Permite que o texto desça até 1030px antes de acionar a restrição lateral
-            const QR_CODE_START_Y = 1030; 
+            // --- AJUSTE VITAL PARA SIDE-BY-SIDE ---
+            // 980px é onde o QR Code começa visualmente.
+            // Definimos isso para que o texto comece a ficar estreito APENAS quando
+            // realmente chegar no topo do QR Code, permitindo ocupar o espaço acima livremente.
+            const QR_CODE_START_Y = 980; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -575,7 +581,11 @@ const App: React.FC = () => {
                 if (isInDangerZone) {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
-                    // --- AJUSTE: Fator de 1.3 evita crescimento excessivo e quebras desnecessárias
+                    
+                    // --- CORREÇÃO DE CÁLCULO (O "PULO DO GATO") ---
+                    // Reduzimos o multiplicador de 1.7 para 1.3.
+                    // Isso permite que o sistema seja "otimista" e encaixe o texto ao lado do QR Code
+                    // em vez de jogá-lo para a próxima página precipitadamente.
                     effectiveHeight = block.height * 1.3; 
                 }
 
