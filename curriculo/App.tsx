@@ -250,7 +250,7 @@ const App: React.FC = () => {
     
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
-    // CRUCIAL: Referência segura para o container de medição (evita erros do React)
+    // CRUCIAL: Referência segura para o container de medição
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
@@ -392,6 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
+    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -413,14 +414,12 @@ const App: React.FC = () => {
     
                 await Promise.all(imagePromises);
                 
-                // Delay para garantir que o layout estabilizou antes de medir
                 await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
             };
             
-            // Key dinâmica força o React a remontar o componente quando o template muda
             measurementRootRef.current.render(
                 <ResumePreview 
                     key={`${dataToPaginate.style.template}-${Date.now()}`}
@@ -441,11 +440,10 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // --- AJUSTE VITAL PARA SIDE-BY-SIDE ---
-            // 980px é onde o QR Code começa visualmente.
-            // Definimos isso para que o texto comece a ficar estreito APENAS quando
-            // realmente chegar no topo do QR Code, permitindo ocupar o espaço acima livremente.
-            const QR_CODE_START_Y = 1000; 
+            // --- CORREÇÃO DE SOBREPOSIÇÃO ---
+            // Baixado para 930px. Isso garante que o texto comece a ficar "fino" (60%)
+            // ANTES de encostar visualmente nos QR Codes.
+            const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -582,11 +580,11 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // --- CORREÇÃO DE CÁLCULO (O "PULO DO GATO") ---
-                    // Reduzimos o multiplicador de 1.7 para 1.3.
-                    // Isso permite que o sistema seja "otimista" e encaixe o texto ao lado do QR Code
-                    // em vez de jogá-lo para a próxima página precipitadamente.
-                    effectiveHeight = block.height * 1.3; 
+                    // --- AJUSTE DE FATOR DE CRESCIMENTO ---
+                    // 1.25 é o equilíbrio. 
+                    // 1.2 causava sobreposição (subestimava o tamanho).
+                    // 1.3+ causava páginas em branco (superestimava o tamanho).
+                    effectiveHeight = block.height * 1.25; 
                 }
 
                 if (block.id.endsWith('-title')) {
