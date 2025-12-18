@@ -445,7 +445,7 @@ const App: React.FC = () => {
             // 980px é onde o QR Code começa visualmente.
             // Definimos isso para que o texto comece a ficar estreito APENAS quando
             // realmente chegar no topo do QR Code, permitindo ocupar o espaço acima livremente.
-            const QR_CODE_START_Y = 980; 
+            const QR_CODE_START_Y = 1000; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
