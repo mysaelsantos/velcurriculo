@@ -98,13 +98,26 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return true; 
   };
 
-  // --- CORREÇÃO 1: Lógica inteligente para largura do cabeçalho ---
-  // Se for Template Moderno E tiver foto, precisamos restringir a largura manualmente.
-  // Se for Clássico ou Minimalista, o CSS já faz o padding, então usamos 100% para não espremer o texto.
+  // Lógica inteligente para largura do cabeçalho
   const isModern = style?.template === 'template-modern';
   const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
+
+  // --- CORREÇÃO DE MARGEM INTELIGENTE ---
+  // Define o estilo do <main> baseado no template e na página
+  const getMainStyle = () => {
+      if (isFirstPage) return { marginTop: isModern ? '0' : '4px' }; // Mantém comportamento original p/ 1ª página
+      
+      // Para páginas seguintes (2, 3...):
+      if (isModern) {
+          // Template Moderno precisa do padding original para alinhar com o design
+          return { paddingTop: '24px' };
+      } else {
+          // Clássico e Minimalista precisam zerar a margem superior excessiva do CSS
+          return { marginTop: '0px', paddingTop: '30px' };
+      }
+  };
 
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
@@ -122,7 +135,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
-                    {/* AQUI APLICAMOS A CORREÇÃO DE LARGURA DO NOME */}
                     <div className="pr-4" style={headerNameWidthStyle}>
                         <h1 id="resume-name" className="font-bold">{personalInfo.name || (isDemoMode ? '' : 'Seu Nome')}</h1>
                         <h2 id="resume-job-title" className="font-medium text-gray-600 mt-1">{personalInfo.jobTitle || (isDemoMode ? '' : 'Cargo Desejado')}</h2>
@@ -141,8 +153,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </>
       )}
       
-      {/* --- CORREÇÃO 2: Margem superior das páginas seguintes reduzida para 10px --- */}
-      <main className={`${isFirstPage ? 'mt-4' : ''} space-y-4`} style={!isFirstPage ? { paddingTop: '10px' } : undefined}>
+      {/* Aplicação do estilo de margem corrigido */}
+      <main className="space-y-4" style={getMainStyle()}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional</h3>
@@ -251,7 +263,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className={getRestrictionClass('skills-block')}>
-                
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
