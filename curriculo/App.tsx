@@ -58,7 +58,7 @@ const DEMO_DATA: ResumeData = {
             location: 'São Paulo, SP', 
             startDate: 'Mar 2021', 
             endDate: 'Dez 2022', 
-            description: 'Atuação no desenvolvimento de interfaces complexas para sistemas de gestão empresarial (ERP), focando na experiência do usuário.\n• Migração de sistemas legados para React.js, reduzindo o tempo de carregamento em 40% e melhorando a manutenibilidade do código.\n• Implementação de Design Systems utilizando Tailwind CSS para garantir consistência visual em múltiplos projetos da empresa.\n• Colaboração em metodologia Ágil (Scrum), realizando code reviews rigorosos e mentoria técnica para desenvolvedores júnior.' 
+            description: 'Atuação no desenvolvimento de interfaces complexas para sistemas de gestão empresarial (ERP), focando em experiência do usuário.\n• Migração de sistemas legados para React.js, reduzindo o tempo de carregamento em 40% e melhorando a manutenibilidade do código.\n• Implementação de Design Systems utilizando Tailwind CSS para garantir consistência visual em múltiplos projetos da empresa.\n• Colaboração em metodologia Ágil (Scrum), realizando code reviews rigorosos e mentoria técnica para desenvolvedores júnior.' 
         },
         { 
             id: '3', 
@@ -385,6 +385,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
+    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current) return [dataToPaginate];
     
@@ -405,12 +406,25 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
+
+                // CORREÇÃO: Pequeno delay para garantir que o reflow do browser aconteceu
+                // e que os estilos do novo template foram aplicados antes de medir.
+                await new Promise(r => setTimeout(r, 60));
+
                 clearTimeout(timeout);
                 resolve(previewEl);
             };
             
+            // CORREÇÃO: Adicionado 'key' baseado no template para forçar remontagem completa
+            // Isso evita que estilos antigos contaminem a medição.
             measurementRootRef.current.render(
-                <ResumePreview data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />
+                <ResumePreview 
+                    key={dataToPaginate.style.template + Date.now()}
+                    data={dataToPaginate} 
+                    isDemoMode={isDemoMode} 
+                    isFirstPage={true} 
+                    isMeasurement={true} 
+                />
             );
             requestAnimationFrame(checkRender);
         });
@@ -423,9 +437,9 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // CORREÇÃO VISUAL: Aumentámos de 930 para 1020 para ser menos agressivo
-            // e evitar que o texto seja "apertado" desnecessariamente.
-            const QR_CODE_START_Y = 1020; 
+            // CORREÇÃO VISUAL: Ajustado para 980 para ser mais seguro contra sobreposições
+            // Como o QR Code fica em posição absoluta, precisamos de mais margem de segurança.
+            const QR_CODE_START_Y = 980; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -561,7 +575,10 @@ const App: React.FC = () => {
                 if (isInDangerZone) {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
-                    effectiveHeight = block.height * 1.2; 
+                    // CORREÇÃO: Fator de aumento de altura mais realista.
+                    // Se restringimos a largura para 60%, a altura aumenta significativamente,
+                    // geralmente mais perto de 1.7x do que 1.2x.
+                    effectiveHeight = block.height * 1.7; 
                 }
 
                 if (block.id.endsWith('-title')) {
