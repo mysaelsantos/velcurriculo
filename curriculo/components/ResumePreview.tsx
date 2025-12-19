@@ -111,8 +111,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       
       // Para páginas seguintes (2, 3...):
       if (isModern) {
-          // Template Moderno precisa do padding original para alinhar com o design
-          return { paddingTop: '24px' };
+          // APLICADO APENAS NAS PÁGINAS SEGUINTES
+          return { paddingTop: '60px' };
       } else {
           // Clássico e Minimalista precisam zerar a margem superior excessiva do CSS
           return { marginTop: '0px', paddingTop: '30px' };
