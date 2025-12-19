@@ -995,25 +995,9 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="mt-8 flex flex-col items-center gap-4">
-                    {/* --- BOTÃO ANIMADO "UIVERSE" NOVO --- */}
-                    <a href="#form-wizard" onClick={handleStartEditing} className="uiverse">
-                        <div className="wrapper">
-                            <span>CRIAR MEU CURRÍCULO</span>
-                            <div className="circle circle-12"></div>
-                            <div className="circle circle-11"></div>
-                            <div className="circle circle-10"></div>
-                            <div className="circle circle-9"></div>
-                            <div className="circle circle-8"></div>
-                            <div className="circle circle-7"></div>
-                            <div className="circle circle-6"></div>
-                            <div className="circle circle-5"></div>
-                            <div className="circle circle-4"></div>
-                            <div className="circle circle-3"></div>
-                            <div className="circle circle-2"></div>
-                            <div className="circle circle-1"></div>
-                        </div>
+                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">
+                        Criar meu Currículo
                     </a>
-                    
                     {savedResumes.length > 0 && (
                         <button onClick={() => setIsMyResumesModalOpen(true)} className="text-sm font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-full transition-all">
                             Meus Currículos
