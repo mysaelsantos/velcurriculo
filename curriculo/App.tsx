@@ -31,8 +31,8 @@ const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Marcos MJ Santos',
         jobTitle: 'Desenvolvedor Full Stack & Criador de Soluções',
-        email: 'l.mysaelsantos@gmail.com',
-        phone: '(37) 98416-9386',
+        email: 'marcos@velsites.com.br',
+        phone: '(37) 92707-2025',
         address: 'Nova Serrana, MG',
         age: '22',
         maritalStatus: 'Casado',
@@ -40,7 +40,7 @@ const DEMO_DATA: ResumeData = {
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
         profilePicture: 'https://i.postimg.cc/c4k45kS3/Gemini-Generated-Image-igzfl4igzfl4igzf.png'
     },
-    summary: 'Desenvolvedor Full Stack apaixonado por transformar ideias complexas em produtos digitais funcionais. Fundador do "VelCurrículo", uma plataforma SaaS inovadora que integra Inteligência Artificial (Google Gemini) para otimização de conteúdo e pagamentos instantâneos via Pix. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Com 22 anos, combino agilidade técnica com visão de produto, focado em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o utilizador final.',
+    summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
     experiences: [
         { 
             id: '1', 
@@ -49,16 +49,16 @@ const DEMO_DATA: ResumeData = {
             location: 'Nova Serrana, MG', 
             startDate: 'Jan 2023', 
             endDate: 'Atual', 
-            description: 'Liderança técnica e desenvolvimento completo da plataforma VelCurrículo.\n• Arquitetura Frontend: Construída com React, TypeScript e Vite para máxima performance e SEO.\n• Backend Serverless: Implementação de Netlify Functions para orquestrar chamadas de API seguras e escaláveis.\n• Integração de IA: Utilização avançada da Google Gemini API para reescrita de textos, sugestão de habilidades contextuais e análise de PDFs.\n• Sistema de Pagamentos: Integração completa com API do Mercado Pago para geração e validação de QR Codes Pix em tempo real.\n• Geração de Documentos: Algoritmo customizado para renderização e exportação de currículos em PDF de alta qualidade via HTML Canvas.' 
+            description: 'Fundador e desenvolvedor responsável pela criação da plataforma VelCurrículo. Atuo do início ao fim do projeto, cuidando da estrutura do sistema, integrações externas e da experiência do usuário, com foco em soluções simples, funcionais e que resolvem problemas reais.' 
         },
         { 
             id: '2', 
             jobTitle: 'Desenvolvedor Front-End Pleno', 
             company: 'Tech Solutions (Remoto)', 
-            location: 'São Paulo, SP', 
+            location: 'Divinópolis, MG', 
             startDate: 'Mar 2021', 
             endDate: 'Dez 2022', 
-            description: 'Atuação no desenvolvimento de interfaces complexas para sistemas de gestão empresarial (ERP), focando na experiência do usuário.\n• Migração de sistemas legados para React.js, reduzindo o tempo de carregamento em 40% e melhorando a manutenibilidade do código.\n• Implementação de Design Systems utilizando Tailwind CSS para garantir consistência visual em múltiplos projetos da empresa.\n• Colaboração em metodologia Ágil (Scrum), realizando code reviews rigorosos e mentoria técnica para desenvolvedores júnior.' 
+            description: 'Desenvolvedor Front-End atuando no desenvolvimento e manutenção de interfaces para sistemas de gestão (ERP), com foco em usabilidade e clareza. Participei da modernização de sistemas antigos, padronização visual dos projetos e trabalho colaborativo em equipe ágil.' 
         },
         { 
             id: '3', 
@@ -67,7 +67,7 @@ const DEMO_DATA: ResumeData = {
             location: 'Minas Gerais', 
             startDate: 'Jan 2020', 
             endDate: 'Fev 2021', 
-            description: 'Desenvolvimento de landing pages de alta conversão e e-commerces para comércios locais, focando em presença digital.\n• Configuração completa de ambientes: servidores, domínios e hospedagem.\n• Otimização de SEO e performance web (Core Web Vitals) para melhor ranqueamento no Google.\n• Desenvolvimento de automações simples utilizando Node.js para integração de leads com WhatsApp.' 
+            description: 'Atuação como desenvolvedor freelancer, criando sites e lojas virtuais para pequenos negócios. Cuido desde a parte técnica até a entrega final, com atenção à performance, presença online e soluções simples para facilitar o contato com clientes.' 
         }
     ],
     education: [
