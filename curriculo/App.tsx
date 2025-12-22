@@ -580,11 +580,10 @@ const App: React.FC = () => {
                     if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                     currentPageData.restrictedBlockIds.push(block.id);
                     
-                    // --- AJUSTE DE FATOR DE CRESCIMENTO ---
-                    // 1.25 é o equilíbrio. 
-                    // 1.2 causava sobreposição (subestimava o tamanho).
-                    // 1.3+ causava páginas em branco (superestimava o tamanho).
-                    effectiveHeight = block.height * 1.25; 
+                    // --- AJUSTE DE FATOR DE CRESCIMENTO (CORREÇÃO DE BUG) ---
+                    // Anteriormente 1.25. Aumentado para 1.65 para compensar corretamente
+                    // o aumento de altura quando a largura é reduzida para 60%.
+                    effectiveHeight = block.height * 1.65; 
                 }
 
                 if (block.id.endsWith('-title')) {
