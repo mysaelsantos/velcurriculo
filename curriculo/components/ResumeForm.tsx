@@ -39,6 +39,13 @@ const SKILL_SUGGESTIONS = [
 
 const LANGUAGE_SUGGESTIONS = ['Inglês', 'Espanhol', 'Francês', 'Alemão', 'Italiano', 'Japonês'];
 
+// --- NOVAS SUGESTÕES DE CURSOS ---
+const COURSE_SUGGESTIONS = [
+    "Informática Básica", "Excel Avançado", "Administração", 
+    "Recursos Humanos (RH)", "Marketing Digital", "Gestão Financeira", 
+    "Atendimento ao Cliente", "Liderança e Gestão", "Primeiros Socorros"
+];
+
 const EDUCATION_SHORTCUTS = [
     "Ensino Médio Completo", "Ensino Médio Incompleto", "Ensino Fundamental"
 ];
@@ -231,6 +238,14 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
   const updateCourse = (id: string, field: keyof Course, value: string) => {
     handleDataChange('courses', data.courses.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
+  
+  // --- NOVA FUNÇÃO PARA ADICIONAR SUGESTÃO DE CURSO ---
+  const handleAddCourseSuggestion = (courseName: string) => {
+    const newId = Date.now().toString();
+    const newCourse: Course = { id: newId, name: courseName, institution: '', completionDate: '' };
+    handleDataChange('courses', [...data.courses, newCourse]);
+    setOpenAccordion(prev => ({...prev, course: newId}));
   };
 
   const addLanguage = () => {
@@ -680,6 +695,15 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
           case 5:
             content = (
                 <>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sugestões (clique para adicionar):</label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {COURSE_SUGGESTIONS.map(courseName => (
+                            <button key={courseName} type="button" onClick={() => handleAddCourseSuggestion(courseName)}
+                                className={`py-2 px-3 rounded-lg text-sm font-medium transition-all bg-indigo-100 text-indigo-700 hover:bg-indigo-200`}>
+                                {courseName}
+                            </button>
+                        ))}
+                    </div>
                     <div id="course-list" className="space-y-4">
                         {data.courses.map(course => {
                             const isOpen = openAccordion.course === course.id;
