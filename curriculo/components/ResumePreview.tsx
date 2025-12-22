@@ -107,7 +107,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   // --- CORREÇÃO DE MARGEM INTELIGENTE ---
   // Define o estilo do <main> baseado no template e na página
   const getMainStyle = () => {
-      if (isFirstPage) return { marginTop: isModern ? '0' : '4px' }; // Mantém comportamento original p/ 1ª página
+      if (isFirstPage) {
+          // *** MUDANÇA (2/2): Lógica específica para o Minimalista ***
+          // Aumenta a margem superior de 4px para 28px apenas neste template
+          if (style?.template === 'template-minimalist') {
+              return { marginTop: '28px' };
+          }
+          return { marginTop: isModern ? '0' : '4px' };
+      }
       
       // Para páginas seguintes (2, 3...):
       if (isModern) {
