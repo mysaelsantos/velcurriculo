@@ -1,303 +1,299 @@
-import React, { forwardRef, useRef, useImperativeHandle } from 'react';
+import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import type { ResumeData } from '../types';
-import QRCode from './QRCode';
+import QRCodeComponent from './QRCode';
+
+interface PageData extends Partial<ResumeData> {
+    continuation?: {
+        [itemId: string]: {
+            offset: number;
+            totalHeight: number;
+            visibleHeight?: number;
+        };
+    };
+    restrictedBlockIds?: string[];
+}
 
 interface ResumePreviewProps {
-  data: ResumeData;
+  data: PageData;
   isDemoMode: boolean;
-  isFirstPage?: boolean;
-  hideEmptySections?: boolean;
+  isFirstPage: boolean;
   isMeasurement?: boolean;
-  isPrint?: boolean; 
+  hideEmptySections?: boolean;
+  isPrint?: boolean;
 }
 
 export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage = true, hideEmptySections = false, isMeasurement = false, isPrint = false }, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
+  const safeData = data || {};
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, restrictedBlockIds = [] } = safeData;
+  
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
-    getElement: () => containerRef.current
+    getElement: () => previewRef.current,
   }));
 
-  const { personalInfo, style } = data;
-  const { template, color } = style;
-
-  // Função ajustada para aplicar espaçamento extra APENAS no minimalista
-  const renderSectionTitle = (title: string) => {
-    switch (template) {
-      case 'template-modern':
-        return (
-          <h3 className="text-xl font-bold uppercase mb-3 border-b-2 pb-1" style={{ color: color, borderColor: color }}>
-            {title}
-          </h3>
-        );
-      case 'template-minimalist':
-        return (
-          // AQUI: Adicionado mt-6 para afastar do item anterior e mantido mb-4
-          <h3 className="text-lg font-medium tracking-wide uppercase mb-4 mt-6" style={{ color: '#374151' }}>
-            {title}
-          </h3>
-        );
-      default: // Classic - Mantido original
-        return (
-          <h3 className="text-xl font-bold mb-3 pb-1 border-b" style={{ color: color, borderColor: '#e5e7eb' }}>
-            {title}
-          </h3>
-        );
+  useEffect(() => {
+    if (style?.color) {
+        document.documentElement.style.setProperty('--theme-color', style.color);
     }
+  }, [style?.color]);
+
+  const getRestrictionClass = (blockId: string) => {
+      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
   };
 
-  const hasData = (section: any[]) => {
-      if (!section) return false;
-      return section.length > 0;
-  }
-
-  const showSection = (sectionData: any[] | string, sectionName: string) => {
-      if ((isMeasurement || isPrint || hideEmptySections) && (!sectionData || (Array.isArray(sectionData) && sectionData.length === 0) || (typeof sectionData === 'string' && !sectionData.trim()))) {
-          return false;
+  const processedSkills = useMemo(() => {
+      if (!skills || !Array.isArray(skills)) return [];
+      try {
+          return skills
+              .map(skill => {
+                  if (typeof skill !== 'string') return '';
+                  const trimmed = skill.trim();
+                  if (!trimmed) return '';
+                  return trimmed.replace(/([a-z])([A-Z])/g, '$1 $2');
+              })
+              .filter(skill => skill.length > 0);
+      } catch (e) {
+          console.error("Erro ao processar skills:", e);
+          return [];
       }
-      return true;
+  }, [skills]);
+
+  const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
+    const continuationInfo = continuation?.[itemId];
+    const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
+
+    if (continuationInfo) {
+      const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
+      const visibleHeight = isFirstPageOfSplit ? continuationInfo.visibleHeight : continuationInfo.totalHeight - continuationInfo.offset;
+      const topPosition = continuationInfo.offset > 0 ? `-${continuationInfo.offset}px` : '0px';
+
+      if (visibleHeight <= 0) return null; 
+
+      return (
+        <div className={restrictionClass} style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
+            {content}
+          </div>
+        </div>
+      );
+    }
+    
+    if (restrictionClass) return <div className={restrictionClass}>{content}</div>;
+    return content;
+  };
+  
+  const shouldShowSection = (content: any, isArray = false) => {
+      const hasContent = isArray 
+          ? (Array.isArray(content) && content.length > 0)
+          : (content && typeof content === 'string' && content.trim().length > 0);
+
+      if (hideEmptySections) return hasContent;
+      if (isMeasurement) return true;
+      if (!isFirstPage) return hasContent;
+      return true; 
   };
 
-  const getBlurClass = (text: string) => {
-      return isDemoMode && !text ? 'blur-sm select-none opacity-50' : '';
+  // Lógica inteligente para largura do cabeçalho
+  const isModern = style?.template === 'template-modern';
+  const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
+      ? { maxWidth: 'calc(100% - 170px)' } 
+      : { maxWidth: '100%' };
+
+  // --- CORREÇÃO DE MARGEM INTELIGENTE ---
+  // Define o estilo do <main> baseado no template e na página
+  const getMainStyle = () => {
+      if (isFirstPage) return { marginTop: isModern ? '0' : '4px' }; // Mantém comportamento original p/ 1ª página
+      
+      // Para páginas seguintes (2, 3...):
+      if (isModern) {
+          // APLICADO APENAS NAS PÁGINAS SEGUINTES
+          return { paddingTop: '60px' };
+      } else {
+          // Clássico e Minimalista precisam zerar a margem superior excessiva do CSS
+          return { marginTop: '0px', paddingTop: '30px' };
+      }
   };
 
-  const getPlaceholderText = (field: string, placeholder: string) => {
-      if (isDemoMode && !field) return placeholder;
-      return field || '';
-  };
+  const containerClasses = [
+      'resume-preview bg-white text-gray-900',
+      style?.template,
+      (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
+      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
+  ].filter(Boolean).join(' ');
 
   return (
-    <div ref={containerRef} className={`bg-white shadow-lg mx-auto overflow-hidden relative text-left ${template}`} style={{ width: '794px', minHeight: '1123px', transformOrigin: 'top left' }}>
-      
-      {/* Header - Mantido idêntico para todos, sem alterações de lógica aqui */}
-      {isFirstPage && (
-          <header className={`p-8 ${template === 'template-modern' ? 'text-white' : 'text-gray-800'}`} style={{ backgroundColor: template === 'template-modern' ? color : 'white' }}>
-            <div className="flex justify-between items-start">
-              <div className="flex-grow pr-4">
-                <h1 className={`text-4xl font-bold mb-2 ${getBlurClass(personalInfo.name)}`} style={{ color: template === 'template-modern' ? 'white' : color }}>
-                  {getPlaceholderText(personalInfo.name, "Seu Nome Completo")}
-                </h1>
-                <h2 className={`text-xl ${template === 'template-modern' ? 'text-blue-100' : 'text-gray-600'} mb-4 font-medium ${getBlurClass(personalInfo.jobTitle)}`}>
-                  {getPlaceholderText(personalInfo.jobTitle, "Seu Cargo Desejado")}
-                </h2>
-                
-                <div className={`text-sm space-y-1 ${template === 'template-modern' ? 'text-blue-50' : 'text-gray-600'}`}>
-                   {(showSection(personalInfo.email, 'email') || showSection(personalInfo.phone, 'phone')) && (
-                      <p className="flex items-center gap-2">
-                        {personalInfo.email && <span>{personalInfo.email}</span>}
-                        {personalInfo.email && personalInfo.phone && <span>|</span>}
-                        {personalInfo.phone && <span>{personalInfo.phone}</span>}
-                      </p>
-                   )}
-                   {(showSection(personalInfo.address, 'address') || showSection(personalInfo.age, 'age')) && (
-                      <p className="flex items-center gap-2">
-                        {personalInfo.address && <span>{personalInfo.address}</span>}
-                        {personalInfo.address && (personalInfo.age || personalInfo.maritalStatus) && <span>|</span>}
-                        {personalInfo.age && <span>{personalInfo.age} anos</span>}
-                        {personalInfo.age && personalInfo.maritalStatus && <span>|</span>}
-                        {personalInfo.maritalStatus && <span>{personalInfo.maritalStatus}</span>}
-                      </p>
-                   )}
-                   {(personalInfo.linkedin || personalInfo.cnh) && (
-                       <p className="flex items-center gap-2">
-                           {personalInfo.linkedin && <span>{personalInfo.linkedin.replace(/^https?:\/\//, '')}</span>}
-                           {personalInfo.linkedin && personalInfo.cnh && personalInfo.cnh !== 'Não possuo' && <span>|</span>}
-                           {personalInfo.cnh && personalInfo.cnh !== 'Não possuo' && <span>CNH: {personalInfo.cnh}</span>}
-                       </p>
-                   )}
-                </div>
-              </div>
-
-              {/* QR Codes and Photo */}
-              <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                 {personalInfo.profilePicture && (
-                    <img 
-                      src={personalInfo.profilePicture} 
-                      alt="Foto de Perfil" 
-                      className={`w-24 h-24 object-cover rounded-full border-2 ${template === 'template-modern' ? 'border-white' : 'border-gray-200'}`}
-                    />
-                 )}
-                 <div className="flex gap-3">
-                    {style.showQRCode && personalInfo.phone && (
-                        <div className="flex flex-col items-center">
-                            <div className="bg-white p-1 rounded">
-                                <QRCode value={`https://wa.me/55${personalInfo.phone.replace(/\D/g, '')}`} size={56} />
-                            </div>
-                            <span className={`text-[10px] mt-1 ${template === 'template-modern' ? 'text-white' : 'text-gray-500'}`}>WhatsApp</span>
-                        </div>
-                    )}
-                    {style.showLinkedinQr && personalInfo.linkedin && (
-                        <div className="flex flex-col items-center">
-                            <div className="bg-white p-1 rounded">
-                                <QRCode value={personalInfo.linkedin} size={56} />
-                            </div>
-                            <span className={`text-[10px] mt-1 ${template === 'template-modern' ? 'text-white' : 'text-gray-500'}`}>LinkedIn</span>
-                        </div>
-                    )}
-                 </div>
-              </div>
+    <div id="resume-preview" ref={previewRef} className={containerClasses}>
+      {isFirstPage && personalInfo && (
+        <>
+            <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
+                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
             </div>
-          </header>
+            <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
+                <div className="flex justify-between items-start">
+                    <div className="pr-4" style={headerNameWidthStyle}>
+                        <h1 id="resume-name" className="font-bold">{personalInfo.name || (isDemoMode ? '' : 'Seu Nome')}</h1>
+                        <h2 id="resume-job-title" className="font-medium text-gray-600 mt-1">{personalInfo.jobTitle || (isDemoMode ? '' : 'Cargo Desejado')}</h2>
+                    </div>
+                </div>
+
+                <div id="contact-info" className="mt-3">
+                    {personalInfo.email && <a href={`mailto:${personalInfo.email}`} id="resume-email-container" className="text-gray-700 hover:text-blue-600 transition-colors flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span id="resume-email" className="leading-none pt-0.5">{personalInfo.email}</span></a>}
+                    {personalInfo.phone && <a href={`tel:${personalInfo.phone}`} id="resume-phone-container" className="text-gray-700 hover:text-blue-600 transition-colors flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span id="resume-phone" className="leading-none pt-0.5">{personalInfo.phone}</span></a>}
+                    {personalInfo.address && <div id="resume-address-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="resume-address" className="leading-none pt-0.5">{personalInfo.address}</span></div>}
+                    {personalInfo.age && <div id="resume-age-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg><span id="resume-age" className="leading-none pt-0.5">{personalInfo.age} anos</span></div>}
+                    {personalInfo.maritalStatus && <div id="resume-marital-status-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span id="resume-marital-status" className="leading-none pt-0.5">{personalInfo.maritalStatus}</span></div>}
+                    {personalInfo.cnh && personalInfo.cnh !== 'Não possuo' && <div id="resume-cnh-container" className="text-gray-700 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9L1 16v5c0 .6.4 1 1 1h3c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1zM2 16l1.5-4.5h11L16 16H2zm13 1v-1H5v1h10zm-1-4h.5c.3 0 .5-.2.5-.5s-.2-.5-.5-.5H14v1z"/></svg><span id="resume-cnh" className="leading-none pt-0.5">CNH: {personalInfo.cnh}</span></div>}
+                </div>
+            </header>
+        </>
       )}
-
-      {/* Main Content */}
-      {/* AQUI: Adicionada classe 'mt-4' SOMENTE se o template for minimalista para afastar do header */}
-      <main className={`p-8 ${template === 'template-minimalist' ? 'mt-4' : ''}`}>
-        
-        {/* Linha Divisória Minimalista */}
-        {/* AQUI: Ajustado para mb-8 (mais espaço abaixo) e mt-2 (mais espaço acima) */}
-        {template === 'template-minimalist' && isFirstPage && (
-            <hr className="border-t-2 border-gray-200 mb-8 mt-2" />
+      
+      {/* Aplicação do estilo de margem corrigido */}
+      <main className="space-y-4" style={getMainStyle()}>
+        {shouldShowSection(summary) && (
+                <section id="summary-section">
+                    <h3 className="section-title">Resumo Profissional</h3>
+                     {renderWithContinuation('summary-text',
+                        <p id="resume-summary" className="text-gray-700 leading-relaxed">
+                            {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                        </p>
+                    )}
+                </section>
         )}
-
-        {/* Summary Section */}
-        {showSection(data.summary, 'summary') && (data.summary || isDemoMode) && (
-            <section className="mb-6" id="summary-section">
-                {renderSectionTitle("Resumo Profissional")}
-                <p className={`text-gray-700 leading-relaxed text-sm text-justify ${getBlurClass(data.summary)}`}>
-                    {getPlaceholderText(data.summary, "Seu resumo profissional aparecerá aqui. Descreva suas principais qualificações e objetivos de carreira.")}
-                </p>
-            </section>
-        )}
-
-        {/* Experience Section */}
-        {showSection(data.experiences, 'experiences') && (
-            <section className="mb-6" id="experience-section">
-                {renderSectionTitle("Experiência Profissional")}
-                <div className="space-y-4" id="resume-experience-list">
-                    {hasData(data.experiences) ? (
-                        data.experiences.map((exp) => (
-                            <div key={exp.id} className="break-inside-avoid">
-                                <div className="flex justify-between items-baseline mb-1">
-                                    <h4 className="font-bold text-gray-800">{exp.jobTitle}</h4>
-                                    <span className="text-sm text-gray-600 whitespace-nowrap ml-4">
-                                        {exp.startDate} {exp.endDate && `- ${exp.endDate}`}
-                                    </span>
-                                </div>
-                                <div className="text-sm font-medium text-gray-700 mb-1">
-                                    {exp.company}{exp.location && ` | ${exp.location}`}
-                                </div>
-                                {exp.description && (
-                                    <p className="text-sm text-gray-600 whitespace-pre-line text-justify leading-relaxed">
-                                        {exp.description}
-                                    </p>
+        {shouldShowSection(experiences, true) && (
+        <section id="experience-section">
+            <h3 className="section-title">Experiência Profissional</h3>
+            <div id="resume-experience-list" className="space-y-4">
+                {experiences && experiences.length > 0 ? (
+                    experiences.map(exp => {
+                        const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
+                        return (
+                            <div key={exp.id} className={getRestrictionClass(exp.id)}>
+                                {!isContinuation && (
+                                    <div className="flex justify-between items-baseline flex-wrap">
+                                        <div className="pr-4">
+                                            <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
+                                            <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+                                        </div>
+                                        <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
+                                    </div>
+                                )}
+                                {exp.description && renderWithContinuation(exp.id, 
+                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
+                                    true
                                 )}
                             </div>
-                        ))
-                    ) : isDemoMode && (
-                        <div className={`p-4 border border-dashed border-gray-300 rounded text-center text-gray-400 text-sm ${getBlurClass('')}`}>
-                            Sua experiência profissional aparecerá aqui.
-                        </div>
-                    )}
-                </div>
-            </section>
+                        )
+                    })
+                ) : (
+                    <p className="text-gray-400 italic text-sm">Suas experiências profissionais aparecerão aqui...</p>
+                )}
+            </div>
+        </section>
         )}
-
-        {/* Education Section */}
-        {showSection(data.education, 'education') && (
-            <section className="mb-6" id="education-section">
-                {renderSectionTitle("Formação Acadêmica")}
-                <div className="space-y-3" id="resume-education-list">
-                    {hasData(data.education) ? (
-                        data.education.map((edu) => (
-                            <div key={edu.id} className="break-inside-avoid">
-                                <div className="flex justify-between items-baseline">
-                                    <h4 className="font-bold text-gray-800">{edu.degree}</h4>
-                                    <span className="text-sm text-gray-600 whitespace-nowrap ml-4">
-                                        {edu.startDate} {edu.endDate && `- ${edu.endDate}`}
-                                    </span>
-                                </div>
-                                <p className="text-sm text-gray-600">{edu.institution}</p>
+        {shouldShowSection(education, true) && (
+        <section id="education-section">
+            <h3 className="section-title">Formação Acadêmica</h3>
+            <div id="resume-education-list" className="space-y-2">
+            {education && education.length > 0 ? (
+                education.map(edu => (
+                    <div key={edu.id} className={getRestrictionClass(edu.id)}>
+                        <div className="flex justify-between items-baseline flex-wrap">
+                            <div className="pr-4">
+                                <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
+                                <p className="text-gray-700">{edu.institution || 'Instituição'}</p>
                             </div>
-                        ))
-                    ) : isDemoMode && (
-                        <div className={`p-4 border border-dashed border-gray-300 rounded text-center text-gray-400 text-sm ${getBlurClass('')}`}>
-                            Sua formação acadêmica aparecerá aqui.
+                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{edu.startDate} {edu.startDate && edu.endDate ? ' - ' : ''} {edu.endDate}</p>
                         </div>
-                    )}
-                </div>
-            </section>
-        )}
-
-        {/* Courses Section */}
-        {showSection(data.courses, 'courses') && (
-            <section className="mb-6" id="courses-section">
-                {renderSectionTitle("Cursos Complementares")}
-                <div className="space-y-2" id="resume-courses-list">
-                    {hasData(data.courses) ? (
-                        data.courses.map((course) => (
-                            <div key={course.id} className="flex justify-between text-sm break-inside-avoid">
-                                <div>
-                                    <span className="font-semibold text-gray-800">{course.name}</span>
-                                    {course.institution && <span className="text-gray-600"> - {course.institution}</span>}
-                                </div>
-                                {course.completionDate && <span className="text-gray-600 whitespace-nowrap ml-4">{course.completionDate}</span>}
-                            </div>
-                        ))
-                    ) : isDemoMode && (
-                        <div className={`p-4 border border-dashed border-gray-300 rounded text-center text-gray-400 text-sm ${getBlurClass('')}`}>
-                            Seus cursos aparecerão aqui.
-                        </div>
-                    )}
-                </div>
-            </section>
-        )}
-
-        {/* Two Columns for Languages and Skills */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {showSection(data.languages, 'languages') && (
-                <section id="languages-section">
-                    {renderSectionTitle("Idiomas")}
-                    <div id="resume-languages-list">
-                      {hasData(data.languages) ? (
-                          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                              {data.languages.map((lang) => (
-                                  <li key={lang.id}>
-                                      <span className="font-medium">{lang.language}</span>
-                                      {lang.proficiency && <span className="text-gray-500"> - {lang.proficiency}</span>}
-                                  </li>
-                              ))}
-                          </ul>
-                      ) : isDemoMode && (
-                          <div className={`p-4 border border-dashed border-gray-300 rounded text-center text-gray-400 text-sm ${getBlurClass('')}`}>
-                              Seus idiomas.
-                          </div>
-                      )}
                     </div>
-                </section>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Sua formação acadêmica aparecerá aqui...</p>
             )}
-
-            {showSection(data.skills, 'skills') && (
-                <section id="skills-section">
-                    {renderSectionTitle("Habilidades")}
-                    <div id="resume-skills">
-                        {hasData(data.skills) ? (
-                            <div className="flex flex-wrap gap-2">
-                                {data.skills.map((skill, index) => (
-                                    <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium border border-gray-200">
-                                        {skill}
-                                    </span>
-                                ))}
+            </div>
+        </section>
+        )}
+        {shouldShowSection(courses, true) && (
+        <section id="courses-section" className={getRestrictionClass('courses-block')}>
+            <h3 className="section-title">Cursos Complementares</h3>
+            <div id="resume-courses-list" className="space-y-2">
+            {courses && courses.length > 0 ? (
+                courses.map(course => (
+                    <div key={course.id} className={getRestrictionClass(course.id)}>
+                        <div className="flex justify-between items-baseline flex-wrap">
+                            <div className="pr-4">
+                                <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
+                                <p className="text-gray-700">{course.institution || 'Instituição'}</p>
                             </div>
-                        ) : isDemoMode && (
-                            <div className={`p-4 border border-dashed border-gray-300 rounded text-center text-gray-400 text-sm ${getBlurClass('')}`}>
-                                Suas habilidades.
-                            </div>
-                        )}
+                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{course.completionDate}</p>
+                        </div>
                     </div>
-                </section>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Seus cursos complementares aparecerão aqui...</p>
             )}
-        </div>
+            </div>
+        </section>
+        )}
+        {shouldShowSection(languages, true) && (
+        <section id="languages-section">
+            <h3 className="section-title">Idiomas</h3>
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
+            {languages && languages.length > 0 ? (
+                languages.map(lang => (
+                    <div key={lang.id} className="flex items-baseline">
+                        <h4 className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</h4>
+                        <p className="text-gray-700">{lang.proficiency || 'Nível'}</p>
+                    </div>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
+            )}
+            </div>
+        </section>
+        )}
+        
+        {shouldShowSection(processedSkills, true) && (
+        <section id="skills-section">
+            <h3 className="section-title">Habilidades e Competências</h3>
+            
+            <div id="resume-skills" className={getRestrictionClass('skills-block')}>
+                {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
+                    <div className="text-gray-700 text-sm leading-relaxed">
+                        {processedSkills.map((skill, index) => (
+                            <span key={index}>
+                                {skill}
+                                {index < processedSkills.length - 1 && (
+                                    <span className="mx-2 font-bold text-gray-400">•</span>
+                                )}
+                            </span>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex flex-wrap gap-2">
+                        {processedSkills.map((skill, index) => (
+                            <span 
+                                key={index} 
+                                className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1"
+                            >
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </section>
+        )}
+        
       </main>
+      {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
     </div>
   );
 });
-
-ResumePreview.displayName = 'ResumePreview';
 
 export default ResumePreview;
