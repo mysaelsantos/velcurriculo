@@ -571,6 +571,7 @@ const App: React.FC = () => {
                 
                 // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
                 // 1. Detecta se toca o QR Code (qualquer parte do bloco)
+                // Usando a altura atual para saber se o bloco "chega" na zona
                 const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
