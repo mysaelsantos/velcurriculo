@@ -900,7 +900,11 @@ const App: React.FC = () => {
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
                             isPrint={true} 
-                            hideEmptySections={paginatedData.length > 1} 
+                            // **** CORREÇÃO ELEGANTE AQUI ****
+                            // Forçamos 'hideEmptySections' para true APENAS na versão de impressão.
+                            // Isso garante que o PDF final nunca mostre placeholders vazios,
+                            // mesmo que o currículo tenha apenas uma página.
+                            hideEmptySections={true} 
                         />
                     </div>
                 ))}
@@ -1122,5 +1126,3 @@ const App: React.FC = () => {
         </>
     );
 };
-
-export default App;
