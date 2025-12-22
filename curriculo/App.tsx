@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
+    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -440,9 +440,6 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // --- CORREÇÃO DE SOBREPOSIÇÃO ---
-            // Baixado para 930px. Isso garante que o texto comece a ficar "fino" (60%)
-            // ANTES de encostar visualmente nos QR Codes.
             const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
@@ -572,26 +569,31 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                const isInDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
+                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
+                let shouldRestrict = false;
 
-                if (isInDangerZone) {
-                    if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
-                    currentPageData.restrictedBlockIds.push(block.id);
-                    
-                    // --- AJUSTE DE FATOR DE CRESCIMENTO (CORREÇÃO DE BUG) ---
-                    // Anteriormente 1.25. Aumentado para 1.65 para compensar corretamente
-                    // o aumento de altura quando a largura é reduzida para 60%.
-                    effectiveHeight = block.height * 1.65; 
+                if (touchesDangerZone) {
+                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
+                    shouldRestrict = true;
+                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
+                    effectiveHeight = block.height * 1.7; 
                 }
 
+                const available = getAvailableSpace();
+
+                // Lógica de títulos (mantém junto do próximo bloco)
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
-                    if (getAvailableSpace() < (effectiveHeight + nextItemHeight)) {
+                    if (available < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
+                        effectiveHeight = block.height; 
+                        shouldRestrict = false;
                     }
                     
                     currentY += effectiveHeight;
@@ -599,20 +601,15 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                const available = getAvailableSpace();
-
-                if (effectiveHeight <= available) {
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = 0; 
-                } else {
+                // --- CORREÇÃO DO BUG DE MARGEM ---
+                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
+                // Isso permite que o texto fique encolhido e vá até o final da página,
+                // mas impede que ele vaze para fora dela.
+                if (effectiveHeight > available) {
                     createNewPage();
+                    // Na nova página, volta ao normal
+                    effectiveHeight = block.height;
+                    shouldRestrict = false;
                     
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
@@ -625,6 +622,22 @@ const App: React.FC = () => {
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
+                } else {
+                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
+                    if (shouldRestrict) {
+                         if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
+                         currentPageData.restrictedBlockIds.push(block.id);
+                    }
+
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = 0; 
                 }
             }
 
