@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO (CORRIGIDA: REMOÇÃO DE FALSOS POSITIVOS) ---
+    // --- LÓGICA DE PAGINAÇÃO REFINADA E ROBUSTA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -414,6 +414,7 @@ const App: React.FC = () => {
     
                 await Promise.all(imagePromises);
                 
+                // Pequeno delay para garantir layout final
                 await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
@@ -435,37 +436,33 @@ const App: React.FC = () => {
         try {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
+            const previewRect = previewEl.getBoundingClientRect();
             
             const A4_HEIGHT = 1123; 
-            const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
+            const MARGIN_TOP = 50;
             
-            // Ponto exato onde o QR code começa visualmente
-            const QR_CODE_START_Y = 930; 
+            // Ajustado para 960px para ser mais preciso em relação à posição visual real do QR Code
+            // (1123px - 24px bottom - ~130px altura QR/container - margem)
+            const dangerZoneStart = 960; 
 
-            // Helper para pegar a altura real do conteúdo (sem margens)
-            const getContentHeight = (element: HTMLElement) => {
-                return element.offsetHeight;
+            // Função Helper para pegar dados de posição reais do DOM
+            const getBlockMetrics = (element: HTMLElement) => {
+                if (!element) return { height: 0, top: 0, bottom: 0 };
+                const rect = element.getBoundingClientRect();
+                return {
+                    height: rect.height,
+                    // Posição relativa ao topo do container de preview
+                    top: rect.top - previewRect.top,
+                    bottom: rect.bottom - previewRect.top
+                };
             };
-
-            const headerEl = previewEl.querySelector('header') as HTMLElement;
-            const mainEl = previewEl.querySelector('main') as HTMLElement;
-            
-            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
-
-            // Medimos a altura total do cabeçalho
-            const style = window.getComputedStyle(headerEl);
-            const headerHeight = headerEl.offsetHeight + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
-            
-            const mainStyle = window.getComputedStyle(mainEl);
-            const mainMarginTop = parseFloat(mainStyle.marginTop) || 0;
 
             interface ContentBlock {
                 id: string;
                 type: keyof ResumeData; 
                 data: any; 
-                height: number;
-                node: HTMLElement;
+                metrics: { height: number; top: number; bottom: number }; // Métricas reais do DOM
             }
 
             const blocks: ContentBlock[] = [];
@@ -480,8 +477,7 @@ const App: React.FC = () => {
                         id: `${dataKey}-title`,
                         type: dataKey,
                         data: null, 
-                        height: 0, // Será calculado depois via offsetHeight
-                        node: titleEl
+                        metrics: getBlockMetrics(titleEl)
                     });
                 }
 
@@ -492,8 +488,7 @@ const App: React.FC = () => {
                             id: 'summary-text',
                             type: 'summary',
                             data: dataToPaginate.summary,
-                            height: 0,
-                            node: pEl
+                            metrics: getBlockMetrics(pEl)
                         });
                     }
                 } else if (listId) {
@@ -510,8 +505,7 @@ const App: React.FC = () => {
                                 id: itemData.id,
                                 type: dataKey,
                                 data: itemData,
-                                height: 0,
-                                node: itemEl
+                                metrics: getBlockMetrics(itemEl)
                             });
                         }
                     });
@@ -522,8 +516,7 @@ const App: React.FC = () => {
                              id: `${dataKey}-block`,
                              type: dataKey,
                              data: dataToPaginate[dataKey],
-                             height: 0,
-                             node: contentDiv
+                             metrics: getBlockMetrics(contentDiv)
                          });
                      }
                 }
@@ -536,9 +529,8 @@ const App: React.FC = () => {
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            // --- CORREÇÃO DE DRIFT (Falso Positivo) ---
-            // Ordena os blocos pela posição real no DOM para garantir sequência correta
-            blocks.sort((a, b) => a.node.offsetTop - b.node.offsetTop);
+            // Ordena blocos pela posição visual real (top) para garantir sequência correta
+            blocks.sort((a, b) => a.metrics.top - b.metrics.top);
 
             const pages: PageData[] = [];
             
@@ -549,8 +541,13 @@ const App: React.FC = () => {
                 restrictedBlockIds: []
             };
             
-            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
+            // Variáveis de controle de página
             let currentPageIndex = 0;
+            // Para a página 1, usamos a posição real do DOM + um offset de expansão se necessário
+            let expansionOffset = 0; 
+            
+            // Para páginas 2+, usamos acumulação manual
+            let accumulatedY_Page2 = MARGIN_TOP + 30; // Margem inicial para págs subsequentes
 
             const createNewPage = () => {
                 pages.push(currentPageData);
@@ -560,81 +557,92 @@ const App: React.FC = () => {
                     restrictedBlockIds: []
                 };
                 currentPageIndex++;
-                currentY = MARGIN_TOP + 30; 
+                accumulatedY_Page2 = MARGIN_TOP + 30; // Reset para nova página
             };
 
-            const getAvailableSpace = () => {
+            const getAvailableSpace = (currentY: number) => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
-
-            const dangerZoneStart = QR_CODE_START_Y;
 
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
-                
-                // --- CÁLCULO PRECISO DE ESPAÇAMENTO ---
-                // Em vez de somar margens fixas (que acumulam erro), calculamos o "gap" real
-                // comparando o offsetTop do bloco atual com o final do bloco anterior.
-                let gap = 0;
-                if (i > 0) {
-                    const prevNode = blocks[i-1].node;
-                    const currentNode = block.node;
-                    // Distância real entre o fim do anterior e o topo do atual
-                    // Isso captura colapso de margens e gaps flex/grid automaticamente
-                    gap = currentNode.offsetTop - (prevNode.offsetTop + prevNode.offsetHeight);
-                    // Garante que não seja negativo (segurança)
-                    gap = Math.max(0, gap);
-                } else {
-                    // Para o primeiro bloco, já temos currentY inicializado corretamente
-                }
-
-                currentY += gap;
-
-                // Altura "crua" do bloco (sem margens)
-                const rawHeight = getContentHeight(block.node);
-                block.height = rawHeight; // Atualiza para referência futura se precisar
-
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- DETECÇÃO DE ZONA DE PERIGO ---
-                // Agora currentY é extremamente preciso.
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + rawHeight > dangerZoneStart);
+                // Determina a posição Y atual do bloco
+                let currentBlockY_Start = 0;
+                let currentBlockY_End = 0;
+                let gapFromPrev = 0;
+
+                if (currentPageIndex === 0) {
+                    // Na página 1, a posição é: Posição Original do DOM + Offset acumulado de expansões anteriores
+                    currentBlockY_Start = block.metrics.top + expansionOffset;
+                    currentBlockY_End = currentBlockY_Start + block.metrics.height;
+                } else {
+                    // Nas páginas seguintes, calculamos o gap baseado no original e somamos ao acumulador
+                    if (i > 0) {
+                        const prevBlock = blocks[i-1];
+                        // Gap original entre os blocos
+                        const originalGap = block.metrics.top - prevBlock.metrics.bottom;
+                        // Se o gap for negativo (overlap estranho) ou muito grande, normalizamos
+                        gapFromPrev = Math.max(0, originalGap);
+                    }
+                    currentBlockY_Start = accumulatedY_Page2 + gapFromPrev;
+                    currentBlockY_End = currentBlockY_Start + block.metrics.height;
+                }
+
+                // --- LÓGICA DE DETECÇÃO DE QR CODE ROBUSTA ---
+                // Agora usamos a posição Y calculada com precisão (baseada no DOM real)
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentBlockY_End > dangerZoneStart);
                 
-                let effectiveHeight = rawHeight;
+                let effectiveHeight = block.metrics.height;
                 let shouldRestrict = false;
 
                 if (touchesDangerZone) {
                     shouldRestrict = true;
-                    // Fator 1.7: Compensação para o crescimento vertical ao estreitar
-                    effectiveHeight = rawHeight * 1.7; 
+                    // Fator 1.7 para estimar altura quando encolhido (largura 60%)
+                    effectiveHeight = block.metrics.height * 1.7; 
                 }
 
-                const available = getAvailableSpace();
+                const available = getAvailableSpace(currentBlockY_Start);
 
                 // Lógica de títulos (mantém junto do próximo bloco)
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
-                    const nextRawHeight = nextBlock ? getContentHeight(nextBlock.node) : 40; 
+                    const nextItemHeight = nextBlock ? nextBlock.metrics.height : 40; 
                     
-                    if (available < (effectiveHeight + nextRawHeight)) {
+                    if (available < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
-                        effectiveHeight = rawHeight; 
+                        // Na nova página, o título volta ao tamanho normal e reseta
+                        effectiveHeight = block.metrics.height;
                         shouldRestrict = false;
+                        
+                        // Atualiza acumulador da página 2
+                        accumulatedY_Page2 += effectiveHeight;
+                        pendingTitleHeight = effectiveHeight; 
+                    } else {
+                        // Se fica na mesma página
+                        if (currentPageIndex === 0) {
+                             // Se restringiu, atualiza o offset para empurrar os próximos
+                             if (shouldRestrict) {
+                                 const diff = effectiveHeight - block.metrics.height;
+                                 expansionOffset += diff;
+                             }
+                        } else {
+                             accumulatedY_Page2 += effectiveHeight;
+                        }
+                        pendingTitleHeight = effectiveHeight;
                     }
-                    
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = effectiveHeight; 
+                    // Não adicionamos dados do título, apenas controlamos o fluxo
                     continue; 
                 }
 
-                // --- DECISÃO DE QUEBRA ---
-                // Se, MESMO encolhido, ele estourar a página -> Joga pra próxima.
                 if (effectiveHeight > available) {
+                    // QUEBRA DE PÁGINA
                     createNewPage();
-                    // Na nova página, volta ao normal
-                    effectiveHeight = rawHeight;
+                    
+                    effectiveHeight = block.metrics.height; // Reseta altura
                     shouldRestrict = false;
                     
                     if (block.type === 'summary') {
@@ -645,14 +653,22 @@ const App: React.FC = () => {
                         (currentPageData[block.type] as any[]).push(block.data);
                     } 
                     
-                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                    currentY += titleHeight + effectiveHeight; 
+                    // Adiciona na nova página
+                    accumulatedY_Page2 += effectiveHeight;
                     pendingTitleHeight = 0;
+
                 } else {
-                     // Cabe na página atual (seja normal ou encolhido)
+                     // MANTÉM NA PÁGINA ATUAL
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
+                         
+                         // Se estamos na página 0 e restringimos, precisamos aumentar o offset
+                         // para que os próximos blocos "desçam" corretamente
+                         if (currentPageIndex === 0) {
+                             const heightDiff = effectiveHeight - block.metrics.height;
+                             expansionOffset += heightDiff;
+                         }
                     }
 
                     if (block.type === 'summary') {
@@ -662,7 +678,10 @@ const App: React.FC = () => {
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
                     } 
-                    currentY += effectiveHeight;
+                    
+                    if (currentPageIndex > 0) {
+                        accumulatedY_Page2 += effectiveHeight;
+                    }
                     pendingTitleHeight = 0; 
                 }
             }
