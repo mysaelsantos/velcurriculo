@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "GULOSA" E VISUAL) ---
+    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "BUCKET FILL" ESTRITA) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -414,8 +414,7 @@ const App: React.FC = () => {
     
                 await Promise.all(imagePromises);
                 
-                // Pequeno delay para garantir layout final e reflow
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 50));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -423,7 +422,7 @@ const App: React.FC = () => {
             
             measurementRootRef.current.render(
                 <ResumePreview 
-                    key={`${dataToPaginate.style.template}-${Date.now()}`}
+                    key={`measure-${Date.now()}`}
                     data={dataToPaginate} 
                     isDemoMode={isDemoMode} 
                     isFirstPage={true} 
@@ -437,278 +436,168 @@ const App: React.FC = () => {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            // Constantes de Layout A4 (em px a 96dpi)
             const A4_HEIGHT = 1123; 
-            const MARGIN_TOP = 50;
+            const MARGIN_TOP = 40; 
             const MARGIN_BOTTOM = 50; 
             
-            // Limite seguro para conteúdo na página (rodapé visual)
-            const PAGE_CONTENT_LIMIT = A4_HEIGHT - MARGIN_BOTTOM;
-            
-            // Zona onde o QR Code começa (visualmente)
-            // Se um elemento terminar DEPOIS disso, ele pode colidir
-            const QR_CODE_ZONE_START = 940; 
+            const QR_CODE_START = 930;
+            const FOOTER_LIMIT = A4_HEIGHT - MARGIN_BOTTOM;
 
-            // Função para pegar altura total (incluindo margens)
-            const getElementHeight = (element: HTMLElement) => {
-                if (!element) return 0;
-                const style = window.getComputedStyle(element);
+            const getBlockHeight = (node: HTMLElement) => {
+                const style = window.getComputedStyle(node);
                 const marginTop = parseFloat(style.marginTop) || 0;
                 const marginBottom = parseFloat(style.marginBottom) || 0;
-                return element.offsetHeight + marginTop + marginBottom;
+                return node.offsetHeight + marginTop + marginBottom;
             };
 
             const headerEl = previewEl.querySelector('header') as HTMLElement;
             const mainEl = previewEl.querySelector('main') as HTMLElement;
             
-            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+            if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
 
-            const headerHeight = getElementHeight(headerEl);
-            
-            // Margem superior do main (pode variar por template)
-            const mainStyle = window.getComputedStyle(mainEl);
-            const mainMarginTop = parseFloat(mainStyle.marginTop) || 0;
-            const mainPaddingTop = parseFloat(mainStyle.paddingTop) || 0;
+            const headerHeight = getBlockHeight(headerEl);
+            const mainPaddingTop = parseFloat(window.getComputedStyle(mainEl).paddingTop) || 0; 
+            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
 
-            interface ContentBlock {
+            interface Block {
                 id: string;
-                type: keyof ResumeData; 
-                data: any; 
+                type: keyof ResumeData;
+                data: any;
                 height: number;
-                node: HTMLElement;
+                isTitle: boolean;
             }
+            const blocks: Block[] = [];
 
-            const blocks: ContentBlock[] = [];
+            const addBlock = (id: string, type: keyof ResumeData, data: any, node: HTMLElement, isTitle = false) => {
+                blocks.push({ id, type, data, height: getBlockHeight(node), isTitle });
+            };
 
-            // Função auxiliar de extração
-            const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
-                const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
-                if (!sectionEl) return;
+            const processSection = (sectionId: string, type: keyof ResumeData, listId?: string) => {
+                const secEl = previewEl.querySelector(`#${sectionId}`);
+                if (!secEl) return;
 
-                // Título da Seção
-                const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
-                if (titleEl) {
-                    blocks.push({
-                        id: `${dataKey}-title`,
-                        type: dataKey,
-                        data: null, 
-                        height: getElementHeight(titleEl), // + margem de segurança visual
-                        node: titleEl
-                    });
-                }
+                const titleEl = secEl.querySelector('.section-title') as HTMLElement;
+                if (titleEl) addBlock(`${type}-title`, type, null, titleEl, true);
 
-                // Conteúdo
-                if (dataKey === 'summary') {
-                    const pEl = sectionEl.querySelector('p') as HTMLElement;
-                    if (pEl) {
-                        blocks.push({
-                            id: 'summary-text',
-                            type: 'summary',
-                            data: dataToPaginate.summary,
-                            height: getElementHeight(pEl),
-                            node: pEl
+                if (type === 'summary') {
+                    const p = secEl.querySelector('p');
+                    if (p) addBlock('summary-text', type, dataToPaginate.summary, p);
+                } else if (listId) {
+                    const list = secEl.querySelector(`#${listId}`);
+                    if (list) {
+                        Array.from(list.children).forEach((child, idx) => {
+                            const itemData = (dataToPaginate[type] as any[])[idx];
+                            if (itemData) addBlock(itemData.id, type, itemData, child as HTMLElement);
                         });
                     }
-                } else if (listId) {
-                    const listContainer = sectionEl.querySelector(`#${listId}`);
-                    if (!listContainer) return;
-                    
-                    const items = Array.from(listContainer.children) as HTMLElement[];
-                    const dataList = dataToPaginate[dataKey] as any[];
-
-                    items.forEach((itemEl, index) => {
-                        const itemData = dataList[index];
-                        if (itemData) {
-                            blocks.push({
-                                id: itemData.id,
-                                type: dataKey,
-                                data: itemData,
-                                height: getElementHeight(itemEl),
-                                node: itemEl
-                            });
-                        }
-                    });
-                } else if (dataKey === 'skills' || dataKey === 'languages') {
-                     const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
-                     if(contentDiv) {
-                         blocks.push({
-                             id: `${dataKey}-block`,
-                             type: dataKey,
-                             data: dataToPaginate[dataKey],
-                             height: getElementHeight(contentDiv),
-                             node: contentDiv
-                         });
-                     }
+                } else if (type === 'skills' || type === 'languages') {
+                    const content = secEl.querySelector(type === 'skills' ? '#resume-skills' : '#resume-languages-list');
+                    if (content) addBlock(`${type}-block`, type, dataToPaginate[type], content as HTMLElement);
                 }
             };
 
-            // Extrair todos os blocos na ordem
-            if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
-            if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
-            if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
-            if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
-            if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
-            if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
+            if (dataToPaginate.summary) processSection('summary-section', 'summary');
+            if (dataToPaginate.experiences?.length) processSection('experience-section', 'experiences', 'resume-experience-list');
+            if (dataToPaginate.education?.length) processSection('education-section', 'education', 'resume-education-list');
+            if (dataToPaginate.courses?.length) processSection('courses-section', 'courses', 'resume-courses-list');
+            if (dataToPaginate.languages?.length) processSection('languages-section', 'languages');
+            if (dataToPaginate.skills?.length) processSection('skills-section', 'skills');
 
             const pages: PageData[] = [];
-            
-            // Inicializar primeira página
-            let currentPageData: PageData = { 
+            let currentPage: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                restrictedBlockIds: []
+                restrictedBlockIds: [] 
             };
             
-            // Posição Y atual na página. Começa depois do cabeçalho.
-            let currentY = MARGIN_TOP + headerHeight + mainMarginTop + mainPaddingTop;
-            let currentPageIndex = 0;
+            let cursorY = MARGIN_TOP + headerHeight + mainMarginTop + mainPaddingTop;
+            let pageIndex = 0;
+            const hasQr = dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr;
 
-            const createNewPage = () => {
-                pages.push(currentPageData);
-                currentPageData = { 
+            const startNewPage = () => {
+                pages.push(currentPage);
+                currentPage = { 
                     style: dataToPaginate.style,
                     experiences: [], education: [], courses: [], languages: [], skills: [],
-                    restrictedBlockIds: []
+                    restrictedBlockIds: [] 
                 };
-                currentPageIndex++;
-                // Páginas subsequentes têm margem padrão + padding do main
-                currentY = MARGIN_TOP + 30; 
+                pageIndex++;
+                cursorY = MARGIN_TOP + 30;
             };
-
-            // Helper para calcular crescimento de texto se restringido (encolhido)
-            const calculateRestrictedHeight = (block: ContentBlock) => {
-                // Heurística simples: se reduzir largura para ~60%, altura aumenta ~1.5x a 1.7x
-                // Mas apenas se for texto longo. Títulos ou itens curtos não mudam.
-                if (block.height < 40) return block.height; // Provavelmente linha única
-                return block.height * 1.5; 
-            };
-
-            let pendingTitleBlock: ContentBlock | null = null;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
-                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
-                
-                // Se é um título, guardamos para processar junto com o próximo item
-                // para evitar títulos órfãos no final da página
-                if (block.id.endsWith('-title')) {
-                    // Se já tínhamos um título pendente (caso raro de título seguido de título), forçamos quebra
-                    if (pendingTitleBlock) {
-                         const availableSpace = PAGE_CONTENT_LIMIT - currentY;
-                         if (pendingTitleBlock.height > availableSpace) {
-                             createNewPage();
-                         }
-                         // Adiciona título pendente anterior
-                         // (Lógica simplificada: apenas adiciona, títulos não têm dados estruturados no PageData, 
-                         //  eles são renderizados automaticamente se a seção tiver dados)
+                const nextBlock = blocks[i+1];
+
+                if (block.isTitle && nextBlock) {
+                    const combinedHeight = block.height + nextBlock.height;
+                    const spaceLeft = FOOTER_LIMIT - cursorY;
+                    
+                    if (combinedHeight > spaceLeft) {
+                        startNewPage();
                     }
-                    pendingTitleBlock = block;
-                    continue; 
                 }
 
-                // Altura necessária para este bloco (considerando título pendente se houver)
-                const titleHeight = pendingTitleBlock ? pendingTitleBlock.height : 0;
-                const totalBlockHeight = titleHeight + block.height;
-                
-                // Espaço disponível atual
-                const availableSpace = PAGE_CONTENT_LIMIT - currentY;
+                if ((cursorY + block.height) > FOOTER_LIMIT) {
+                    startNewPage();
+                }
 
-                // --- LÓGICA PRINCIPAL ---
+                let finalBlockHeight = block.height;
+                let shouldRestrict = false;
 
-                // 1. Verifica se cabe "normal" na página
-                if (totalBlockHeight <= availableSpace) {
+                if (pageIndex === 0 && hasQr) {
+                    const blockBottom = cursorY + block.height;
                     
-                    // Cabe na página! Mas... colide com o QR Code na primeira página?
-                    let finalBlockHeight = block.height;
-                    let shouldRestrict = false;
-
-                    if (currentPageIndex === 0 && hasQr) {
-                        const blockEndY = currentY + totalBlockHeight;
+                    if (blockBottom > QR_CODE_START) {
+                        const estimatedRestrictedHeight = block.height * 1.5; 
                         
-                        // Se o bloco terminar DENTRO da zona perigosa
-                        if (blockEndY > QR_CODE_ZONE_START) {
-                            // Tenta restringir (encolher)
-                            const restrictedHeight = calculateRestrictedHeight(block);
-                            const totalRestricted = titleHeight + restrictedHeight;
-
-                            // Se encolhido ele AINDA couber na página...
-                            if (totalRestricted <= availableSpace) {
-                                shouldRestrict = true;
-                                finalBlockHeight = restrictedHeight;
-                            } else {
-                                // Se encolher faz ele estourar a página (ficou muito alto), 
-                                // então é melhor quebrar a página de vez.
-                                createNewPage();
-                                // Reset na nova página
-                                pendingTitleBlock = null; // Título será re-renderizado pela lógica da seção na nova página
-                                finalBlockHeight = block.height;
-                                shouldRestrict = false;
-                                
-                                // Recalcula se cabe na nova página (caso extremo de bloco gigante)
-                                // ... (assumindo que cabe numa pág vazia por enquanto)
-                            }
+                        if ((cursorY + estimatedRestrictedHeight) <= FOOTER_LIMIT) {
+                            shouldRestrict = true;
+                            finalBlockHeight = estimatedRestrictedHeight;
+                        } else {
+                            startNewPage();
+                            shouldRestrict = false;
+                            finalBlockHeight = block.height;
                         }
                     }
+                }
 
-                    // Adiciona à página atual
-                    if (shouldRestrict) {
-                        if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
-                        currentPageData.restrictedBlockIds.push(block.id);
-                    }
+                if (shouldRestrict) {
+                    if (!currentPage.restrictedBlockIds) currentPage.restrictedBlockIds = [];
+                    currentPage.restrictedBlockIds.push(block.id);
+                }
 
-                    // Adiciona dados ao PageData
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    }
+                if (block.type === 'summary') {
+                    currentPage.summary = block.data;
+                } else if (block.type === 'skills' || block.type === 'languages') {
+                    currentPage[block.type] = block.data;
+                } else if (['experiences', 'education', 'courses'].includes(block.type)) {
+                    if (!currentPage[block.type]) currentPage[block.type] = [];
+                    (currentPage[block.type] as any[]).push(block.data);
+                }
+                
+                cursorY += finalBlockHeight;
+            }
 
-                    currentY += (titleHeight + finalBlockHeight);
-                    pendingTitleBlock = null; // Título consumido
-
-                } else {
-                    // 2. NÃO cabe na página. Quebra Imediata.
-                    createNewPage();
-                    
-                    // Na nova página, adiciona sem restrição
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    }
-                    
-                    // O título pendente "viaja" para a nova página implicitamente
-                    // pois a seção recomeça nela.
-                    
-                    currentY += (titleHeight + block.height); // Adiciona altura na nova página
-                    pendingTitleBlock = null;
+            if (Object.keys(currentPage).length > 0) {
+                const hasContent = currentPage.summary || 
+                                   currentPage.experiences?.length || 
+                                   currentPage.education?.length || 
+                                   currentPage.courses?.length || 
+                                   currentPage.skills?.length || 
+                                   currentPage.languages?.length;
+                
+                if (hasContent || pageIndex === 0) {
+                    pages.push(currentPage);
                 }
             }
 
-            if (Object.keys(currentPageData).length > 0) {
-               pages.push(currentPageData);
-            }
-            
-            // Filtro final para remover páginas vazias acidentais
-            const finalPages = pages.filter(p => {
-                const hasData = p.summary || 
-                                (p.experiences && p.experiences.length > 0) || 
-                                (p.education && p.education.length > 0) ||
-                                (p.courses && p.courses.length > 0) ||
-                                (p.skills && p.skills.length > 0);
-                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
-            });
-
-            setPaginatedData(finalPages);
-            return finalPages;
+            setPaginatedData(pages);
+            return pages;
 
         } catch (error) {
-            console.error("Pagination failed:", error);
+            console.error("Pagination error:", error);
             setPaginatedData([dataToPaginate]);
             return [dataToPaginate];
         }
