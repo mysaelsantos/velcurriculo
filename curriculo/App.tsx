@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "BUCKET FILL" ESTRITA) ---
+    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "BUCKET FILL" ESTRITA & SEGURA) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -517,7 +517,9 @@ const App: React.FC = () => {
 
             const startNewPage = () => {
                 pages.push(currentPage);
+                // FIXED: Garante que personalInfo existe na nova página para não quebrar o preview
                 currentPage = { 
+                    personalInfo: dataToPaginate.personalInfo,
                     style: dataToPaginate.style,
                     experiences: [], education: [], courses: [], languages: [], skills: [],
                     restrictedBlockIds: [] 
