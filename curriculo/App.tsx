@@ -26,7 +26,7 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// DADOS DE DEMONSTRAÇÃO ATUALIZADOS (SEU PERFIL)
+// DADOS DE DEMONSTRAÇÃO (MANTIDOS)
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Marcos MJ Santos',
@@ -250,7 +250,6 @@ const App: React.FC = () => {
     
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
-    // CRUCIAL: Referência segura para o container de medição
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
@@ -392,7 +391,6 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -562,36 +560,44 @@ const App: React.FC = () => {
             };
 
             const dangerZoneStart = QR_CODE_START_Y;
-
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA CORRIGIDA (ZERO FALSOS POSITIVOS) ---
-                // Só encolhemos se o bloco realmente COMEÇAR na zona de perigo (rodapé).
-                const startsInDangerZone = currentPageIndex === 0 && hasQr && (currentY > dangerZoneStart - 50);
-                
                 let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
-                if (startsInDangerZone) {
-                    // Caso A: O bloco começa no rodapé, ao lado do QR Code.
-                    // Ação: Restringir largura para caber.
-                    shouldRestrict = true;
-                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento vertical
-                    effectiveHeight = block.height * 1.7; 
-                } else if (currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart)) {
-                    // Caso B: O bloco começa acima, mas é comprido e invade o QR Code.
-                    // Ação: Forçar quebra de página (corte), jogando para a próxima página.
-                    effectiveHeight = A4_HEIGHT; 
-                    shouldRestrict = false;
+                // --- LÓGICA DEFINITIVA DE COLISÃO ---
+                if (currentPageIndex === 0 && hasQr) {
+                    const blockEnd = currentY + block.height;
+                    const safeQrLimit = dangerZoneStart - 10; 
+
+                    // SE O BLOCO TERMINA ANTES DO QR CODE, ELE É SEGURO.
+                    // Isso elimina o "encolher quando não precisa".
+                    if (blockEnd <= safeQrLimit) {
+                        shouldRestrict = false; 
+                    }
+                    else {
+                        // SE ELE INVADE O QR CODE:
+                        // Verificamos se ele começa muito embaixo.
+                        // Se começar "perto" (menos de 40px antes) ou dentro da zona, encolhemos.
+                        if (currentY > (dangerZoneStart - 40)) {
+                            shouldRestrict = true;
+                            effectiveHeight = block.height * 1.7; 
+                        } 
+                        // Se ele começa lá em cima e bate no QR Code, temos que quebrar a página.
+                        else {
+                            effectiveHeight = A4_HEIGHT; 
+                            shouldRestrict = false;
+                        }
+                    }
                 }
 
                 const available = getAvailableSpace();
 
-                // Lógica de títulos (mantém junto do próximo bloco)
+                // Lógica de títulos
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
@@ -607,11 +613,8 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // --- CORREÇÃO DO BUG DE MARGEM ---
-                // Se a altura efetiva não couber, cria nova página
                 if (effectiveHeight > available) {
                     createNewPage();
-                    // Na nova página, volta ao normal
                     effectiveHeight = block.height;
                     shouldRestrict = false;
                     
@@ -627,7 +630,6 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição se necessário
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
@@ -916,10 +918,6 @@ const App: React.FC = () => {
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
                             isPrint={true} 
-                            // **** CORREÇÃO ELEGANTE AQUI ****
-                            // Forçamos 'hideEmptySections' para true APENAS na versão de impressão.
-                            // Isso garante que o PDF final nunca mostre placeholders vazios,
-                            // mesmo que o currículo tenha apenas uma página.
                             hideEmptySections={true} 
                         />
                     </div>
