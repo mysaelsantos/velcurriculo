@@ -155,21 +155,16 @@ const calculateTodaysBase = () => {
 const calculateCurrentGenerated = (base: number) => {
   const now = new Date();
   const hour = now.getHours();
-  
   if (hour < 0) return base; 
-  
   const startOfDayCount = new Date();
   startOfDayCount.setHours(9, 0, 0, 0);
-  
   const endOfDayCount = new Date();
   endOfDayCount.setHours(19, 0, 0, 0);
-  
   if (hour < 9) return base;
   if (now > endOfDayCount) {
       const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
       return base + Math.floor(totalSecondsInWorkDay / 20);
   }
-  
   const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
   return base + Math.floor(secondsElapsed / 20);
 };
@@ -194,7 +189,6 @@ const TestimonialsSection = React.memo(() => {
         <section id="avaliacoes" className="my-24">
             <h2 className="text-3xl font-bold text-center text-gray-800">Feito para quem precisa de resultados</h2>
             <p className="text-lg text-center text-gray-600 mt-2 mb-12">Veja o que os nossos usuários estão a dizer.</p>
-
             <div className="space-y-4">
                 <div className="scroller px-4 py-4" data-animated="true">
                     <ul className="scroller__inner list-none p-0">
@@ -215,7 +209,6 @@ const TestimonialsSection = React.memo(() => {
 
 const App: React.FC = () => {
     const isPixTestMode = false;
-
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
     const [isDemoMode, setIsDemoMode] = useState(true);
@@ -234,7 +227,6 @@ const App: React.FC = () => {
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
-
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
 
@@ -243,9 +235,7 @@ const App: React.FC = () => {
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
-        setTimeout(() => {
-            setToast(null);
-        }, 5000);
+        setTimeout(() => setToast(null), 5000);
     };
     
     const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -254,13 +244,7 @@ const App: React.FC = () => {
     
     useEffect(() => {
         const loadFonts = async () => {
-            try {
-                await document.fonts.ready;
-            } catch (error) {
-                console.error("Failed to load fonts:", error);
-            } finally {
-                setFontsLoaded(true);
-            }
+            try { await document.fonts.ready; } catch (e) { console.error(e); } finally { setFontsLoaded(true); }
         };
         loadFonts();
     }, []);
@@ -280,16 +264,12 @@ const App: React.FC = () => {
         measurementNode.style.zIndex = '-1';
         measurementNode.style.width = '794px'; 
         document.body.appendChild(measurementNode);
-        
         measurementContainerRef.current = measurementNode;
         measurementRootRef.current = ReactDOM.createRoot(measurementNode);
-    
         return () => {
             setTimeout(() => {
                 measurementRootRef.current?.unmount();
-                if (document.body.contains(measurementNode)) {
-                    document.body.removeChild(measurementNode);
-                }
+                if (document.body.contains(measurementNode)) document.body.removeChild(measurementNode);
                 measurementContainerRef.current = null;
             }, 0);
         };
@@ -303,14 +283,9 @@ const App: React.FC = () => {
                 setPendingSavedData(parsedProgress);
                 setIsContinueModalOpen(true);
             }
-
             const storedResumes = localStorage.getItem('savedResumes');
-            if (storedResumes) {
-                setSavedResumes(JSON.parse(storedResumes));
-            }
-        } catch (error) {
-            console.error("Failed to load data from localStorage:", error);
-        }
+            if (storedResumes) setSavedResumes(JSON.parse(storedResumes));
+        } catch (e) { console.error(e); }
     }, []);
 
     useEffect(() => {
@@ -318,9 +293,7 @@ const App: React.FC = () => {
             try {
                 const progress = { resumeData, currentStep, isFinished };
                 localStorage.setItem('inProgressResume', JSON.stringify(progress));
-            } catch (error) {
-                console.error("Failed to save progress to localStorage:", error);
-            }
+            } catch (e) { console.error(e); }
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
 
@@ -337,11 +310,7 @@ const App: React.FC = () => {
     };
 
     const handleStartNew = () => {
-        try {
-            localStorage.removeItem('inProgressResume');
-        } catch (error) {
-            console.error("Error removing localStorage item", error);
-        }
+        localStorage.removeItem('inProgressResume');
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
     };
@@ -353,11 +322,7 @@ const App: React.FC = () => {
         setIsFinished(false);
         setHasPaidInSession(false);
         setEditingResumeId(null);
-        try {
-            localStorage.removeItem('inProgressResume');
-        } catch (error) {
-            console.error("Failed to remove in-progress resume from localStorage:", error);
-        }
+        localStorage.removeItem('inProgressResume');
     };
 
     const handleRequestDelete = (target: { id: string; type: 'experience' | 'education' | 'course' | 'language' }) => {
@@ -367,21 +332,9 @@ const App: React.FC = () => {
     const handleConfirmDelete = () => {
         if (!deletionTarget) return;
         const { type, id } = deletionTarget;
-
-        const keyMap = {
-            experience: 'experiences',
-            education: 'education',
-            course: 'courses',
-            language: 'languages',
-        } as const;
-
+        const keyMap = { experience: 'experiences', education: 'education', course: 'courses', language: 'languages' } as const;
         const key = keyMap[type];
-
-        setResumeData(prev => ({
-            ...prev,
-            [key]: prev[key].filter((item: any) => item.id !== id),
-        }));
-
+        setResumeData(prev => ({ ...prev, [key]: prev[key].filter((item: any) => item.id !== id) }));
         setDeletionTarget(null);
     };
     
@@ -393,135 +346,60 @@ const App: React.FC = () => {
     
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
-    
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
             const container = measurementContainerRef.current;
-            const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
-    
+            const timeout = setTimeout(() => reject(new Error("Timeout")), 6000);
             const checkRender = async () => {
                 const previewEl = container?.firstChild as HTMLElement;
-                if (!previewEl) {
-                    requestAnimationFrame(checkRender); return;
-                }
-    
+                if (!previewEl) { requestAnimationFrame(checkRender); return; }
                 const images = Array.from(previewEl.querySelectorAll('img'));
-                const imagePromises = images.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(res => { img.onload = res; img.onerror = res; });
-                });
-    
-                await Promise.all(imagePromises);
-                
+                await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(res => img.onload = res)));
                 await new Promise(r => setTimeout(r, 80));
-
                 clearTimeout(timeout);
                 resolve(previewEl);
             };
-            
-            measurementRootRef.current.render(
-                <ResumePreview 
-                    key={`${dataToPaginate.style.template}-${Date.now()}`}
-                    data={dataToPaginate} 
-                    isDemoMode={isDemoMode} 
-                    isFirstPage={true} 
-                    isMeasurement={true} 
-                />
-            );
+            measurementRootRef.current.render(<ResumePreview key={Date.now()} data={dataToPaginate} isDemoMode={isDemoMode} isFirstPage={true} isMeasurement={true} />);
             requestAnimationFrame(checkRender);
         });
         
         try {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
-            
             const A4_HEIGHT = 1123; 
-            const MARGIN_TOP = 50;
-            const MARGIN_BOTTOM = 50; 
-            
+            const MARGIN_TOP = 50, MARGIN_BOTTOM = 50; 
             const QR_CODE_START_Y = 930; 
-
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
                 const style = window.getComputedStyle(element);
-                const marginTop = parseFloat(style.marginTop) || 0;
-                const marginBottom = parseFloat(style.marginBottom) || 0;
-                return element.offsetHeight + marginTop + marginBottom;
+                return element.offsetHeight + parseFloat(style.marginTop || '0') + parseFloat(style.marginBottom || '0');
             };
-
             const headerEl = previewEl.querySelector('header') as HTMLElement;
             const mainEl = previewEl.querySelector('main') as HTMLElement;
-            
-            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
-
+            if (!mainEl) return [dataToPaginate];
             const headerHeight = getElementHeight(headerEl);
-            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop || '0');
 
-            interface ContentBlock {
-                id: string;
-                type: keyof ResumeData; 
-                data: any; 
-                height: number;
-                node: HTMLElement;
-            }
-
+            interface ContentBlock { id: string; type: keyof ResumeData; data: any; height: number; node: HTMLElement; }
             const blocks: ContentBlock[] = [];
-
             const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
                 const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
                 if (!sectionEl) return;
-
                 const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
-                if (titleEl) {
-                    blocks.push({
-                        id: `${dataKey}-title`,
-                        type: dataKey,
-                        data: null, 
-                        height: getElementHeight(titleEl) + 10,
-                        node: titleEl
-                    });
-                }
-
+                if (titleEl) blocks.push({ id: `${dataKey}-title`, type: dataKey, data: null, height: getElementHeight(titleEl) + 10, node: titleEl });
                 if (dataKey === 'summary') {
                     const pEl = sectionEl.querySelector('p') as HTMLElement;
-                    if (pEl) {
-                        blocks.push({
-                            id: 'summary-text',
-                            type: 'summary',
-                            data: dataToPaginate.summary,
-                            height: getElementHeight(pEl),
-                            node: pEl
-                        });
-                    }
+                    if (pEl) blocks.push({ id: 'summary-text', type: 'summary', data: dataToPaginate.summary, height: getElementHeight(pEl), node: pEl });
                 } else if (listId) {
                     const listContainer = sectionEl.querySelector(`#${listId}`);
                     if (!listContainer) return;
-                    
                     const items = Array.from(listContainer.children) as HTMLElement[];
-                    const dataList = dataToPaginate[dataKey] as any[];
-
-                    items.forEach((itemEl, index) => {
-                        const itemData = dataList[index];
-                        if (itemData) {
-                            blocks.push({
-                                id: itemData.id,
-                                type: dataKey,
-                                data: itemData,
-                                height: getElementHeight(itemEl),
-                                node: itemEl
-                            });
-                        }
+                    items.forEach((itemEl, idx) => {
+                        const itemData = (dataToPaginate[dataKey] as any[])[idx];
+                        if (itemData) blocks.push({ id: itemData.id, type: dataKey, data: itemData, height: getElementHeight(itemEl), node: itemEl });
                     });
                 } else if (dataKey === 'skills' || dataKey === 'languages') {
-                     const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
-                     if(contentDiv) {
-                         blocks.push({
-                             id: `${dataKey}-block`,
-                             type: dataKey,
-                             data: dataToPaginate[dataKey],
-                             height: getElementHeight(contentDiv),
-                             node: contentDiv
-                         });
-                     }
+                     const div = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                     if(div) blocks.push({ id: `${dataKey}-block`, type: dataKey, data: dataToPaginate[dataKey], height: getElementHeight(div), node: div });
                 }
             };
 
@@ -533,612 +411,188 @@ const App: React.FC = () => {
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
             const pages: PageData[] = [];
-            
-            let currentPageData: PageData = { 
-                personalInfo: dataToPaginate.personalInfo, 
-                style: dataToPaginate.style,
-                experiences: [], education: [], courses: [], languages: [], skills: [],
-                restrictedBlockIds: []
-            };
-            
+            let currentPageData: PageData = { personalInfo: dataToPaginate.personalInfo, style: dataToPaginate.style, experiences: [], education: [], courses: [], languages: [], skills: [], restrictedBlockIds: [] };
             let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
             let currentPageIndex = 0;
-
             const createNewPage = () => {
                 pages.push(currentPageData);
-                currentPageData = { 
-                    style: dataToPaginate.style,
-                    experiences: [], education: [], courses: [], languages: [], skills: [],
-                    restrictedBlockIds: []
-                };
+                currentPageData = { style: dataToPaginate.style, experiences: [], education: [], courses: [], languages: [], skills: [], restrictedBlockIds: [] };
                 currentPageIndex++;
                 currentY = MARGIN_TOP + 30; 
             };
-
-            const getAvailableSpace = () => {
-                return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
-            };
-
             const dangerZoneStart = QR_CODE_START_Y;
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
-                
                 let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
-                // --- LÓGICA DEFINITIVA DE COLISÃO ---
+                // --- LÓGICA DE DETECÇÃO CORRIGIDA ---
                 if (currentPageIndex === 0 && hasQr) {
                     const blockEnd = currentY + block.height;
-                    const safeQrLimit = dangerZoneStart - 10; 
-
-                    // SE O BLOCO TERMINA ANTES DO QR CODE, ELE É SEGURO.
-                    // Isso elimina o "encolher quando não precisa".
-                    if (blockEnd <= safeQrLimit) {
-                        shouldRestrict = false; 
-                    }
-                    else {
-                        // SE ELE INVADE O QR CODE:
-                        // Verificamos se ele começa muito embaixo.
-                        // Se começar "perto" (menos de 40px antes) ou dentro da zona, encolhemos.
-                        if (currentY > (dangerZoneStart - 40)) {
+                    const safeLimit = dangerZoneStart - 10;
+                    if (blockEnd > safeLimit) {
+                        // Se começou já no rodapé, encolhe largura
+                        if (currentY > (dangerZoneStart - 60)) {
                             shouldRestrict = true;
                             effectiveHeight = block.height * 1.7; 
-                        } 
-                        // Se ele começa lá em cima e bate no QR Code, temos que quebrar a página.
-                        else {
-                            effectiveHeight = A4_HEIGHT; 
-                            shouldRestrict = false;
+                        } else {
+                            // Se começou no topo mas bateria no QR, joga para página 2
+                            effectiveHeight = A4_HEIGHT;
                         }
                     }
                 }
 
-                const available = getAvailableSpace();
-
-                // Lógica de títulos
+                const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
                 if (block.id.endsWith('-title')) {
-                    const nextBlock = blocks[i+1];
-                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
-                    
-                    if (available < (effectiveHeight + nextItemHeight)) {
-                        createNewPage();
-                        effectiveHeight = block.height; 
-                        shouldRestrict = false;
-                    }
-                    
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = effectiveHeight; 
-                    continue; 
+                    const next = blocks[i+1];
+                    const nextH = next ? next.height : 40;
+                    if (available < (effectiveHeight + nextH)) { createNewPage(); effectiveHeight = block.height; }
+                    currentY += effectiveHeight; pendingTitleHeight = effectiveHeight; continue;
                 }
-
                 if (effectiveHeight > available) {
                     createNewPage();
-                    effectiveHeight = block.height;
-                    shouldRestrict = false;
-                    
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    
-                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                    currentY += titleHeight + effectiveHeight; 
-                    pendingTitleHeight = 0;
+                    effectiveHeight = block.height; shouldRestrict = false;
+                    if (block.type === 'summary') currentPageData.summary = block.data;
+                    else if (block.type === 'skills' || block.type === 'languages') currentPageData[block.type] = block.data;
+                    else if (Array.isArray(currentPageData[block.type])) (currentPageData[block.type] as any[]).push(block.data);
+                    currentY += (pendingTitleHeight > 0 ? pendingTitleHeight : 40) + effectiveHeight; pendingTitleHeight = 0;
                 } else {
-                    if (shouldRestrict) {
-                         if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
-                         currentPageData.restrictedBlockIds.push(block.id);
-                    }
-
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = 0; 
+                    if (shouldRestrict) { if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = []; currentPageData.restrictedBlockIds.push(block.id); }
+                    if (block.type === 'summary') currentPageData.summary = block.data;
+                    else if (block.type === 'skills' || block.type === 'languages') currentPageData[block.type] = block.data;
+                    else if (Array.isArray(currentPageData[block.type])) (currentPageData[block.type] as any[]).push(block.data);
+                    currentY += effectiveHeight; pendingTitleHeight = 0;
                 }
             }
-
-            if (Object.keys(currentPageData).length > 0) {
-               pages.push(currentPageData);
-            }
-            
-            const finalPages = pages.filter(p => {
-                const hasData = p.summary || 
-                                (p.experiences && p.experiences.length > 0) || 
-                                (p.education && p.education.length > 0) ||
-                                (p.courses && p.courses.length > 0) ||
-                                (p.skills && p.skills.length > 0);
-                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
-            });
-
-            setPaginatedData(finalPages);
-            return finalPages;
-
-        } catch (error) {
-            console.error("Pagination failed:", error);
-            setPaginatedData([dataToPaginate]);
-            return [dataToPaginate];
-        }
+            if (Object.keys(currentPageData).length > 0) pages.push(currentPageData);
+            setPaginatedData(pages.filter(p => p.summary || p.experiences?.length || p.education?.length || p.personalInfo));
+            return pages;
+        } catch (e) { console.error(e); setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
     }, [isDemoMode]);
 
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
-        
         if (!previewColumn || !previewElement) return;
-
-        const columnWidth = previewColumn.offsetWidth;
-        const baseWidth = 794;
-        const baseHeight = 1123;
-        
-        const scale = columnWidth / baseWidth;
-        
+        const scale = previewColumn.offsetWidth / 794;
         previewElement.style.transform = `scale(${scale})`;
-        
-        if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
-        }
+        if (previewWrapperRef.current) previewWrapperRef.current.style.height = `${1123 * scale}px`;
     }, []);
 
     useEffect(() => {
-        const handler = setTimeout(() => {
-            if (fontsLoaded) { 
-                paginateResume(resumeData);
-            }
-        }, 300);
-
-        return () => {
-            clearTimeout(handler);
-        };
+        const h = setTimeout(() => fontsLoaded && paginateResume(resumeData), 300);
+        return () => clearTimeout(h);
     }, [resumeData, paginateResume, fontsLoaded]);
-
 
     useEffect(() => {
         if(fontsLoaded){ 
-            scalePreview();
-            window.addEventListener('resize', scalePreview);
+            scalePreview(); window.addEventListener('resize', scalePreview);
             return () => window.removeEventListener('resize', scalePreview);
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
-        setIsPaymentProcessing(true);
-        setGeneratingStatus('Preparando documento...');
-        
-        if (document.fonts) {
-            await document.fonts.ready;
-        }
-
+        setIsPaymentProcessing(true); setGeneratingStatus('Preparando...');
+        if (document.fonts) await document.fonts.ready;
         const printArea = document.getElementById('print-area');
-        if (!printArea) {
-            console.error("Print area not found");
-            setIsPaymentProcessing(false);
-            return;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
+        if (!printArea) { setIsPaymentProcessing(false); return; }
+        await new Promise(r => setTimeout(r, 1000));
         try {
-            setGeneratingStatus('Gerando imagens...');
             const pages = Array.from(printArea.querySelectorAll('.resume-page')) as HTMLElement[];
-            
-            if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
-
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-
-            const pdfWidth = 210;
-            const pdfHeight = 297;
-
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             for (let i = 0; i < pages.length; i++) {
-                const pageEl = pages[i];
-                
-                pageEl.style.height = '1123px';
-                pageEl.style.minHeight = '1123px';
-
-                let imgData;
-                try {
-                    imgData = await toPng(pageEl, {
-                        quality: 0.95,
-                        pixelRatio: 2, 
-                        cacheBust: true, 
-                        backgroundColor: '#ffffff',
-                        height: 1123, 
-                        width: 794
-                    });
-                } catch (firstError) {
-                    console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
-                    imgData = await toPng(pageEl, {
-                        quality: 0.9,
-                        pixelRatio: 1, 
-                        backgroundColor: '#ffffff',
-                        height: 1123,
-                        width: 794
-                    });
-                }
-
-                if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                const img = await toPng(pages[i], { quality: 0.95, pixelRatio: 2, backgroundColor: '#ffffff', height: 1123, width: 794 });
+                if (i > 0) pdf.addPage(); pdf.addImage(img, 'PNG', 0, 0, 210, 297);
             }
-
-            setGeneratingStatus('Finalizando PDF...');
-            const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
-            pdf.save(fileName);
-
-        } catch (error) {
-            console.error("Erro ao gerar PDF:", error);
-            showToast("Erro ao gerar PDF. Tente usar um computador se persistir.", "error");
-        } finally {
-            setIsPaymentProcessing(false);
-            setGeneratingStatus('');
-        }
-        
+            pdf.save(`curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+        } catch (e) { console.error(e); showToast("Erro ao gerar PDF."); } finally { setIsPaymentProcessing(false); setGeneratingStatus(''); }
     }, []);
 
     const handlePaymentRequest = async () => {
-        if(hasPaidInSession) {
-            exportToPdf(resumeData);
-            return;
-        }
-
+        if(hasPaidInSession) { exportToPdf(resumeData); return; }
         setIsPaymentProcessing(true);
-        const currentAmount = !!editingResumeId ? 2.50 : 5.00;
-        setPaymentAmount(currentAmount);
-
-        if (isPixTestMode) {
-            console.log("Entering Pix Test Mode...");
-            setTimeout(() => {
-                setPixPaymentData({
-                    qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
-                    copyPasteCode: '00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5913Test_User_Name6009SAO_PAULO62070503***6304E2A4',
-                    paymentId: `pi_test_${Date.now()}`,
-                });
-                setIsPixModalOpen(true);
-                setIsPaymentProcessing(false);
-            }, 1000);
-            return;
-        }
-
+        const amount = !!editingResumeId ? 2.50 : 5.00; setPaymentAmount(amount);
         try {
-            const backendUrl = '/.netlify/functions/create-pix-payment';
-
-            const response = await fetch(backendUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isDiscounted: !!editingResumeId })
-            });
-    
-            const data = await response.json();
-    
-            if (!response.ok || !data.paymentId) {
-                throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
-            }
-    
-            setPixPaymentData(data);
-            setIsPixModalOpen(true);
-        } catch (error) {
-            console.error("Erro ao solicitar pagamento Pix:", error);
-            alert((error as Error).message);
-        } finally {
-            setIsPaymentProcessing(false);
-        }
+            const res = await fetch('/.netlify/functions/create-pix-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isDiscounted: !!editingResumeId }) });
+            const data = await res.json();
+            if (!res.ok || !data.paymentId) throw new Error('Erro no Pix');
+            setPixPaymentData(data); setIsPixModalOpen(true);
+        } catch (e) { alert((e as Error).message); } finally { setIsPaymentProcessing(false); }
     };
 
     const handlePaymentSuccess = () => {
-        setIsPixModalOpen(false);
-        setPixPaymentData(null);
-        setHasPaidInSession(true);
-
-        const newSavedResume: SavedResume = {
-            ...resumeData,
-            savedAt: new Date().toISOString()
-        };
-
-        setSavedResumes(prevResumes => {
-            const updatedResumes = editingResumeId
-                ? prevResumes.map(r => r.savedAt === editingResumeId ? newSavedResume : r)
-                : [...prevResumes, newSavedResume];
-            
-            try {
-                localStorage.setItem('savedResumes', JSON.stringify(updatedResumes));
-            } catch (error) {
-                console.error("Failed to save resumes to localStorage:", error);
-            }
-            return updatedResumes;
+        setIsPixModalOpen(false); setPixPaymentData(null); setHasPaidInSession(true);
+        const newResume: SavedResume = { ...resumeData, savedAt: new Date().toISOString() };
+        setSavedResumes(prev => {
+            const updated = editingResumeId ? prev.map(r => r.savedAt === editingResumeId ? newResume : r) : [...prev, newResume];
+            localStorage.setItem('savedResumes', JSON.stringify(updated)); return updated;
         });
-
-        setEditingResumeId(null);
-
-        try {
-            localStorage.removeItem('inProgressResume');
-        } catch (error) {
-            console.error("Failed to remove in-progress resume from localStorage:", error);
-        }
-
-        setTimeout(() => {
-            exportToPdf(resumeData);
-        }, 300);
+        setEditingResumeId(null); localStorage.removeItem('inProgressResume');
+        setTimeout(() => exportToPdf(resumeData), 300);
     };
     
     const handleEditResume = (savedAt: string) => {
-        const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
-        if (resumeToEdit) {
-            setResumeData(resumeToEdit);
-            setCurrentStep(0);
-            setIsFinished(false);
-            setEditingResumeId(savedAt);
-            setIsDemoMode(false);
-            setHasPaidInSession(false);
-            setIsMyResumesModalOpen(false);
-            document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
-        }
+        const resume = savedResumes.find(r => r.savedAt === savedAt);
+        if (resume) { setResumeData(resume); setCurrentStep(0); setIsFinished(false); setEditingResumeId(savedAt); setIsDemoMode(false); setIsMyResumesModalOpen(false); }
     };
 
     const handleDeleteSavedResume = (savedAt: string) => {
         setSavedResumes(prev => {
             const updated = prev.filter(r => r.savedAt !== savedAt);
-            localStorage.setItem('savedResumes', JSON.stringify(updated));
-            return updated;
+            localStorage.setItem('savedResumes', JSON.stringify(updated)); return updated;
         });
     };
 
-    if (!fontsLoaded) {
-        return (
-            <div className="fixed inset-0 flex flex-col items-center justify-center bg-gray-50 z-[200]">
-                <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="mt-4 text-gray-600 font-semibold">Carregando editor...</p>
-            </div>
-        );
-    }
+    if (!fontsLoaded) return <div className="fixed inset-0 flex items-center justify-center bg-gray-50 z-[200]">Carregando...</div>;
 
     return (
         <>
         <div id="print-container">
              <div id="print-area">
-                {paginatedData.map((pageData, index) => (
-                    <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px' }}>
-                        <ResumePreview 
-                            data={pageData} 
-                            isDemoMode={false} 
-                            isFirstPage={index === 0} 
-                            isMeasurement={false} 
-                            isPrint={true} 
-                            hideEmptySections={true} 
-                        />
+                {paginatedData.map((p, i) => (
+                    <div key={i} className="resume-page" style={{ height: '1123px', minHeight: '1123px' }}>
+                        <ResumePreview data={p} isDemoMode={false} isFirstPage={i === 0} isPrint={true} hideEmptySections={true} />
                     </div>
                 ))}
              </div>
         </div>
-
-        {toast && (
-            <div
-                role="alert"
-                className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${
-                {
-                    success: 'bg-green-500',
-                    error: 'bg-red-600',
-                    warning: 'bg-yellow-500 text-gray-900',
-                }[toast.type]
-                }`}
-            >
-                {toast.message}
-            </div>
-        )}
-        <ContinueProgressModal 
-            isOpen={isContinueModalOpen}
-            onContinue={handleContinueProgress}
-            onStartNew={handleStartNew}
-        />
-        {isPixModalOpen && pixPaymentData && (
-            <PixModal
-                isOpen={isPixModalOpen}
-                onClose={() => setIsPixModalOpen(false)}
-                paymentData={pixPaymentData}
-                onPaymentSuccess={handlePaymentSuccess}
-                isTestMode={isPixTestMode}
-                amount={paymentAmount}
-            />
-        )}
-        {isMyResumesModalOpen && (
-            <MyResumesModal
-                isOpen={isMyResumesModalOpen}
-                onClose={() => setIsMyResumesModalOpen(false)}
-                resumes={savedResumes}
-                onEdit={handleEditResume}
-                onDownload={exportToPdf}
-                onDelete={handleDeleteSavedResume}
-            />
-        )}
-        {deletionTarget && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                    <h3 className="text-lg font-semibold text-gray-800">Confirmar Exclusão</h3>
-                    <p className="text-gray-600 mt-2">Tem a certeza que deseja remover este item? Esta ação não pode ser desfeita.</p>
-                    <div className="mt-6 flex justify-end gap-3">
-                        <button onClick={() => setDeletionTarget(null)} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
-                            Cancelar
-                        </button>
-                        <button onClick={handleConfirmDelete} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-                            Remover
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-        <button
-            type="button"
-            onClick={() => exportToPdf(resumeData)}
-            className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105"
-            title="Pular pagamento e baixar PDF (Apenas para Teste)"
-            aria-label="Baixar PDF para teste"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>
-        </button>
-        <header className="fixed top-6 left-6 right-6 bg-blue-800/80 backdrop-blur-lg z-50 border border-white/10 rounded-full shadow-lg">
-            <div className="px-6 py-3 flex justify-between items-center">
-                <a href="https://velsites.com.br/" className="flex items-center">
-                    <img src="https://i.postimg.cc/yNWrvPQJ/Subcabe-alho-76.png" alt="Vel Sites Logo" className="h-5 mr-3" />
-                </a>
-                <nav>
-                    <a href="https://velsites.com.br/" className="text-white hover:text-blue-200 font-medium transition">Início</a>
-                </nav>
-            </div>
+        {toast && <div className={`fixed top-20 right-5 z-[101] p-4 rounded bg-red-600 text-white`}>{toast.message}</div>}
+        <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
+        {isPixModalOpen && pixPaymentData && <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} amount={paymentAmount} />}
+        {isMyResumesModalOpen && <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />}
+        {deletionTarget && <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white p-6 rounded shadow-xl"><h3 className="font-bold">Remover item?</h3><div className="mt-6 flex justify-end gap-3"><button onClick={() => setDeletionTarget(null)}>Cancelar</button><button onClick={handleConfirmDelete} className="bg-red-600 text-white p-2 px-4 rounded">Remover</button></div></div>
+        </div>}
+        <button type="button" onClick={() => exportToPdf(resumeData)} className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg">Baixar PDF</button>
+        <header className="fixed top-6 left-6 right-6 bg-blue-800/80 backdrop-blur-lg z-50 rounded-full p-3 px-6 text-white flex justify-between">
+            <img src="https://i.postimg.cc/yNWrvPQJ/Subcabe-alho-76.png" className="h-5" alt="Logo" />
+            <nav><a href="https://velsites.com.br/">Início</a></nav>
         </header>
-
-        <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
-            <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
-                <h1 className="text-4xl lg:text-5xl font-bold gradient-text">
-                    Faça seu Currículo Profissional por Apenas R$5<span className="text-4xl lg:text-5xl font-bold">,00</span>
-                </h1>
-                <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">Destaque-se em qualquer seleção com um currículo moderno, profissional e pronto para te garantir aquela vaga.</p>
-                
-                <div className="mt-4 flex items-center justify-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-4 py-2 rounded-full w-fit mx-auto">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <span>+{resumesGenerated} currículos gerados!</span>
-                </div>
-
-                <div className="mt-8 flex flex-col items-center gap-4">
-                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">
-                        Criar meu Currículo
-                    </a>
-                    {savedResumes.length > 0 && (
-                        <button onClick={() => setIsMyResumesModalOpen(true)} className="text-sm font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-full transition-all">
-                            Meus Currículos
-                        </button>
-                    )}
+        <main className="container mx-auto p-4 pt-28">
+            <section className="text-center my-12">
+                <h1 className="text-4xl font-bold">Faça seu Currículo Profissional por R$5,00</h1>
+                <p className="mt-4">+{resumesGenerated} currículos gerados!</p>
+                <button onClick={handleStartEditing} className="mt-8 bg-blue-600 text-white p-3 px-8 rounded-full">Criar meu Currículo</button>
+            </section>
+            <section id="gerador" className="flex flex-col lg:flex-row gap-8">
+                <ResumeForm data={resumeData} setData={setResumeData} isDemoMode={isDemoMode} onStartEditing={handleStartEditing} onRequestPayment={handlePaymentRequest} isPaymentProcessing={isPaymentProcessing} onRequestDelete={handleRequestDelete} currentStep={currentStep} setCurrentStep={setCurrentStep} isFinished={isFinished} setIsFinished={setIsFinished} showToast={showToast} />
+                <div className="w-full lg:w-2/3">
+                    <div ref={previewWrapperRef} className="w-full">
+                        {paginatedData[currentPage - 1] && <ResumePreview ref={previewRef} data={paginatedData[currentPage - 1]} isDemoMode={isDemoMode} isFirstPage={currentPage === 1} hideEmptySections={paginatedData.length > 1} />}
+                    </div>
+                    {paginatedData.length > 1 && <div className="mt-4 flex gap-2">{paginatedData.map((_, i) => <button key={i} onClick={() => setCurrentPage(i+1)} className={currentPage === i+1 ? 'font-bold' : ''}>{i+1}</button>)}</div>}
                 </div>
             </section>
-            
-            <section id="gerador" className="mb-16 scroll-mt-24">
-                 <div className="my-8 flex justify-center">
-                    <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-8">
-                    <ResumeForm 
-                        data={resumeData} 
-                        setData={setResumeData} 
-                        isDemoMode={isDemoMode} 
-                        onStartEditing={handleStartEditing} 
-                        onRequestPayment={handlePaymentRequest} 
-                        isPaymentProcessing={isPaymentProcessing} 
-                        onRequestDelete={handleRequestDelete}
-                        hasPaidInSession={hasPaidInSession}
-                        isEditing={!!editingResumeId}
-                        currentStep={currentStep}
-                        setCurrentStep={setCurrentStep}
-                        isFinished={isFinished}
-                        setIsFinished={setIsFinished}
-                        onRequestImport={() => {}}
-                        showToast={showToast}
-                    />
-                    <div className="w-full lg:w-2/3">
-                        <div ref={previewWrapperRef} className="w-full">
-                           {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                             <ResumePreview
-                                ref={previewRef}
-                                data={paginatedData[currentPage - 1]}
-                                isDemoMode={isDemoMode}
-                                isFirstPage={currentPage === 1}
-                                hideEmptySections={paginatedData.length > 1} 
-                             />
-                           )}
-                        </div>
-                        {paginatedData.length > 1 && (
-                            <div className="pagination-controls">
-                                {paginatedData.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setCurrentPage(index + 1)}
-                                        className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}
-                                    >
-                                        {index + 1}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </section>
-            
-            <section id="como-funciona" className="text-center my-24">
-                <h2 className="text-3xl font-bold text-gray-800">Simples, Rápido e Eficaz</h2>
-                <p className="text-lg text-gray-600 mt-2 max-w-2xl mx-auto">Criar um currículo de destaque nunca foi tão fácil. Siga apenas 3 passos:</p>
-                <div className="mt-12 grid md:grid-cols-3 gap-8">
-                    <div className="flex flex-col items-center">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">1</div>
-                        <h3 className="text-xl font-semibold mb-2">Preencha</h3>
-                        <p className="text-gray-600">Insira as suas informações nos campos guiados. A nossa IA pode ajudar a refinar os textos.</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">2</div>
-                        <h3 className="text-xl font-semibold mb-2">Personalize</h3>
-                        <p className="text-gray-600">Escolha entre templates modernos e ajuste a cor para combinar com o seu estilo.</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                         <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">3</div>
-                        <h3 className="text-xl font-semibold mb-2">Exporte</h3>
-                        <p className="text-gray-600">Pague uma taxa simbólica e baixe o seu novo currículo em formato PDF, pronto para ser enviado.</p>
-                    </div>
-                </div>
-            </section>
-
             <TestimonialsSection />
-            
-             <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
-                 <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
-                 <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                 <a href="#form-wizard" onClick={handleStartEditing} className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
-            </section>
         </main>
-        
-        <footer className="bg-gray-900 text-white py-10 md:py-12">
-            <div className="container mx-auto px-4 max-w-7xl">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div className="mb-6 md:mb-0 text-center md:text-left">
-                        <div className="mb-4 mx-auto md:mx-0" style={{width: 'fit-content'}}>
-                            <img src="https://i.postimg.cc/D0pp6j3q/Subcabe-alho-39.png" alt="Vel Sites Logo Rodapé" className="footer-logo" />
-                        </div>
-                        <p className="text-gray-400 max-w-md">A Vel nasceu pra quem não espera, pra quem resolve. Se você move o mundo com seu ofício, a gente move sua marca no digital.</p>
-                    </div>
-                    <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
-                        <div>
-                            <h4 className="font-bold text-lg mb-4">Contacto</h4>
-                            <ul className="space-y-2">
-                                <li className="text-gray-400">(37) 98416-9386</li>
-                                <li className="text-gray-400">contato@velsites.com.br</li>
-                            </ul>
-                        </div>
-                         <div>
-                            <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
-                            <div className="flex space-x-4 justify-center md:justify-start">
-                                <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon"><svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353-.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zM12 15a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400">
-                    <p>&copy; {new Date().getFullYear()} Vel Sites. Todos os direitos reservados.</p>
-                </div>
-            </div>
+        <footer className="bg-gray-900 text-white p-12 text-center">
+            <img src="https://i.postimg.cc/D0pp6j3q/Subcabe-alho-39.png" className="h-8 mx-auto mb-6" alt="Footer Logo" />
+            <p>&copy; {new Date().getFullYear()} Vel Sites. Todos os direitos reservados.</p>
         </footer>
         </>
     );
 };
-
 export default App;
