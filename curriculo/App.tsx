@@ -11,6 +11,7 @@ import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData } from './types';
 
+// Interface atualizada para suportar o offset dinâmico do QR Code
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
@@ -19,14 +20,16 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
-    restrictedBlockIds?: string[];
+    // Substituímos restrictedBlockIds por offsets precisos
+    qrCodeOffsets?: {
+        [itemId: string]: number; // Distância em px do topo do elemento até o topo do QR Code
+    };
 }
 
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// DADOS DE DEMONSTRAÇÃO ATUALIZADOS (SEU PERFIL)
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Marcos MJ Santos',
@@ -250,7 +253,6 @@ const App: React.FC = () => {
     
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
-    // CRUCIAL: Referência segura para o container de medição
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
     useEffect(() => {
@@ -392,7 +394,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
+    // --- LÓGICA DE PAGINAÇÃO COM "L-SHAPE" ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -413,7 +415,6 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                
                 await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
@@ -440,6 +441,7 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
+            // Ponto onde o QR Code começa (visualmente)
             const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
@@ -540,7 +542,7 @@ const App: React.FC = () => {
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                restrictedBlockIds: []
+                qrCodeOffsets: {} // Inicializa o mapa de offsets
             };
             
             let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
@@ -551,7 +553,7 @@ const App: React.FC = () => {
                 currentPageData = { 
                     style: dataToPaginate.style,
                     experiences: [], education: [], courses: [], languages: [], skills: [],
-                    restrictedBlockIds: []
+                    qrCodeOffsets: {}
                 };
                 currentPageIndex++;
                 currentY = MARGIN_TOP + 30; 
@@ -562,26 +564,31 @@ const App: React.FC = () => {
             };
 
             const dangerZoneStart = QR_CODE_START_Y;
-
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
-                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
-                // Usando a altura atual para saber se o bloco "chega" na zona
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                // --- NOVA LÓGICA "L-SHAPE" ---
+                // Verifica se o bloco atual "cai" na zona do QR code (Começa antes, termina depois OU começa dentro)
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
-                let shouldRestrict = false;
 
-                if (touchesDangerZone) {
-                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
-                    shouldRestrict = true;
-                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
-                    effectiveHeight = block.height * 1.7; 
+                if (overlapsDangerZone) {
+                    // Calcula o offset: quantos pixels de "segurança" (largura total) temos antes de atingir o QR Code
+                    // Se o bloco começa antes de 930 (ex: 800), o offset é 130px.
+                    // Se começa depois (ex: 950), o offset é 0 (espaçador no topo).
+                    const offset = Math.max(0, dangerZoneStart - currentY);
+                    
+                    if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
+                    currentPageData.qrCodeOffsets[block.id] = offset;
+
+                    // Estimativa de crescimento de altura: 
+                    // Como o texto vai estreitar no final, ele pode crescer um pouco para baixo.
+                    // Adicionamos um fator de segurança conservador apenas para a paginação.
+                    effectiveHeight = block.height * 1.15; 
                 }
 
                 const available = getAvailableSpace();
@@ -594,7 +601,6 @@ const App: React.FC = () => {
                     if (available < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
                         effectiveHeight = block.height; 
-                        shouldRestrict = false;
                     }
                     
                     currentY += effectiveHeight;
@@ -602,15 +608,11 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // --- CORREÇÃO DO BUG DE MARGEM ---
-                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
-                // Isso permite que o texto fique encolhido e vá até o final da página,
-                // mas impede que ele vaze para fora dela.
+                // Quebra de página se necessário
                 if (effectiveHeight > available) {
                     createNewPage();
-                    // Na nova página, volta ao normal
+                    // Na nova página, o offset do QR Code não existe, altura volta ao normal
                     effectiveHeight = block.height;
-                    shouldRestrict = false;
                     
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
@@ -624,12 +626,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
-                    if (shouldRestrict) {
-                         if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
-                         currentPageData.restrictedBlockIds.push(block.id);
-                    }
-
+                    // Adiciona o dado à página
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
@@ -913,10 +910,6 @@ const App: React.FC = () => {
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
                             isPrint={true} 
-                            // **** CORREÇÃO ELEGANTE AQUI ****
-                            // Forçamos 'hideEmptySections' para true APENAS na versão de impressão.
-                            // Isso garante que o PDF final nunca mostre placeholders vazios,
-                            // mesmo que o currículo tenha apenas uma página.
                             hideEmptySections={true} 
                         />
                     </div>
