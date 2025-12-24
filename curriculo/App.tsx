@@ -35,6 +35,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     console.error("Uncaught error:", error, errorInfo);
   }
 
+  handleCopyError = () => {
+    if (this.state.error) {
+        navigator.clipboard.writeText(this.state.error.toString());
+        alert("Erro copiado! Cole no chat para análise.");
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -47,19 +54,25 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
             </div>
             <h3 className="text-lg font-medium text-gray-900">Ops! Algo correu mal.</h3>
             <p className="mt-2 text-sm text-gray-500">
-              Ocorreu um erro inesperado na aplicação. Tente recarregar a página.
+              Ocorreu um erro inesperado na aplicação.
             </p>
             {this.state.error && (
-               <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-left overflow-auto max-h-32 text-red-800 font-mono">
+               <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-left overflow-auto max-h-32 text-red-800 font-mono border border-red-200">
                  {this.state.error.toString()}
                </div>
             )}
-            <div className="mt-6">
+            <div className="mt-6 flex flex-col gap-3">
               <button
                 onClick={() => window.location.reload()}
                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Recarregar Página
+                Tentar Novamente
+              </button>
+              <button
+                onClick={this.handleCopyError}
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Copiar Erro (Para Suporte)
               </button>
             </div>
           </div>
@@ -334,6 +347,7 @@ const App: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // --- CORREÇÃO DE LIMPEZA E ESTABILIDADE ---
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
@@ -344,15 +358,27 @@ const App: React.FC = () => {
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
-        measurementRootRef.current = ReactDOM.createRoot(measurementNode);
+        const root = ReactDOM.createRoot(measurementNode);
+        measurementRootRef.current = root;
     
         return () => {
+            // Usamos setTimeout para garantir que a desmontagem não entra em conflito com renders pendentes
             setTimeout(() => {
-                measurementRootRef.current?.unmount();
+                // Tentativa segura de desmontar
+                try {
+                    root.unmount();
+                } catch(e) {
+                    console.warn("Root unmount warning:", e);
+                }
+
                 if (document.body.contains(measurementNode)) {
                     document.body.removeChild(measurementNode);
                 }
-                measurementContainerRef.current = null;
+                
+                // Limpa a referência global APENAS se ela ainda apontar para este nó
+                if (measurementContainerRef.current === measurementNode) {
+                    measurementContainerRef.current = null;
+                }
             }, 0);
         };
     }, []);
@@ -492,16 +518,23 @@ const App: React.FC = () => {
             
             // Renderiza no nó oculto
             if (measurementRootRef.current) {
-                measurementRootRef.current.render(
-                    <ResumePreview 
-                        key={`measure-${Date.now()}`}
-                        data={dataToPaginate} 
-                        isDemoMode={isDemoMode} 
-                        isFirstPage={true} 
-                        isMeasurement={true} 
-                    />
-                );
-                requestAnimationFrame(checkRender);
+                // --- NOVA CAMADA DE PROTEÇÃO ---
+                try {
+                    measurementRootRef.current.render(
+                        <ResumePreview 
+                            key={`measure-${Date.now()}`}
+                            data={dataToPaginate} 
+                            isDemoMode={isDemoMode} 
+                            isFirstPage={true} 
+                            isMeasurement={true} 
+                        />
+                    );
+                    requestAnimationFrame(checkRender);
+                } catch(err) {
+                    console.error("Render error in hidden root:", err);
+                    clearTimeout(timeout);
+                    reject(err);
+                }
             }
         });
         
@@ -681,6 +714,8 @@ const App: React.FC = () => {
 
         } catch (error) {
             console.error("Pagination error:", error);
+            // --- FALLBACK ROBUSTO ---
+            // Se falhar, garantimos que o site NÃO QUEBRA e mostra a versão não paginada
             setPaginatedData([dataToPaginate]);
             return [dataToPaginate];
         }
@@ -696,7 +731,12 @@ const App: React.FC = () => {
         const baseWidth = 794;
         const baseHeight = 1123;
         
-        const scale = columnWidth / baseWidth;
+        let scale = columnWidth / baseWidth;
+        
+        // --- PROTEÇÃO CONTRA VALORES INVÁLIDOS ---
+        if (!isFinite(scale) || isNaN(scale) || scale <= 0) {
+            scale = 1; // Fallback para escala normal se o cálculo falhar
+        }
         
         previewElement.style.transform = `scale(${scale})`;
         
