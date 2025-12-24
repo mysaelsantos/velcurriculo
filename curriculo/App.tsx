@@ -625,8 +625,9 @@ const App: React.FC = () => {
                 }
 
                 // --- LÓGICA DE DETECÇÃO DE QR CODE ROBUSTA ---
-                // Agora usamos a posição Y calculada com precisão (baseada no DOM real)
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentBlockY_End > dangerZoneStart);
+                // Verifica sobreposição real com margem de tolerância
+                const TOLERANCE = 20; // 20px de tolerância
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentBlockY_End > (dangerZoneStart + TOLERANCE));
                 
                 let effectiveHeight = block.metrics.height;
                 let shouldRestrict = false;
