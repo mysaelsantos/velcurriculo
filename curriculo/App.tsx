@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
+    // --- LÓGICA DE PAGINAÇÃO (CORRIGIDA: REMOÇÃO DE FALSOS POSITIVOS) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -440,14 +440,12 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
+            // Ponto exato onde o QR code começa visualmente
             const QR_CODE_START_Y = 930; 
 
-            const getElementHeight = (element: HTMLElement) => {
-                if (!element) return 0;
-                const style = window.getComputedStyle(element);
-                const marginTop = parseFloat(style.marginTop) || 0;
-                const marginBottom = parseFloat(style.marginBottom) || 0;
-                return element.offsetHeight + marginTop + marginBottom;
+            // Helper para pegar a altura real do conteúdo (sem margens)
+            const getContentHeight = (element: HTMLElement) => {
+                return element.offsetHeight;
             };
 
             const headerEl = previewEl.querySelector('header') as HTMLElement;
@@ -455,8 +453,12 @@ const App: React.FC = () => {
             
             if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
 
-            const headerHeight = getElementHeight(headerEl);
-            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+            // Medimos a altura total do cabeçalho
+            const style = window.getComputedStyle(headerEl);
+            const headerHeight = headerEl.offsetHeight + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+            
+            const mainStyle = window.getComputedStyle(mainEl);
+            const mainMarginTop = parseFloat(mainStyle.marginTop) || 0;
 
             interface ContentBlock {
                 id: string;
@@ -478,7 +480,7 @@ const App: React.FC = () => {
                         id: `${dataKey}-title`,
                         type: dataKey,
                         data: null, 
-                        height: getElementHeight(titleEl) + 10,
+                        height: 0, // Será calculado depois via offsetHeight
                         node: titleEl
                     });
                 }
@@ -490,7 +492,7 @@ const App: React.FC = () => {
                             id: 'summary-text',
                             type: 'summary',
                             data: dataToPaginate.summary,
-                            height: getElementHeight(pEl),
+                            height: 0,
                             node: pEl
                         });
                     }
@@ -508,7 +510,7 @@ const App: React.FC = () => {
                                 id: itemData.id,
                                 type: dataKey,
                                 data: itemData,
-                                height: getElementHeight(itemEl),
+                                height: 0,
                                 node: itemEl
                             });
                         }
@@ -520,7 +522,7 @@ const App: React.FC = () => {
                              id: `${dataKey}-block`,
                              type: dataKey,
                              data: dataToPaginate[dataKey],
-                             height: getElementHeight(contentDiv),
+                             height: 0,
                              node: contentDiv
                          });
                      }
@@ -533,6 +535,10 @@ const App: React.FC = () => {
             if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
+
+            // --- CORREÇÃO DE DRIFT (Falso Positivo) ---
+            // Ordena os blocos pela posição real no DOM para garantir sequência correta
+            blocks.sort((a, b) => a.node.offsetTop - b.node.offsetTop);
 
             const pages: PageData[] = [];
             
@@ -567,21 +573,42 @@ const App: React.FC = () => {
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
+                
+                // --- CÁLCULO PRECISO DE ESPAÇAMENTO ---
+                // Em vez de somar margens fixas (que acumulam erro), calculamos o "gap" real
+                // comparando o offsetTop do bloco atual com o final do bloco anterior.
+                let gap = 0;
+                if (i > 0) {
+                    const prevNode = blocks[i-1].node;
+                    const currentNode = block.node;
+                    // Distância real entre o fim do anterior e o topo do atual
+                    // Isso captura colapso de margens e gaps flex/grid automaticamente
+                    gap = currentNode.offsetTop - (prevNode.offsetTop + prevNode.offsetHeight);
+                    // Garante que não seja negativo (segurança)
+                    gap = Math.max(0, gap);
+                } else {
+                    // Para o primeiro bloco, já temos currentY inicializado corretamente
+                }
+
+                currentY += gap;
+
+                // Altura "crua" do bloco (sem margens)
+                const rawHeight = getContentHeight(block.node);
+                block.height = rawHeight; // Atualiza para referência futura se precisar
+
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
-                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
-                // Usando a altura atual para saber se o bloco "chega" na zona
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                // --- DETECÇÃO DE ZONA DE PERIGO ---
+                // Agora currentY é extremamente preciso.
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + rawHeight > dangerZoneStart);
                 
-                let effectiveHeight = block.height;
+                let effectiveHeight = rawHeight;
                 let shouldRestrict = false;
 
                 if (touchesDangerZone) {
-                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
                     shouldRestrict = true;
-                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
-                    effectiveHeight = block.height * 1.7; 
+                    // Fator 1.7: Compensação para o crescimento vertical ao estreitar
+                    effectiveHeight = rawHeight * 1.7; 
                 }
 
                 const available = getAvailableSpace();
@@ -589,11 +616,11 @@ const App: React.FC = () => {
                 // Lógica de títulos (mantém junto do próximo bloco)
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
-                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
+                    const nextRawHeight = nextBlock ? getContentHeight(nextBlock.node) : 40; 
                     
-                    if (available < (effectiveHeight + nextItemHeight)) {
+                    if (available < (effectiveHeight + nextRawHeight)) {
                         createNewPage();
-                        effectiveHeight = block.height; 
+                        effectiveHeight = rawHeight; 
                         shouldRestrict = false;
                     }
                     
@@ -602,14 +629,12 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // --- CORREÇÃO DO BUG DE MARGEM ---
-                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
-                // Isso permite que o texto fique encolhido e vá até o final da página,
-                // mas impede que ele vaze para fora dela.
+                // --- DECISÃO DE QUEBRA ---
+                // Se, MESMO encolhido, ele estourar a página -> Joga pra próxima.
                 if (effectiveHeight > available) {
                     createNewPage();
                     // Na nova página, volta ao normal
-                    effectiveHeight = block.height;
+                    effectiveHeight = rawHeight;
                     shouldRestrict = false;
                     
                     if (block.type === 'summary') {
@@ -624,7 +649,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
+                     // Cabe na página atual (seja normal ou encolhido)
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
