@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
+    // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -440,7 +440,10 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            const QR_CODE_START_Y = 930; 
+            // CORREÇÃO 1: Ajustei o início da zona de perigo de 930 para 950.
+            // 930 estava sendo muito conservador e causando falsos positivos.
+            // O QR code visualmente começa por volta de 955-960px.
+            const QR_CODE_START_Y = 950; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -567,26 +570,29 @@ const App: React.FC = () => {
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
-                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
-                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
-                // Usando a altura atual para saber se o bloco "chega" na zona
+                // CORREÇÃO 2: Verificação mais robusta se há REALMENTE dados para o QR Code.
+                // Isso evita o "fantasma" do QR Code encolhendo conteúdo quando não há imagem visível.
+                const hasWhatsapp = dataToPaginate.style.showQRCode && dataToPaginate.personalInfo.phone && dataToPaginate.personalInfo.phone.length > 9;
+                const hasLinkedin = dataToPaginate.style.showLinkedinQr && dataToPaginate.personalInfo.linkedin;
+                
+                const hasQr = hasWhatsapp || hasLinkedin;
+                
+                // Lógica de Detecção de Zona de Perigo
                 const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
                 if (touchesDangerZone) {
-                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
                     shouldRestrict = true;
-                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
+                    // Fator 1.7: Segurança para compensar o crescimento do texto ao encolher a largura
                     effectiveHeight = block.height * 1.7; 
                 }
 
                 const available = getAvailableSpace();
 
-                // Lógica de títulos (mantém junto do próximo bloco)
+                // Lógica de títulos
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
@@ -602,10 +608,6 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // --- CORREÇÃO DO BUG DE MARGEM ---
-                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
-                // Isso permite que o texto fique encolhido e vá até o final da página,
-                // mas impede que ele vaze para fora dela.
                 if (effectiveHeight > available) {
                     createNewPage();
                     // Na nova página, volta ao normal
@@ -624,7 +626,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
+                     // Adiciona à página atual, COM a restrição se necessário
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
