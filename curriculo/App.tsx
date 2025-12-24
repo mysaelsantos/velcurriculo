@@ -440,10 +440,10 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // CORREÇÃO 1: Ajustei o início da zona de perigo de 930 para 950.
-            // 930 estava sendo muito conservador e causando falsos positivos.
-            // O QR code visualmente começa por volta de 955-960px.
-            const QR_CODE_START_Y = 950; 
+            // CORREÇÃO FINAL: Subindo a margem para 980 para garantir ZERO falsos positivos.
+            // O rodapé com QR code está bem abaixo disso, então 980 é uma margem segura
+            // para texto que vai até quase o fim da página.
+            const QR_CODE_START_Y = 980; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -571,10 +571,9 @@ const App: React.FC = () => {
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 
-                // CORREÇÃO 2: Verificação mais robusta se há REALMENTE dados para o QR Code.
-                // Isso evita o "fantasma" do QR Code encolhendo conteúdo quando não há imagem visível.
-                const hasWhatsapp = dataToPaginate.style.showQRCode && dataToPaginate.personalInfo.phone && dataToPaginate.personalInfo.phone.length > 9;
-                const hasLinkedin = dataToPaginate.style.showLinkedinQr && dataToPaginate.personalInfo.linkedin;
+                // CORREÇÃO 2: Verificação robusta. O QR só existe se tiver telefone/linkedin preenchidos.
+                const hasWhatsapp = dataToPaginate.style.showQRCode && dataToPaginate.personalInfo.phone && dataToPaginate.personalInfo.phone.trim().length > 9;
+                const hasLinkedin = dataToPaginate.style.showLinkedinQr && dataToPaginate.personalInfo.linkedin && dataToPaginate.personalInfo.linkedin.trim().length > 0;
                 
                 const hasQr = hasWhatsapp || hasLinkedin;
                 
