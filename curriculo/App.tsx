@@ -564,6 +564,38 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
+            // Helper para estimar crescimento de altura ao encolher (CORREÇÃO DE FALSOS POSITIVOS)
+            // Em vez de usar um fator fixo (1.7), calcula se o texto realmente quebra linha.
+            const calculateHeightIncrease = (block: ContentBlock) => {
+                const CHARS_PER_LINE_FULL = 90; 
+                const CHARS_PER_LINE_RESTRICTED = 50; 
+                const LINE_HEIGHT = 22; // px (estimativa média)
+
+                let textLength = 0;
+
+                if (block.type === 'summary' && typeof block.data === 'string') {
+                    textLength = block.data.length;
+                } else if (block.type === 'experiences' && block.data) {
+                    // Soma descrição + título para garantia
+                    textLength = (block.data.description?.length || 0) + (block.data.jobTitle?.length || 0);
+                } else if (block.type === 'education' && block.data) {
+                    textLength = (block.data.degree?.length || 0) + (block.data.institution?.length || 0);
+                } else if (block.type === 'skills' && Array.isArray(block.data)) {
+                    textLength = block.data.join('   ').length;
+                }
+
+                if (textLength === 0) return 0;
+
+                // Se o texto é curto, não cresce
+                if (textLength < CHARS_PER_LINE_FULL) return 0;
+
+                const oldLines = Math.ceil(textLength / CHARS_PER_LINE_FULL);
+                const newLines = Math.ceil(textLength / CHARS_PER_LINE_RESTRICTED);
+                const addedLines = Math.max(0, newLines - oldLines);
+                
+                return addedLines * LINE_HEIGHT;
+            };
+
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
@@ -601,8 +633,9 @@ const App: React.FC = () => {
 
                 if (touchesDangerZone) {
                     shouldRestrict = true;
-                    // Fator 1.7 para estimar altura quando encolhido (largura 60%)
-                    effectiveHeight = block.metrics.height * 1.7; 
+                    // Fator calculado: só aumenta se o texto for longo o suficiente para quebrar linha
+                    const estimatedIncrease = calculateHeightIncrease(block);
+                    effectiveHeight = block.metrics.height + estimatedIncrease; 
                 }
 
                 const available = getAvailableSpace(currentBlockY_Start);
