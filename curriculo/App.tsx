@@ -392,7 +392,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO REFINADA E ROBUSTA ---
+    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "GULOSA" E VISUAL) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -414,8 +414,8 @@ const App: React.FC = () => {
     
                 await Promise.all(imagePromises);
                 
-                // Pequeno delay para garantir layout final
-                await new Promise(r => setTimeout(r, 80));
+                // Pequeno delay para garantir layout final e reflow
+                await new Promise(r => setTimeout(r, 100));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -436,51 +436,68 @@ const App: React.FC = () => {
         try {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
-            const previewRect = previewEl.getBoundingClientRect();
             
+            // Constantes de Layout A4 (em px a 96dpi)
             const A4_HEIGHT = 1123; 
-            const MARGIN_BOTTOM = 50; 
             const MARGIN_TOP = 50;
+            const MARGIN_BOTTOM = 50; 
             
-            // Ajustado para 960px para ser mais preciso em relação à posição visual real do QR Code
-            // (1123px - 24px bottom - ~130px altura QR/container - margem)
-            const dangerZoneStart = 960; 
+            // Limite seguro para conteúdo na página (rodapé visual)
+            const PAGE_CONTENT_LIMIT = A4_HEIGHT - MARGIN_BOTTOM;
+            
+            // Zona onde o QR Code começa (visualmente)
+            // Se um elemento terminar DEPOIS disso, ele pode colidir
+            const QR_CODE_ZONE_START = 940; 
 
-            // Função Helper para pegar dados de posição reais do DOM
-            const getBlockMetrics = (element: HTMLElement) => {
-                if (!element) return { height: 0, top: 0, bottom: 0 };
-                const rect = element.getBoundingClientRect();
-                return {
-                    height: rect.height,
-                    // Posição relativa ao topo do container de preview
-                    top: rect.top - previewRect.top,
-                    bottom: rect.bottom - previewRect.top
-                };
+            // Função para pegar altura total (incluindo margens)
+            const getElementHeight = (element: HTMLElement) => {
+                if (!element) return 0;
+                const style = window.getComputedStyle(element);
+                const marginTop = parseFloat(style.marginTop) || 0;
+                const marginBottom = parseFloat(style.marginBottom) || 0;
+                return element.offsetHeight + marginTop + marginBottom;
             };
+
+            const headerEl = previewEl.querySelector('header') as HTMLElement;
+            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            
+            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+
+            const headerHeight = getElementHeight(headerEl);
+            
+            // Margem superior do main (pode variar por template)
+            const mainStyle = window.getComputedStyle(mainEl);
+            const mainMarginTop = parseFloat(mainStyle.marginTop) || 0;
+            const mainPaddingTop = parseFloat(mainStyle.paddingTop) || 0;
 
             interface ContentBlock {
                 id: string;
                 type: keyof ResumeData; 
                 data: any; 
-                metrics: { height: number; top: number; bottom: number }; // Métricas reais do DOM
+                height: number;
+                node: HTMLElement;
             }
 
             const blocks: ContentBlock[] = [];
 
+            // Função auxiliar de extração
             const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
                 const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
                 if (!sectionEl) return;
 
+                // Título da Seção
                 const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
                 if (titleEl) {
                     blocks.push({
                         id: `${dataKey}-title`,
                         type: dataKey,
                         data: null, 
-                        metrics: getBlockMetrics(titleEl)
+                        height: getElementHeight(titleEl), // + margem de segurança visual
+                        node: titleEl
                     });
                 }
 
+                // Conteúdo
                 if (dataKey === 'summary') {
                     const pEl = sectionEl.querySelector('p') as HTMLElement;
                     if (pEl) {
@@ -488,7 +505,8 @@ const App: React.FC = () => {
                             id: 'summary-text',
                             type: 'summary',
                             data: dataToPaginate.summary,
-                            metrics: getBlockMetrics(pEl)
+                            height: getElementHeight(pEl),
+                            node: pEl
                         });
                     }
                 } else if (listId) {
@@ -505,7 +523,8 @@ const App: React.FC = () => {
                                 id: itemData.id,
                                 type: dataKey,
                                 data: itemData,
-                                metrics: getBlockMetrics(itemEl)
+                                height: getElementHeight(itemEl),
+                                node: itemEl
                             });
                         }
                     });
@@ -516,12 +535,14 @@ const App: React.FC = () => {
                              id: `${dataKey}-block`,
                              type: dataKey,
                              data: dataToPaginate[dataKey],
-                             metrics: getBlockMetrics(contentDiv)
+                             height: getElementHeight(contentDiv),
+                             node: contentDiv
                          });
                      }
                 }
             };
 
+            // Extrair todos os blocos na ordem
             if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
             if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
             if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
@@ -529,11 +550,9 @@ const App: React.FC = () => {
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            // Ordena blocos pela posição visual real (top) para garantir sequência correta
-            blocks.sort((a, b) => a.metrics.top - b.metrics.top);
-
             const pages: PageData[] = [];
             
+            // Inicializar primeira página
             let currentPageData: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
@@ -541,13 +560,9 @@ const App: React.FC = () => {
                 restrictedBlockIds: []
             };
             
-            // Variáveis de controle de página
+            // Posição Y atual na página. Começa depois do cabeçalho.
+            let currentY = MARGIN_TOP + headerHeight + mainMarginTop + mainPaddingTop;
             let currentPageIndex = 0;
-            // Para a página 1, usamos a posição real do DOM + um offset de expansão se necessário
-            let expansionOffset = 0; 
-            
-            // Para páginas 2+, usamos acumulação manual
-            let accumulatedY_Page2 = MARGIN_TOP + 30; // Margem inicial para págs subsequentes
 
             const createNewPage = () => {
                 pages.push(currentPageData);
@@ -557,166 +572,121 @@ const App: React.FC = () => {
                     restrictedBlockIds: []
                 };
                 currentPageIndex++;
-                accumulatedY_Page2 = MARGIN_TOP + 30; // Reset para nova página
+                // Páginas subsequentes têm margem padrão + padding do main
+                currentY = MARGIN_TOP + 30; 
             };
 
-            const getAvailableSpace = (currentY: number) => {
-                return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
+            // Helper para calcular crescimento de texto se restringido (encolhido)
+            const calculateRestrictedHeight = (block: ContentBlock) => {
+                // Heurística simples: se reduzir largura para ~60%, altura aumenta ~1.5x a 1.7x
+                // Mas apenas se for texto longo. Títulos ou itens curtos não mudam.
+                if (block.height < 40) return block.height; // Provavelmente linha única
+                return block.height * 1.5; 
             };
 
-            // Helper para estimar crescimento de altura ao encolher (CORREÇÃO DE FALSOS POSITIVOS)
-            // Em vez de usar um fator fixo (1.7), calcula se o texto realmente quebra linha.
-            const calculateHeightIncrease = (block: ContentBlock) => {
-                const CHARS_PER_LINE_FULL = 90; 
-                const CHARS_PER_LINE_RESTRICTED = 50; 
-                const LINE_HEIGHT = 22; // px (estimativa média)
-
-                let textLength = 0;
-
-                if (block.type === 'summary' && typeof block.data === 'string') {
-                    textLength = block.data.length;
-                } else if (block.type === 'experiences' && block.data) {
-                    // Soma descrição + título para garantia
-                    textLength = (block.data.description?.length || 0) + (block.data.jobTitle?.length || 0);
-                } else if (block.type === 'education' && block.data) {
-                    textLength = (block.data.degree?.length || 0) + (block.data.institution?.length || 0);
-                } else if (block.type === 'skills' && Array.isArray(block.data)) {
-                    textLength = block.data.join('   ').length;
-                }
-
-                if (textLength === 0) return 0;
-
-                // Se o texto é curto, não cresce
-                if (textLength < CHARS_PER_LINE_FULL) return 0;
-
-                const oldLines = Math.ceil(textLength / CHARS_PER_LINE_FULL);
-                const newLines = Math.ceil(textLength / CHARS_PER_LINE_RESTRICTED);
-                const addedLines = Math.max(0, newLines - oldLines);
-                
-                return addedLines * LINE_HEIGHT;
-            };
-
-            let pendingTitleHeight = 0;
+            let pendingTitleBlock: ContentBlock | null = null;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // Determina a posição Y atual do bloco
-                let currentBlockY_Start = 0;
-                let currentBlockY_End = 0;
-                let gapFromPrev = 0;
-
-                if (currentPageIndex === 0) {
-                    // Na página 1, a posição é: Posição Original do DOM + Offset acumulado de expansões anteriores
-                    currentBlockY_Start = block.metrics.top + expansionOffset;
-                    currentBlockY_End = currentBlockY_Start + block.metrics.height;
-                } else {
-                    // Nas páginas seguintes, calculamos o gap baseado no original e somamos ao acumulador
-                    if (i > 0) {
-                        const prevBlock = blocks[i-1];
-                        // Gap original entre os blocos
-                        const originalGap = block.metrics.top - prevBlock.metrics.bottom;
-                        // Se o gap for negativo (overlap estranho) ou muito grande, normalizamos
-                        gapFromPrev = Math.max(0, originalGap);
-                    }
-                    currentBlockY_Start = accumulatedY_Page2 + gapFromPrev;
-                    currentBlockY_End = currentBlockY_Start + block.metrics.height;
-                }
-
-                // --- LÓGICA DE DETECÇÃO DE QR CODE ROBUSTA ---
-                // Verifica sobreposição real com margem de tolerância
-                const TOLERANCE = 20; // 20px de tolerância
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentBlockY_End > (dangerZoneStart + TOLERANCE));
-                
-                let effectiveHeight = block.metrics.height;
-                let shouldRestrict = false;
-
-                if (touchesDangerZone) {
-                    shouldRestrict = true;
-                    // Fator calculado: só aumenta se o texto for longo o suficiente para quebrar linha
-                    const estimatedIncrease = calculateHeightIncrease(block);
-                    effectiveHeight = block.metrics.height + estimatedIncrease; 
-                }
-
-                const available = getAvailableSpace(currentBlockY_Start);
-
-                // Lógica de títulos (mantém junto do próximo bloco)
+                // Se é um título, guardamos para processar junto com o próximo item
+                // para evitar títulos órfãos no final da página
                 if (block.id.endsWith('-title')) {
-                    const nextBlock = blocks[i+1];
-                    const nextItemHeight = nextBlock ? nextBlock.metrics.height : 40; 
-                    
-                    if (available < (effectiveHeight + nextItemHeight)) {
-                        createNewPage();
-                        // Na nova página, o título volta ao tamanho normal e reseta
-                        effectiveHeight = block.metrics.height;
-                        shouldRestrict = false;
-                        
-                        // Atualiza acumulador da página 2
-                        accumulatedY_Page2 += effectiveHeight;
-                        pendingTitleHeight = effectiveHeight; 
-                    } else {
-                        // Se fica na mesma página
-                        if (currentPageIndex === 0) {
-                             // Se restringiu, atualiza o offset para empurrar os próximos
-                             if (shouldRestrict) {
-                                 const diff = effectiveHeight - block.metrics.height;
-                                 expansionOffset += diff;
-                             }
-                        } else {
-                             accumulatedY_Page2 += effectiveHeight;
-                        }
-                        pendingTitleHeight = effectiveHeight;
+                    // Se já tínhamos um título pendente (caso raro de título seguido de título), forçamos quebra
+                    if (pendingTitleBlock) {
+                         const availableSpace = PAGE_CONTENT_LIMIT - currentY;
+                         if (pendingTitleBlock.height > availableSpace) {
+                             createNewPage();
+                         }
+                         // Adiciona título pendente anterior
+                         // (Lógica simplificada: apenas adiciona, títulos não têm dados estruturados no PageData, 
+                         //  eles são renderizados automaticamente se a seção tiver dados)
                     }
-                    // Não adicionamos dados do título, apenas controlamos o fluxo
+                    pendingTitleBlock = block;
                     continue; 
                 }
 
-                if (effectiveHeight > available) {
-                    // QUEBRA DE PÁGINA
-                    createNewPage();
+                // Altura necessária para este bloco (considerando título pendente se houver)
+                const titleHeight = pendingTitleBlock ? pendingTitleBlock.height : 0;
+                const totalBlockHeight = titleHeight + block.height;
+                
+                // Espaço disponível atual
+                const availableSpace = PAGE_CONTENT_LIMIT - currentY;
+
+                // --- LÓGICA PRINCIPAL ---
+
+                // 1. Verifica se cabe "normal" na página
+                if (totalBlockHeight <= availableSpace) {
                     
-                    effectiveHeight = block.metrics.height; // Reseta altura
-                    shouldRestrict = false;
-                    
+                    // Cabe na página! Mas... colide com o QR Code na primeira página?
+                    let finalBlockHeight = block.height;
+                    let shouldRestrict = false;
+
+                    if (currentPageIndex === 0 && hasQr) {
+                        const blockEndY = currentY + totalBlockHeight;
+                        
+                        // Se o bloco terminar DENTRO da zona perigosa
+                        if (blockEndY > QR_CODE_ZONE_START) {
+                            // Tenta restringir (encolher)
+                            const restrictedHeight = calculateRestrictedHeight(block);
+                            const totalRestricted = titleHeight + restrictedHeight;
+
+                            // Se encolhido ele AINDA couber na página...
+                            if (totalRestricted <= availableSpace) {
+                                shouldRestrict = true;
+                                finalBlockHeight = restrictedHeight;
+                            } else {
+                                // Se encolher faz ele estourar a página (ficou muito alto), 
+                                // então é melhor quebrar a página de vez.
+                                createNewPage();
+                                // Reset na nova página
+                                pendingTitleBlock = null; // Título será re-renderizado pela lógica da seção na nova página
+                                finalBlockHeight = block.height;
+                                shouldRestrict = false;
+                                
+                                // Recalcula se cabe na nova página (caso extremo de bloco gigante)
+                                // ... (assumindo que cabe numa pág vazia por enquanto)
+                            }
+                        }
+                    }
+
+                    // Adiciona à página atual
+                    if (shouldRestrict) {
+                        if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
+                        currentPageData.restrictedBlockIds.push(block.id);
+                    }
+
+                    // Adiciona dados ao PageData
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
                         currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    
-                    // Adiciona na nova página
-                    accumulatedY_Page2 += effectiveHeight;
-                    pendingTitleHeight = 0;
+                    }
+
+                    currentY += (titleHeight + finalBlockHeight);
+                    pendingTitleBlock = null; // Título consumido
 
                 } else {
-                     // MANTÉM NA PÁGINA ATUAL
-                    if (shouldRestrict) {
-                         if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
-                         currentPageData.restrictedBlockIds.push(block.id);
-                         
-                         // Se estamos na página 0 e restringimos, precisamos aumentar o offset
-                         // para que os próximos blocos "desçam" corretamente
-                         if (currentPageIndex === 0) {
-                             const heightDiff = effectiveHeight - block.metrics.height;
-                             expansionOffset += heightDiff;
-                         }
-                    }
-
+                    // 2. NÃO cabe na página. Quebra Imediata.
+                    createNewPage();
+                    
+                    // Na nova página, adiciona sem restrição
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
                         currentPageData[block.type] = block.data;
                     } else if (Array.isArray(currentPageData[block.type])) {
                         (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    
-                    if (currentPageIndex > 0) {
-                        accumulatedY_Page2 += effectiveHeight;
                     }
-                    pendingTitleHeight = 0; 
+                    
+                    // O título pendente "viaja" para a nova página implicitamente
+                    // pois a seção recomeça nela.
+                    
+                    currentY += (titleHeight + block.height); // Adiciona altura na nova página
+                    pendingTitleBlock = null;
                 }
             }
 
@@ -724,6 +694,7 @@ const App: React.FC = () => {
                pages.push(currentPageData);
             }
             
+            // Filtro final para remover páginas vazias acidentais
             const finalPages = pages.filter(p => {
                 const hasData = p.summary || 
                                 (p.experiences && p.experiences.length > 0) || 
