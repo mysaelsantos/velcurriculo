@@ -569,19 +569,24 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
-                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
-                // Usando a altura atual para saber se o bloco "chega" na zona
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                // --- LÓGICA CORRIGIDA (ZERO FALSOS POSITIVOS) ---
+                // Só encolhemos se o bloco realmente COMEÇAR na zona de perigo (rodapé).
+                const startsInDangerZone = currentPageIndex === 0 && hasQr && (currentY > dangerZoneStart - 50);
                 
                 let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
-                if (touchesDangerZone) {
-                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
+                if (startsInDangerZone) {
+                    // Caso A: O bloco começa no rodapé, ao lado do QR Code.
+                    // Ação: Restringir largura para caber.
                     shouldRestrict = true;
-                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
+                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento vertical
                     effectiveHeight = block.height * 1.7; 
+                } else if (currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart)) {
+                    // Caso B: O bloco começa acima, mas é comprido e invade o QR Code.
+                    // Ação: Forçar quebra de página (corte), jogando para a próxima página.
+                    effectiveHeight = A4_HEIGHT; 
+                    shouldRestrict = false;
                 }
 
                 const available = getAvailableSpace();
@@ -603,9 +608,7 @@ const App: React.FC = () => {
                 }
 
                 // --- CORREÇÃO DO BUG DE MARGEM ---
-                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
-                // Isso permite que o texto fique encolhido e vá até o final da página,
-                // mas impede que ele vaze para fora dela.
+                // Se a altura efetiva não couber, cria nova página
                 if (effectiveHeight > available) {
                     createNewPage();
                     // Na nova página, volta ao normal
@@ -624,7 +627,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
+                     // Adiciona à página atual, COM a restrição se necessário
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
