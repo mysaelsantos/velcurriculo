@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -10,6 +10,67 @@ import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData } from './types';
+
+// --- ERROR BOUNDARY (Proteção contra Tela Branca) ---
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Ops! Algo correu mal.</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Ocorreu um erro inesperado na aplicação. Tente recarregar a página.
+            </p>
+            {this.state.error && (
+               <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-left overflow-auto max-h-32 text-red-800 font-mono">
+                 {this.state.error.toString()}
+               </div>
+            )}
+            <div className="mt-6">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Recarregar Página
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+// ----------------------------------------------------
 
 interface PageData extends Partial<ResumeData> {
     continuation?: {
@@ -394,16 +455,25 @@ const App: React.FC = () => {
     
     // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "BUCKET FILL" ESTRITA & SEGURA) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
+        // CORREÇÃO CRÍTICA 1: Verificar se os refs existem antes de tentar qualquer coisa
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
-            const container = measurementContainerRef.current;
             const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
     
             const checkRender = async () => {
-                const previewEl = container?.firstChild as HTMLElement;
+                // CORREÇÃO CRÍTICA 2: Verificar se o container ainda existe (pode ter sido desmontado)
+                const container = measurementContainerRef.current;
+                if (!container) {
+                    clearTimeout(timeout);
+                    return; // Aborta se o container sumiu
+                }
+
+                // CORREÇÃO CRÍTICA 3: Verificar se o firstChild existe antes de acessar
+                const previewEl = container.firstChild as HTMLElement;
                 if (!previewEl) {
-                    requestAnimationFrame(checkRender); return;
+                    requestAnimationFrame(checkRender); 
+                    return;
                 }
     
                 const images = Array.from(previewEl.querySelectorAll('img'));
@@ -420,22 +490,28 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
-            measurementRootRef.current.render(
-                <ResumePreview 
-                    key={`measure-${Date.now()}`}
-                    data={dataToPaginate} 
-                    isDemoMode={isDemoMode} 
-                    isFirstPage={true} 
-                    isMeasurement={true} 
-                />
-            );
-            requestAnimationFrame(checkRender);
+            // Renderiza no nó oculto
+            if (measurementRootRef.current) {
+                measurementRootRef.current.render(
+                    <ResumePreview 
+                        key={`measure-${Date.now()}`}
+                        data={dataToPaginate} 
+                        isDemoMode={isDemoMode} 
+                        isFirstPage={true} 
+                        isMeasurement={true} 
+                    />
+                );
+                requestAnimationFrame(checkRender);
+            }
         });
         
         try {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
+            // Se por acaso onRenderComplete retornou mas o elemento sumiu
+            if (!previewEl) return [dataToPaginate];
+
             const A4_HEIGHT = 1123; 
             const MARGIN_TOP = 40; 
             const MARGIN_BOTTOM = 50; 
@@ -847,7 +923,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <>
+        <ErrorBoundary>
         <div id="print-container">
              <div id="print-area">
                 {paginatedData.map((pageData, index) => (
@@ -1081,7 +1157,7 @@ const App: React.FC = () => {
                 </div>
             </div>
         </footer>
-        </>
+        </ErrorBoundary>
     );
 };
 
