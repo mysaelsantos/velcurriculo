@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -10,80 +10,6 @@ import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData } from './types';
-
-// --- ERROR BOUNDARY (Proteção contra Tela Branca) ---
-interface ErrorBoundaryProps {
-  children: ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error in ErrorBoundary:", error, errorInfo);
-  }
-
-  handleCopyError = () => {
-    if (this.state.error) {
-        navigator.clipboard.writeText(this.state.error.toString());
-        alert("Erro copiado! Cole no chat para análise.");
-    }
-  };
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-              <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">Ops! Algo correu mal.</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              Ocorreu um erro inesperado na aplicação.
-            </p>
-            {this.state.error && (
-               <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-left overflow-auto max-h-32 text-red-800 font-mono border border-red-200">
-                 {this.state.error.toString()}
-               </div>
-            )}
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Tentar Novamente
-              </button>
-              <button
-                onClick={this.handleCopyError}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Copiar Erro (Para Suporte)
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-// ----------------------------------------------------
 
 interface PageData extends Partial<ResumeData> {
     continuation?: {
@@ -347,7 +273,6 @@ const App: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // --- CORREÇÃO DE LIMPEZA E ESTABILIDADE ---
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
@@ -358,27 +283,15 @@ const App: React.FC = () => {
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
-        const root = ReactDOM.createRoot(measurementNode);
-        measurementRootRef.current = root;
+        measurementRootRef.current = ReactDOM.createRoot(measurementNode);
     
         return () => {
-            // Usamos setTimeout para garantir que a desmontagem não entra em conflito com renders pendentes
             setTimeout(() => {
-                // Tentativa segura de desmontar
-                try {
-                    root.unmount();
-                } catch(e) {
-                    console.warn("Root unmount warning:", e);
-                }
-
+                measurementRootRef.current?.unmount();
                 if (document.body.contains(measurementNode)) {
                     document.body.removeChild(measurementNode);
                 }
-                
-                // Limpa a referência global APENAS se ela ainda apontar para este nó
-                if (measurementContainerRef.current === measurementNode) {
-                    measurementContainerRef.current = null;
-                }
+                measurementContainerRef.current = null;
             }, 0);
         };
     }, []);
@@ -479,254 +392,274 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO REFINADA (ABORDAGEM "BUCKET FILL" ESTRITA & SEGURA) ---
+    // --- LÓGICA DE PAGINAÇÃO (CORREÇÃO DE BUG + PRESERVAÇÃO DE FUNÇÃO) ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
-        // CORREÇÃO CRÍTICA 1: Verificar se os refs existem antes de tentar qualquer coisa
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
+            const container = measurementContainerRef.current;
             const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
     
             const checkRender = async () => {
-                try {
-                    // CORREÇÃO CRÍTICA 2: Verificar se o container ainda existe (pode ter sido desmontado)
-                    const container = measurementContainerRef.current;
-                    if (!container) {
-                        clearTimeout(timeout);
-                        return; // Aborta se o container sumiu
-                    }
-    
-                    // CORREÇÃO CRÍTICA 3: Verificar se o firstChild existe antes de acessar
-                    const previewEl = container.firstChild as HTMLElement;
-                    if (!previewEl) {
-                        requestAnimationFrame(checkRender); 
-                        return;
-                    }
-        
-                    const images = Array.from(previewEl.querySelectorAll('img'));
-                    const imagePromises = images.map(img => {
-                        if (img.complete) return Promise.resolve();
-                        return new Promise(res => { img.onload = res; img.onerror = res; });
-                    });
-        
-                    await Promise.all(imagePromises);
-                    
-                    await new Promise(r => setTimeout(r, 50));
-    
-                    clearTimeout(timeout);
-                    resolve(previewEl);
-                } catch (e) {
-                     // BLINDAGEM ASSÍNCRONA
-                     console.error("Check render failed", e);
-                     clearTimeout(timeout);
-                     reject(e);
+                const previewEl = container?.firstChild as HTMLElement;
+                if (!previewEl) {
+                    requestAnimationFrame(checkRender); return;
                 }
+    
+                const images = Array.from(previewEl.querySelectorAll('img'));
+                const imagePromises = images.map(img => {
+                    if (img.complete) return Promise.resolve();
+                    return new Promise(res => { img.onload = res; img.onerror = res; });
+                });
+    
+                await Promise.all(imagePromises);
+                
+                await new Promise(r => setTimeout(r, 80));
+
+                clearTimeout(timeout);
+                resolve(previewEl);
             };
             
-            // Renderiza no nó oculto
-            if (measurementRootRef.current) {
-                // --- NOVA CAMADA DE PROTEÇÃO ---
-                try {
-                    // *** FIX: EMBRULHAR EM ErrorBoundary ***
-                    // Isso impede que um erro no ResumePreview derrube o nó oculto e trave o sistema
-                    measurementRootRef.current.render(
-                        <ErrorBoundary>
-                            <ResumePreview 
-                                key={`measure-${Date.now()}`}
-                                data={dataToPaginate} 
-                                isDemoMode={isDemoMode} 
-                                isFirstPage={true} 
-                                isMeasurement={true} 
-                            />
-                        </ErrorBoundary>
-                    );
-                    requestAnimationFrame(checkRender);
-                } catch(err) {
-                    console.error("Render error in hidden root:", err);
-                    clearTimeout(timeout);
-                    reject(err);
-                }
-            }
+            measurementRootRef.current.render(
+                <ResumePreview 
+                    key={`${dataToPaginate.style.template}-${Date.now()}`}
+                    data={dataToPaginate} 
+                    isDemoMode={isDemoMode} 
+                    isFirstPage={true} 
+                    isMeasurement={true} 
+                />
+            );
+            requestAnimationFrame(checkRender);
         });
         
         try {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            // Se por acaso onRenderComplete retornou mas o elemento sumiu
-            if (!previewEl) return [dataToPaginate];
-
             const A4_HEIGHT = 1123; 
-            const MARGIN_TOP = 40; 
+            const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            const QR_CODE_START = 930;
-            const FOOTER_LIMIT = A4_HEIGHT - MARGIN_BOTTOM;
+            const QR_CODE_START_Y = 930; 
 
-            const getBlockHeight = (node: HTMLElement) => {
-                const style = window.getComputedStyle(node);
+            const getElementHeight = (element: HTMLElement) => {
+                if (!element) return 0;
+                const style = window.getComputedStyle(element);
                 const marginTop = parseFloat(style.marginTop) || 0;
                 const marginBottom = parseFloat(style.marginBottom) || 0;
-                return node.offsetHeight + marginTop + marginBottom;
+                return element.offsetHeight + marginTop + marginBottom;
             };
 
             const headerEl = previewEl.querySelector('header') as HTMLElement;
             const mainEl = previewEl.querySelector('main') as HTMLElement;
             
-            if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
 
-            const headerHeight = getBlockHeight(headerEl);
-            const mainPaddingTop = parseFloat(window.getComputedStyle(mainEl).paddingTop) || 0; 
+            const headerHeight = getElementHeight(headerEl);
             const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
 
-            interface Block {
+            interface ContentBlock {
                 id: string;
-                type: keyof ResumeData;
-                data: any;
+                type: keyof ResumeData; 
+                data: any; 
                 height: number;
-                isTitle: boolean;
+                node: HTMLElement;
             }
-            const blocks: Block[] = [];
 
-            const addBlock = (id: string, type: keyof ResumeData, data: any, node: HTMLElement, isTitle = false) => {
-                blocks.push({ id, type, data, height: getBlockHeight(node), isTitle });
-            };
+            const blocks: ContentBlock[] = [];
 
-            const processSection = (sectionId: string, type: keyof ResumeData, listId?: string) => {
-                const secEl = previewEl.querySelector(`#${sectionId}`);
-                if (!secEl) return;
+            const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
+                const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
+                if (!sectionEl) return;
 
-                const titleEl = secEl.querySelector('.section-title') as HTMLElement;
-                if (titleEl) addBlock(`${type}-title`, type, null, titleEl, true);
+                const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
+                if (titleEl) {
+                    blocks.push({
+                        id: `${dataKey}-title`,
+                        type: dataKey,
+                        data: null, 
+                        height: getElementHeight(titleEl) + 10,
+                        node: titleEl
+                    });
+                }
 
-                if (type === 'summary') {
-                    const p = secEl.querySelector('p');
-                    if (p) addBlock('summary-text', type, dataToPaginate.summary, p);
-                } else if (listId) {
-                    const list = secEl.querySelector(`#${listId}`);
-                    if (list) {
-                        Array.from(list.children).forEach((child, idx) => {
-                            const itemData = (dataToPaginate[type] as any[])[idx];
-                            if (itemData) addBlock(itemData.id, type, itemData, child as HTMLElement);
+                if (dataKey === 'summary') {
+                    const pEl = sectionEl.querySelector('p') as HTMLElement;
+                    if (pEl) {
+                        blocks.push({
+                            id: 'summary-text',
+                            type: 'summary',
+                            data: dataToPaginate.summary,
+                            height: getElementHeight(pEl),
+                            node: pEl
                         });
                     }
-                } else if (type === 'skills' || type === 'languages') {
-                    const content = secEl.querySelector(type === 'skills' ? '#resume-skills' : '#resume-languages-list');
-                    if (content) addBlock(`${type}-block`, type, dataToPaginate[type], content as HTMLElement);
+                } else if (listId) {
+                    const listContainer = sectionEl.querySelector(`#${listId}`);
+                    if (!listContainer) return;
+                    
+                    const items = Array.from(listContainer.children) as HTMLElement[];
+                    const dataList = dataToPaginate[dataKey] as any[];
+
+                    items.forEach((itemEl, index) => {
+                        const itemData = dataList[index];
+                        if (itemData) {
+                            blocks.push({
+                                id: itemData.id,
+                                type: dataKey,
+                                data: itemData,
+                                height: getElementHeight(itemEl),
+                                node: itemEl
+                            });
+                        }
+                    });
+                } else if (dataKey === 'skills' || dataKey === 'languages') {
+                     const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                     if(contentDiv) {
+                         blocks.push({
+                             id: `${dataKey}-block`,
+                             type: dataKey,
+                             data: dataToPaginate[dataKey],
+                             height: getElementHeight(contentDiv),
+                             node: contentDiv
+                         });
+                     }
                 }
             };
 
-            if (dataToPaginate.summary) processSection('summary-section', 'summary');
-            if (dataToPaginate.experiences?.length) processSection('experience-section', 'experiences', 'resume-experience-list');
-            if (dataToPaginate.education?.length) processSection('education-section', 'education', 'resume-education-list');
-            if (dataToPaginate.courses?.length) processSection('courses-section', 'courses', 'resume-courses-list');
-            if (dataToPaginate.languages?.length) processSection('languages-section', 'languages');
-            if (dataToPaginate.skills?.length) processSection('skills-section', 'skills');
-
-            // HELPER: Inicializa uma página nova totalmente limpa e segura
-            const createEmptyPage = (): PageData => ({
-                personalInfo: { ...dataToPaginate.personalInfo }, // Cópia profunda
-                style: { ...dataToPaginate.style }, // Cópia profunda
-                summary: '', // Inicializa vazio
-                experiences: [], // Array vazio
-                education: [], // Array vazio
-                courses: [], // Array vazio
-                languages: [], // Array vazio
-                skills: [], // Array vazio
-                restrictedBlockIds: []
-            });
+            if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
+            if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
+            if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
+            if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
+            if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
+            if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
             const pages: PageData[] = [];
-            let currentPage: PageData = createEmptyPage();
             
-            let cursorY = MARGIN_TOP + headerHeight + mainMarginTop + mainPaddingTop;
-            let pageIndex = 0;
-            const hasQr = dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr;
-
-            const startNewPage = () => {
-                pages.push(currentPage);
-                currentPage = createEmptyPage(); // Garante estrutura completa
-                pageIndex++;
-                cursorY = MARGIN_TOP + 30;
+            let currentPageData: PageData = { 
+                personalInfo: dataToPaginate.personalInfo, 
+                style: dataToPaginate.style,
+                experiences: [], education: [], courses: [], languages: [], skills: [],
+                restrictedBlockIds: []
             };
+            
+            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
+            let currentPageIndex = 0;
+
+            const createNewPage = () => {
+                pages.push(currentPageData);
+                currentPageData = { 
+                    style: dataToPaginate.style,
+                    experiences: [], education: [], courses: [], languages: [], skills: [],
+                    restrictedBlockIds: []
+                };
+                currentPageIndex++;
+                currentY = MARGIN_TOP + 30; 
+            };
+
+            const getAvailableSpace = () => {
+                return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
+            };
+
+            const dangerZoneStart = QR_CODE_START_Y;
+
+            let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
-                const nextBlock = blocks[i+1];
-
-                if (block.isTitle && nextBlock) {
-                    const combinedHeight = block.height + nextBlock.height;
-                    const spaceLeft = FOOTER_LIMIT - cursorY;
-                    
-                    if (combinedHeight > spaceLeft) {
-                        startNewPage();
-                    }
-                }
-
-                if ((cursorY + block.height) > FOOTER_LIMIT) {
-                    startNewPage();
-                }
-
-                let finalBlockHeight = block.height;
+                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+                
+                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
+                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
+                // Usando a altura atual para saber se o bloco "chega" na zona
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                
+                let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
-                if (pageIndex === 0 && hasQr) {
-                    const blockBottom = cursorY + block.height;
+                if (touchesDangerZone) {
+                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
+                    shouldRestrict = true;
+                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
+                    effectiveHeight = block.height * 1.7; 
+                }
+
+                const available = getAvailableSpace();
+
+                // Lógica de títulos (mantém junto do próximo bloco)
+                if (block.id.endsWith('-title')) {
+                    const nextBlock = blocks[i+1];
+                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
-                    if (blockBottom > QR_CODE_START) {
-                        const estimatedRestrictedHeight = block.height * 1.5; 
-                        
-                        if ((cursorY + estimatedRestrictedHeight) <= FOOTER_LIMIT) {
-                            shouldRestrict = true;
-                            finalBlockHeight = estimatedRestrictedHeight;
-                        } else {
-                            startNewPage();
-                            shouldRestrict = false;
-                            finalBlockHeight = block.height;
-                        }
+                    if (available < (effectiveHeight + nextItemHeight)) {
+                        createNewPage();
+                        effectiveHeight = block.height; 
+                        shouldRestrict = false;
                     }
+                    
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = effectiveHeight; 
+                    continue; 
                 }
 
-                if (shouldRestrict) {
-                    if (!currentPage.restrictedBlockIds) currentPage.restrictedBlockIds = [];
-                    currentPage.restrictedBlockIds!.push(block.id);
-                }
+                // --- CORREÇÃO DO BUG DE MARGEM ---
+                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
+                // Isso permite que o texto fique encolhido e vá até o final da página,
+                // mas impede que ele vaze para fora dela.
+                if (effectiveHeight > available) {
+                    createNewPage();
+                    // Na nova página, volta ao normal
+                    effectiveHeight = block.height;
+                    shouldRestrict = false;
+                    
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
+                    
+                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
+                    currentY += titleHeight + effectiveHeight; 
+                    pendingTitleHeight = 0;
+                } else {
+                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
+                    if (shouldRestrict) {
+                         if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
+                         currentPageData.restrictedBlockIds.push(block.id);
+                    }
 
-                // Inserção segura de dados
-                if (block.type === 'summary') {
-                    currentPage.summary = block.data;
-                } else if (block.type === 'skills' || block.type === 'languages') {
-                    // Cópia defensiva para arrays de skills/languages
-                    currentPage[block.type] = Array.isArray(block.data) ? [...block.data] : block.data;
-                } else if (['experiences', 'education', 'courses'].includes(block.type)) {
-                    // Garante que o array existe antes de push
-                    if (!currentPage[block.type]) currentPage[block.type] = [];
-                    (currentPage[block.type] as any[]).push(block.data);
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = 0; 
                 }
-                
-                cursorY += finalBlockHeight;
             }
 
-            // Garante que a última página é adicionada se tiver qualquer conteúdo
-            const hasContent = currentPage.summary || 
-                               (currentPage.experiences && currentPage.experiences.length > 0) || 
-                               (currentPage.education && currentPage.education.length > 0) || 
-                               (currentPage.courses && currentPage.courses.length > 0) || 
-                               (currentPage.skills && currentPage.skills.length > 0) || 
-                               (currentPage.languages && currentPage.languages.length > 0);
+            if (Object.keys(currentPageData).length > 0) {
+               pages.push(currentPageData);
+            }
             
-            // Sempre adiciona se for a primeira página (mesmo vazia) ou se tiver conteúdo
-            if (pageIndex === 0 || hasContent) {
-                pages.push(currentPage);
-            }
+            const finalPages = pages.filter(p => {
+                const hasData = p.summary || 
+                                (p.experiences && p.experiences.length > 0) || 
+                                (p.education && p.education.length > 0) ||
+                                (p.courses && p.courses.length > 0) ||
+                                (p.skills && p.skills.length > 0);
+                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
+            });
 
-            setPaginatedData(pages);
-            return pages;
+            setPaginatedData(finalPages);
+            return finalPages;
 
         } catch (error) {
-            console.error("Pagination error:", error);
-            // --- FALLBACK ROBUSTO ---
-            // Se falhar, garantimos que o site NÃO QUEBRA e mostra a versão não paginada
+            console.error("Pagination failed:", error);
             setPaginatedData([dataToPaginate]);
             return [dataToPaginate];
         }
@@ -742,12 +675,7 @@ const App: React.FC = () => {
         const baseWidth = 794;
         const baseHeight = 1123;
         
-        let scale = columnWidth / baseWidth;
-        
-        // --- PROTEÇÃO CONTRA VALORES INVÁLIDOS ---
-        if (!isFinite(scale) || isNaN(scale) || scale <= 0) {
-            scale = 1; // Fallback para escala normal se o cálculo falhar
-        }
+        const scale = columnWidth / baseWidth;
         
         previewElement.style.transform = `scale(${scale})`;
         
@@ -759,8 +687,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
-                // *** FIX: CATCH NO CALLER ***
-                paginateResume(resumeData).catch(err => console.error("Pagination process failed:", err));
+                paginateResume(resumeData);
             }
         }, 300);
 
@@ -975,7 +902,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <ErrorBoundary>
+        <>
         <div id="print-container">
              <div id="print-area">
                 {paginatedData.map((pageData, index) => (
@@ -1209,7 +1136,7 @@ const App: React.FC = () => {
                 </div>
             </div>
         </footer>
-        </ErrorBoundary>
+        </>
     );
 };
 
