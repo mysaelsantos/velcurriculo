@@ -32,7 +32,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("Uncaught error in ErrorBoundary:", error, errorInfo);
   }
 
   handleCopyError = () => {
@@ -488,46 +488,57 @@ const App: React.FC = () => {
             const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
     
             const checkRender = async () => {
-                // CORREÇÃO CRÍTICA 2: Verificar se o container ainda existe (pode ter sido desmontado)
-                const container = measurementContainerRef.current;
-                if (!container) {
+                try {
+                    // CORREÇÃO CRÍTICA 2: Verificar se o container ainda existe (pode ter sido desmontado)
+                    const container = measurementContainerRef.current;
+                    if (!container) {
+                        clearTimeout(timeout);
+                        return; // Aborta se o container sumiu
+                    }
+    
+                    // CORREÇÃO CRÍTICA 3: Verificar se o firstChild existe antes de acessar
+                    const previewEl = container.firstChild as HTMLElement;
+                    if (!previewEl) {
+                        requestAnimationFrame(checkRender); 
+                        return;
+                    }
+        
+                    const images = Array.from(previewEl.querySelectorAll('img'));
+                    const imagePromises = images.map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(res => { img.onload = res; img.onerror = res; });
+                    });
+        
+                    await Promise.all(imagePromises);
+                    
+                    await new Promise(r => setTimeout(r, 50));
+    
                     clearTimeout(timeout);
-                    return; // Aborta se o container sumiu
+                    resolve(previewEl);
+                } catch (e) {
+                     // BLINDAGEM ASSÍNCRONA
+                     console.error("Check render failed", e);
+                     clearTimeout(timeout);
+                     reject(e);
                 }
-
-                // CORREÇÃO CRÍTICA 3: Verificar se o firstChild existe antes de acessar
-                const previewEl = container.firstChild as HTMLElement;
-                if (!previewEl) {
-                    requestAnimationFrame(checkRender); 
-                    return;
-                }
-    
-                const images = Array.from(previewEl.querySelectorAll('img'));
-                const imagePromises = images.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(res => { img.onload = res; img.onerror = res; });
-                });
-    
-                await Promise.all(imagePromises);
-                
-                await new Promise(r => setTimeout(r, 50));
-
-                clearTimeout(timeout);
-                resolve(previewEl);
             };
             
             // Renderiza no nó oculto
             if (measurementRootRef.current) {
                 // --- NOVA CAMADA DE PROTEÇÃO ---
                 try {
+                    // *** FIX: EMBRULHAR EM ErrorBoundary ***
+                    // Isso impede que um erro no ResumePreview derrube o nó oculto e trave o sistema
                     measurementRootRef.current.render(
-                        <ResumePreview 
-                            key={`measure-${Date.now()}`}
-                            data={dataToPaginate} 
-                            isDemoMode={isDemoMode} 
-                            isFirstPage={true} 
-                            isMeasurement={true} 
-                        />
+                        <ErrorBoundary>
+                            <ResumePreview 
+                                key={`measure-${Date.now()}`}
+                                data={dataToPaginate} 
+                                isDemoMode={isDemoMode} 
+                                isFirstPage={true} 
+                                isMeasurement={true} 
+                            />
+                        </ErrorBoundary>
                     );
                     requestAnimationFrame(checkRender);
                 } catch(err) {
@@ -748,7 +759,8 @@ const App: React.FC = () => {
     useEffect(() => {
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
-                paginateResume(resumeData);
+                // *** FIX: CATCH NO CALLER ***
+                paginateResume(resumeData).catch(err => console.error("Pagination process failed:", err));
             }
         }, 300);
 
