@@ -2,6 +2,7 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { ResumeData } from '../types';
 import QRCodeComponent from './QRCode';
 
+// Interface atualizada para receber o offset calculado no App.tsx
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
@@ -10,7 +11,10 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
-    restrictedBlockIds?: string[];
+    qrCodeOffsets?: {
+        [itemId: string]: number;
+    };
+    restrictedBlockIds?: string[]; // Mantido por compatibilidade, mas a lógica principal usa offsets agora
 }
 
 interface ResumePreviewProps {
@@ -28,7 +32,7 @@ export interface ResumePreviewRef {
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
-  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, restrictedBlockIds = [] } = safeData;
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -42,8 +46,29 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  const getRestrictionClass = (blockId: string) => {
-      return restrictedBlockIds.includes(blockId) ? 'max-w-[60%]' : 'w-full';
+  // Função auxiliar que gera o espaçador invisível para o fluxo em "L"
+  const getSpacerHtml = (itemId: string) => {
+      const offset = qrCodeOffsets?.[itemId];
+      if (offset === undefined) return '';
+      
+      // O espaçador flutua à direita, empurrando o texto apenas quando a margem superior (offset) termina.
+      return `<div style="float: right; width: 320px; height: 200px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
+  };
+
+  const getSpacerComponent = (itemId: string) => {
+      const offset = qrCodeOffsets?.[itemId];
+      if (offset === undefined) return null;
+      
+      return (
+          <div style={{ 
+              float: 'right', 
+              width: '320px', 
+              height: '200px', 
+              marginTop: `${offset}px`, 
+              clear: 'right', 
+              pointerEvents: 'none' 
+          }} />
+      );
   };
 
   const processedSkills = useMemo(() => {
@@ -63,9 +88,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       }
   }, [skills]);
 
-  const renderWithContinuation = (itemId: string, content: React.ReactNode, skipRestriction: boolean = false) => {
+  const renderWithContinuation = (itemId: string, content: React.ReactNode, isHtmlInjection: boolean = false) => {
     const continuationInfo = continuation?.[itemId];
-    const restrictionClass = !skipRestriction ? getRestrictionClass(itemId) : '';
 
     if (continuationInfo) {
       const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
@@ -75,7 +99,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       if (visibleHeight <= 0) return null; 
 
       return (
-        <div className={restrictionClass} style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
+        <div className="w-full" style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
             {content}
           </div>
@@ -83,8 +107,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       );
     }
     
-    if (restrictionClass) return <div className={restrictionClass}>{content}</div>;
-    return content;
+    // Se não é continuação, retornamos o conteúdo normal.
+    // O espaçador já está injetado dentro do conteúdo (children) ou via HTML string.
+    return <div className="w-full">{content}</div>;
   };
   
   const shouldShowSection = (content: any, isArray = false) => {
@@ -98,30 +123,22 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return true; 
   };
 
-  // Lógica inteligente para largura do cabeçalho
   const isModern = style?.template === 'template-modern';
   const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
 
-  // --- CORREÇÃO DE MARGEM INTELIGENTE ---
-  // Define o estilo do <main> baseado no template e na página
   const getMainStyle = () => {
       if (isFirstPage) {
-          // *** MUDANÇA (2/2): Lógica específica para o Minimalista ***
-          // Aumenta a margem superior de 4px para 28px apenas neste template
           if (style?.template === 'template-minimalist') {
               return { marginTop: '28px' };
           }
           return { marginTop: isModern ? '0' : '4px' };
       }
       
-      // Para páginas seguintes (2, 3...):
       if (isModern) {
-          // APLICADO APENAS NAS PÁGINAS SEGUINTES
           return { paddingTop: '60px' };
       } else {
-          // Clássico e Minimalista precisam zerar a margem superior excessiva do CSS
           return { marginTop: '0px', paddingTop: '30px' };
       }
   };
@@ -160,15 +177,16 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </>
       )}
       
-      {/* Aplicação do estilo de margem corrigido */}
       <main className="space-y-4" style={getMainStyle()}>
         {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional</h3>
                      {renderWithContinuation('summary-text',
-                        <p id="resume-summary" className="text-gray-700 leading-relaxed">
+                        <div id="resume-summary" className="text-gray-700 leading-relaxed block">
+                             {/* Injeção do Espaçador no React Component */}
+                            {getSpacerComponent('summary-text')}
                             {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
-                        </p>
+                        </div>
                     )}
                 </section>
         )}
@@ -179,8 +197,10 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => {
                         const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
+                        const spacerHtml = getSpacerHtml(exp.id); // Pega o HTML do espaçador se houver offset
+                        
                         return (
-                            <div key={exp.id} className={getRestrictionClass(exp.id)}>
+                            <div key={exp.id} className="w-full">
                                 {!isContinuation && (
                                     <div className="flex justify-between items-baseline flex-wrap">
                                         <div className="pr-4">
@@ -191,7 +211,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                     </div>
                                 )}
                                 {exp.description && renderWithContinuation(exp.id, 
-                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} dangerouslySetInnerHTML={{ __html: exp.description.replace(/\n/g, '<br />') }} />,
+                                    // Injeta o spacerHtml ANTES do texto da descrição
+                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} 
+                                       dangerouslySetInnerHTML={{ 
+                                           __html: spacerHtml + exp.description.replace(/\n/g, '<br />') 
+                                       }} 
+                                    />,
                                     true
                                 )}
                             </div>
@@ -209,7 +234,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    <div key={edu.id} className={getRestrictionClass(edu.id)}>
+                    <div key={edu.id} className="w-full">
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
@@ -226,12 +251,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </section>
         )}
         {shouldShowSection(courses, true) && (
-        <section id="courses-section" className={getRestrictionClass('courses-block')}>
+        <section id="courses-section" className="w-full">
             <h3 className="section-title">Cursos Complementares</h3>
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
-                    <div key={course.id} className={getRestrictionClass(course.id)}>
+                    <div key={course.id} className="w-full">
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
@@ -250,7 +275,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 ${getRestrictionClass('languages-block')}`}>
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full`}>
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="flex items-baseline">
@@ -269,7 +294,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
-            <div id="resume-skills" className={getRestrictionClass('skills-block')}>
+            <div id="resume-skills" className="w-full">
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
