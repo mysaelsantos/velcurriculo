@@ -569,32 +569,30 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE DETECÇÃO DE QR CODE CORRIGIDA PARA EVITAR FALSOS POSITIVOS ---
-                // 1. Só ativa a restrição se o INÍCIO do bloco estiver próximo ou dentro da zona do QR Code.
-                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY > dangerZoneStart - 40);
+                // --- LÓGICA DE DETECÇÃO DE QR CODE (SIMPLIFICADA E CORRETA) ---
+                // 1. Detecta se toca o QR Code (qualquer parte do bloco)
+                // Usando a altura atual para saber se o bloco "chega" na zona
+                const touchesDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
                 let shouldRestrict = false;
 
-                // 2. Títulos nunca devem ser restritos lateralmente.
-                const isTitle = block.id.endsWith('-title');
-
-                if (touchesDangerZone && !isTitle) {
+                if (touchesDangerZone) {
+                    // 2. Se tocar, SEMPRE tenta encolher (para manter o layout bonito)
                     shouldRestrict = true;
-                    // 3. Multiplicador de altura suavizado (1.4 em vez de 1.7) para evitar erros de drift vertical.
-                    effectiveHeight = block.height * 1.4; 
+                    // Fator 1.7: Um pouco mais de segurança para compensar o crescimento
+                    effectiveHeight = block.height * 1.7; 
                 }
 
                 const available = getAvailableSpace();
 
                 // Lógica de títulos (mantém junto do próximo bloco)
-                if (isTitle) {
+                if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
                     if (available < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
-                        // Na nova página, resetamos a altura efetiva para o valor base
                         effectiveHeight = block.height; 
                         shouldRestrict = false;
                     }
@@ -604,7 +602,10 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // Apenas se a altura NÃO COUBER na página, quebra.
+                // --- CORREÇÃO DO BUG DE MARGEM ---
+                // 3. Apenas se a altura (mesmo encolhida) NÃO COUBER na página, quebra.
+                // Isso permite que o texto fique encolhido e vá até o final da página,
+                // mas impede que ele vaze para fora dela.
                 if (effectiveHeight > available) {
                     createNewPage();
                     // Na nova página, volta ao normal
@@ -623,7 +624,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                     // Adiciona à página atual, COM a restrição se necessário
+                     // Adiciona à página atual, COM a restrição (encolhimento) se necessário
                     if (shouldRestrict) {
                          if(!currentPageData.restrictedBlockIds) currentPageData.restrictedBlockIds = [];
                          currentPageData.restrictedBlockIds.push(block.id);
@@ -912,7 +913,10 @@ const App: React.FC = () => {
                             isFirstPage={index === 0} 
                             isMeasurement={false} 
                             isPrint={true} 
+                            // **** CORREÇÃO ELEGANTE AQUI ****
                             // Forçamos 'hideEmptySections' para true APENAS na versão de impressão.
+                            // Isso garante que o PDF final nunca mostre placeholders vazios,
+                            // mesmo que o currículo tenha apenas uma página.
                             hideEmptySections={true} 
                         />
                     </div>
