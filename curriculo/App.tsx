@@ -37,6 +37,7 @@ const DEMO_DATA: ResumeData = {
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
         profilePicture: 'https://i.postimg.cc/c4k45kS3/Gemini-Generated-Image-igzfl4igzfl4igzf.png'
     },
+    // GARANTIDO: O resumo profissional solicitado está aqui
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
     experiences: [
         { 
@@ -475,13 +476,15 @@ const App: React.FC = () => {
                 }
 
                 if (dataKey === 'summary') {
-                    const pEl = sectionEl.querySelector('p') as HTMLElement;
-                    if (pEl) {
+                    // CORREÇÃO: Busca pelo ID específico do div que contém o resumo,
+                    // em vez de 'p' que pode não existir se o conteúdo for um div.
+                    const summaryEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
+                    if (summaryEl) {
                         blocks.push({
                             id: 'summary-text',
                             type: 'summary',
                             data: dataToPaginate.summary,
-                            height: getElementHeight(pEl),
+                            height: getElementHeight(summaryEl),
                         });
                     }
                 } else if (listId) {
