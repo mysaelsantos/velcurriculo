@@ -20,8 +20,6 @@ const A4_HEIGHT = 1123;
 const MARGIN_BOTTOM = 50; 
 
 // --- CORREÇÃO DA ZONA DE PERIGO ---
-// Reduzido para 950px. Isso aumenta a área de proteção.
-// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -35,7 +33,9 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Casado',
         cnh: 'A',
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
-        profilePicture: '/perfil-demo.png'
+        // --- ALTERAÇÃO AQUI: Use o nome exato do arquivo que você enviou ---
+        // Se o arquivo tiver outro nome, altere 'perfil.png' abaixo.
+        profilePicture: '/perfil.png' 
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
     experiences: [
@@ -651,26 +651,16 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        // CORREÇÃO (OPÇÃO 3): Lógica de Recálculo para o Modo Demo
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
                 paginateResume(resumeData);
-
-                // Se estivermos em Modo Demo (onde ocorrem as expansões/animações)
-                // Forçamos um segundo cálculo após 800ms para garantir que tudo (fontes, imagens) esteja pronto.
-                if (isDemoMode) {
-                    setTimeout(() => {
-                        console.log("Recalculando paginação (Modo Demo - Double Check)...");
-                        paginateResume(resumeData);
-                    }, 800);
-                }
             }
         }, 300);
 
         return () => {
             clearTimeout(handler);
         };
-    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]); // Adicionado isDemoMode na dependência
+    }, [resumeData, paginateResume, fontsLoaded]);
 
 
     useEffect(() => {
