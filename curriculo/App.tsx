@@ -19,11 +19,10 @@ interface SavedResume extends ResumeData {
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
 
-// --- CORREÇÃO DO FALSO POSITIVO (BURACO) ---
-// Alteramos de 930 para 990.
-// Isso significa que o "alerta de colisão" só dispara se o texto passar do pixel 990.
-// Antes, ele disparava no 930, o que causava buracos em textos que terminavam no meio da página.
-const QR_DANGER_ZONE_START = 990; 
+// --- CORREÇÃO DA ZONA DE PERIGO ---
+// Aumentado para 1030 para evitar quebra prematura no template Moderno.
+// Isso significa que o texto precisa estar nos últimos 90px da página para desviar do QR.
+const QR_DANGER_ZONE_START = 1030; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -432,11 +431,12 @@ const App: React.FC = () => {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            const MARGIN_TOP = 50;
-            // AQUI ESTÁ A CHAVE DA CORREÇÃO:
-            // QR_DANGER_ZONE_START agora é 990 (muito mais baixo).
-            // Isso significa que blocos que começam em 800 ou 900 não vão disparar o espaçador.
-            const dangerZoneStart = QR_DANGER_ZONE_START;
+            const A4_HEIGHT = 1123; 
+            const MARGIN_BOTTOM = 50; 
+            const headerEl = previewEl.querySelector('header') as HTMLElement;
+            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            
+            if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -446,13 +446,10 @@ const App: React.FC = () => {
                 return element.offsetHeight + marginTop + marginBottom;
             };
 
-            const headerEl = previewEl.querySelector('header') as HTMLElement;
-            const mainEl = previewEl.querySelector('main') as HTMLElement;
-            
-            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
-
             const headerHeight = getElementHeight(headerEl);
             const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+
+            const dangerZoneStart = QR_DANGER_ZONE_START;
 
             interface ContentBlock {
                 id: string;
@@ -534,7 +531,7 @@ const App: React.FC = () => {
                 qrCodeOffsets: {} 
             };
             
-            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
+            let currentY = 50 + headerHeight + mainMarginTop;
             let currentPageIndex = 0;
 
             const createNewPage = () => {
@@ -545,7 +542,7 @@ const App: React.FC = () => {
                     qrCodeOffsets: {}
                 };
                 currentPageIndex++;
-                currentY = MARGIN_TOP + 30; 
+                currentY = 50 + 30; 
             };
 
             let pendingTitleHeight = 0;
@@ -554,19 +551,16 @@ const App: React.FC = () => {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- VERIFICAÇÃO DE COLISÃO ---
                 const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // Offset
                     const offset = Math.max(0, dangerZoneStart - currentY);
                     
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = offset;
 
-                    // Ajuste de altura
                     effectiveHeight = block.height * 1.1; 
                 }
 
@@ -1109,3 +1103,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+}
