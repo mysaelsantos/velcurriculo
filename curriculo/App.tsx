@@ -33,8 +33,7 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Casado',
         cnh: 'A',
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
-        // --- ALTERAÇÃO AQUI: Use o nome exato do arquivo que você enviou ---
-        // Se o arquivo tiver outro nome, altere 'perfil.png' abaixo.
+        // Mantendo a imagem local conforme configuramos antes
         profilePicture: '/perfil.png' 
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
@@ -213,8 +212,11 @@ const TestimonialsSection = React.memo(() => {
 const App: React.FC = () => {
     const isPixTestMode = false;
 
-    const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
-    const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
+    // ALTERAÇÃO 1: Começamos com INITIAL_DATA (vazio) em vez de DEMO_DATA
+    // Isso é essencial para o "Hard Reset"
+    const [resumeData, setResumeData] = useState<ResumeData>(INITIAL_DATA);
+    const [paginatedData, setPaginatedData] = useState<PageData[]>([INITIAL_DATA]);
+    
     const [isDemoMode, setIsDemoMode] = useState(true);
     const [currentStep, setCurrentStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
@@ -237,6 +239,18 @@ const App: React.FC = () => {
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
+
+    // ALTERAÇÃO 2: useEffect para o "Hard Reset"
+    // Ao montar o componente, aguardamos 150ms e injetamos os dados de Demo.
+    // Isso garante que o DOM esteja pronto e evita medições prematuras.
+    useEffect(() => {
+        if (isDemoMode && resumeData.personalInfo.name === '') {
+             const timer = setTimeout(() => {
+                 setResumeData(DEMO_DATA);
+             }, 150);
+             return () => clearTimeout(timer);
+        }
+    }, []); // Executa apenas uma vez no mount
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
@@ -341,6 +355,9 @@ const App: React.FC = () => {
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
+        // Garante que iniciamos limpos no modo demo
+        setResumeData(INITIAL_DATA);
+        setTimeout(() => setResumeData(DEMO_DATA), 50);
     };
 
     const handleStartEditing = () => {
