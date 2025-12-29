@@ -4,14 +4,14 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Tamanho do espaçador (invisível) - Mantido em 190px
-    spacer: { width: 190, height: 130 }, 
+    // Tamanho do espaçador (invisível) - Aumentado para 210px para proteger o fundo maior
+    spacer: { width: 210, height: 130 }, 
     
-    // Coordenadas
+    // Coordenadas (Valores menores de 'right' movem o elemento para a direita/borda)
     positions: {
-        'template-modern': { bottom: 20, right: 20 }, 
-        'template-classic': { bottom: 40, right: 40 },
-        'template-minimalist': { bottom: 35, right: 40 },
+        'template-modern': { bottom: 20, right: 10 }, 
+        'template-classic': { bottom: 40, right: 30 },
+        'template-minimalist': { bottom: 35, right: 30 },
     }
 };
 
@@ -287,7 +287,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              // CORREÇÃO: Largura Fixa igual ao espaçador para garantir que a caixa "exista" para os flex items dentro
               width: `${QR_CONFIG.spacer.width}px`, 
               zIndex: 30, 
               pointerEvents: 'none',
