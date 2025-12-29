@@ -1,4 +1,4 @@
-// mysaelsantos/velcurriculo/velcurriculo-e23dad75da69d9628af1265847d431a6b3da0e11/curriculo/types.ts
+// types.ts
 
 export interface PersonalInfo {
   name: string;
@@ -51,13 +51,6 @@ export interface Style {
   showLinkedinQr?: boolean;
 }
 
-// NOVO: Definição do espaçador para o QR Code
-export interface QrSpacer {
-  height: number;
-  width: number;
-  marginTop: number; // Distância do topo do bloco de texto até onde o QR code começa
-}
-
 export interface ResumeData {
   personalInfo: PersonalInfo;
   summary: string;
@@ -67,4 +60,11 @@ export interface ResumeData {
   languages: Language[];
   skills: string[];
   style: Style;
+}
+
+// Interface estendida para a paginação
+export interface PageData extends Partial<ResumeData> {
+    // Distância exata do topo do <main> até onde o QR Code começa.
+    // Isso posiciona o espaçador fantasma.
+    qrSpacerMarginTop?: number; 
 }
