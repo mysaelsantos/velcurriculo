@@ -33,7 +33,7 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Casado',
         cnh: 'A',
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
-        // Mantendo a imagem local
+        // Mantemos a imagem local, pois ajuda na performance
         profilePicture: '/perfil.png' 
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
@@ -212,7 +212,6 @@ const TestimonialsSection = React.memo(() => {
 const App: React.FC = () => {
     const isPixTestMode = false;
 
-    // Voltamos ao DEMO_DATA normal, já que o problema é de redimensionamento e não de dados
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
     const [isDemoMode, setIsDemoMode] = useState(true);
@@ -631,6 +630,7 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
+    // --- FUNÇÃO DE ESCALA CORRIGIDA ---
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
@@ -638,7 +638,7 @@ const App: React.FC = () => {
         if (!previewColumn || !previewElement) return;
 
         const columnWidth = previewColumn.offsetWidth;
-        // Se a largura for 0, não faz nada para evitar escala 0 ou negativa
+        // Evita divisões por zero ou escalas negativas
         if (columnWidth <= 0) return;
 
         const baseWidth = 794;
@@ -647,7 +647,7 @@ const App: React.FC = () => {
         const scale = columnWidth / baseWidth;
         
         previewElement.style.transform = `scale(${scale})`;
-        previewElement.style.transformOrigin = 'top left'; // Garante origem correta
+        previewElement.style.transformOrigin = 'top left'; 
         
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
@@ -666,9 +666,9 @@ const App: React.FC = () => {
         };
     }, [resumeData, paginateResume, fontsLoaded]);
 
-    // --- NOVA IMPLEMENTAÇÃO: RESIZE OBSERVER ---
-    // Monitora o tamanho real do container pai do preview.
-    // Assim que o layout "assentar" ou animar, ele corrige a escala instantaneamente.
+    // --- CORREÇÃO DEFINITIVA (ResizeObserver) ---
+    // Monitora o tamanho real do container pai e ajusta o zoom
+    // automaticamente, corrigindo o problema de "encolhimento".
     useEffect(() => {
         if (!fontsLoaded || !previewWrapperRef.current?.parentElement) return;
 
@@ -685,6 +685,15 @@ const App: React.FC = () => {
             resizeObserver.disconnect();
         };
     }, [scalePreview, fontsLoaded, paginatedData]);
+
+    
+    useEffect(() => {
+        if(fontsLoaded){ 
+            scalePreview();
+            window.addEventListener('resize', scalePreview);
+            return () => window.removeEventListener('resize', scalePreview);
+        }
+    }, [scalePreview, paginatedData, fontsLoaded]);
     
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
@@ -1027,6 +1036,7 @@ const App: React.FC = () => {
                         <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
+                                key={isDemoMode ? 'demo' : 'manual'}
                                 ref={previewRef}
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
