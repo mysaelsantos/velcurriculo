@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 
 declare const QRCode: any;
@@ -34,7 +33,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
       try {
         const dataUrl = await QRCode.toDataURL(whatsappLink, {
           errorCorrectionLevel: 'M',
-          margin: 2,
+          margin: 1, // Margem reduzida para maximizar o código
           width: 80,
         });
         setWhatsappQrUrl(dataUrl);
@@ -58,7 +57,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         try {
             const dataUrl = await QRCode.toDataURL(link, {
                 errorCorrectionLevel: 'M',
-                margin: 2,
+                margin: 1,
                 width: 80,
             });
             setLinkedinQrUrl(dataUrl);
@@ -75,17 +74,41 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
   if (!whatsappQrUrl && !linkedinQrUrl) return null;
 
   return (
-    <div id="whatsapp-qr-code-container" style={{ display: 'flex', flexDirection: 'row', gap: '1rem', alignItems: 'flex-end' }}>
+    <div id="whatsapp-qr-code-container" style={{ 
+        display: 'flex', 
+        flexDirection: 'row', 
+        gap: '12px', 
+        alignItems: 'flex-end',
+        pointerEvents: 'none' // Garante que não interfira no clique
+    }}>
        {linkedinQrUrl && (
-          <div className="flex flex-col items-center">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" alt="Ícone do LinkedIn" className="h-8 mb-2" />
-              <img id="qr-code-linkedin-img" alt="QR Code do LinkedIn" className="w-20 h-20" src={linkedinQrUrl} />
+          <div className="flex flex-col items-center" style={{ width: '80px', flexShrink: 0 }}>
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
+                alt="Ícone do LinkedIn" 
+                className="h-6 mb-1 object-contain" 
+              />
+              <img 
+                id="qr-code-linkedin-img" 
+                alt="QR Code do LinkedIn" 
+                src={linkedinQrUrl} 
+                style={{ width: '80px', height: '80px', minWidth: '80px', minHeight: '80px', objectFit: 'contain' }}
+              />
           </div>
        )}
        {whatsappQrUrl && (
-          <div className="flex flex-col items-center">
-              <img src="https://files.catbox.moe/cvyrae.svg" alt="Ícone do WhatsApp" className="h-8 mb-2" />
-              <img id="qr-code-img" alt="QR Code do WhatsApp" className="w-20 h-20" src={whatsappQrUrl} />
+          <div className="flex flex-col items-center" style={{ width: '80px', flexShrink: 0 }}>
+              <img 
+                src="https://files.catbox.moe/cvyrae.svg" 
+                alt="Ícone do WhatsApp" 
+                className="h-6 mb-1 object-contain" 
+              />
+              <img 
+                id="qr-code-img" 
+                alt="QR Code do WhatsApp" 
+                src={whatsappQrUrl} 
+                style={{ width: '80px', height: '80px', minWidth: '80px', minHeight: '80px', objectFit: 'contain' }}
+              />
           </div>
       )}
     </div>
