@@ -20,9 +20,9 @@ const A4_HEIGHT = 1123;
 const MARGIN_BOTTOM = 50; 
 
 // --- CORREÇÃO DA ZONA DE PERIGO ---
-// Reduzido para 950px. Isso aumenta a área de proteção.
-// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
-const QR_DANGER_ZONE_START = 950; 
+// Reduzido para 900px. Isso aumenta a área de proteção significativamente.
+// Resolve o bug do modo DEMO onde o texto ficava no limite e não ativava o recuo.
+const QR_DANGER_ZONE_START = 900; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -556,8 +556,6 @@ const App: React.FC = () => {
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
-                    // apenas sinalizamos que este bloco colide com o QR code.
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
 
@@ -651,11 +649,12 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // AUMENTADO PARA 800ms para garantir que o modo DEMO carregue tudo antes de paginar
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
                 paginateResume(resumeData);
             }
-        }, 300);
+        }, 800);
 
         return () => {
             clearTimeout(handler);
