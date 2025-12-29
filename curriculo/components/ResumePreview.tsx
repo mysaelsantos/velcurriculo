@@ -15,11 +15,12 @@ export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-// Configuração exata da posição dos QR Codes
+// CONFIGURAÇÃO DE POSIÇÃO ABSOLUTA E EXATA
+// Ajustado para garantir que fique no canto inferior direito, dentro da margem de impressão
 const TEMPLATE_QR_CONFIG: Record<string, { bottom: number; right: number; width: number; height: number }> = {
-    'template-modern': { bottom: 35, right: 35, width: 180, height: 120 }, // Largura aumentada para caber 2 QRs
-    'template-classic': { bottom: 45, right: 50, width: 180, height: 120 },
-    'template-minimalist': { bottom: 40, right: 50, width: 180, height: 120 },
+    'template-modern': { bottom: 30, right: 30, width: 180, height: 100 }, 
+    'template-classic': { bottom: 40, right: 50, width: 180, height: 100 },
+    'template-minimalist': { bottom: 35, right: 50, width: 180, height: 100 },
 };
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
@@ -38,22 +39,22 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // Função auxiliar para gerar o espaçador local
+  // --- CORREÇÃO DO ESPAÇADOR ---
+  // Reduzimos a largura para 180px (antes estava 320px, causando o buraco)
   const getLocalSpacer = (itemId: string) => {
-      // Se não há offset calculado para este item, não renderiza nada.
       if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
 
       const marginTop = qrCodeOffsets[itemId];
-      const qrConfig = style?.template ? TEMPLATE_QR_CONFIG[style.template] : TEMPLATE_QR_CONFIG['template-modern'];
+      const templateName = style?.template || 'template-modern';
+      const config = TEMPLATE_QR_CONFIG[templateName];
       
-      // Retorna uma DIV flutuante que empurra o texto APENAS neste ponto
       return (
           <div 
             style={{ 
                 float: 'right', 
                 clear: 'right',
-                width: `${qrConfig.width + 10}px`, 
-                height: `${qrConfig.height}px`, 
+                width: `${config.width}px`, // Largura corrigida para não empurrar texto demais
+                height: `${config.height}px`, 
                 marginTop: `${marginTop}px`,
                 pointerEvents: 'none'
             }} 
@@ -146,7 +147,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                {/* Injeção do Espaçador Local no Resumo */}
                 <div className="relative">
                     {getLocalSpacer('summary-text')}
                     <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
@@ -171,7 +171,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                             </div>
                             
-                            {/* Injeção do Espaçador Local na Descrição da Experiência */}
                             {exp.description && (
                                 <div>
                                     {getLocalSpacer(exp.id)}
@@ -196,7 +195,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             {education && education.length > 0 ? (
                 education.map(edu => (
                     <div key={edu.id} className="w-full relative">
-                         {/* Injeção do Espaçador Local na Educação (caso raro, mas possível) */}
                          {getLocalSpacer(edu.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
@@ -241,8 +239,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full`}>
-            {/* O espaçador para idiomas deve ser tratado no bloco pai, se necessário, mas aqui simplificamos */}
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative`}>
+            {/* Espaçador para o bloco de idiomas inteiro, se necessário */}
+            {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="flex items-baseline">
@@ -293,13 +292,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
+      {/* POSICIONAMENTO ABSOLUTO FIXO DO QR CODE */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrConfig.bottom}px`,
               right: `${qrConfig.right}px`,
               width: `${qrConfig.width}px`,
-              zIndex: 20 
+              zIndex: 30, // Z-index alto para ficar acima de tudo
+              pointerEvents: 'none' // Não atrapalhar cliques
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
