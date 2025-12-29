@@ -4,12 +4,9 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Mantemos a largura de proteção do texto
     spacer: { width: 210, height: 130 }, 
-    
-    // CORREÇÃO DE POSIÇÃO: Valores menores aproximam da borda (Direita e Baixo)
     positions: {
-        'template-modern': { bottom: 15, right: 0 }, // Bem no canto
+        'template-modern': { bottom: 15, right: 0 }, 
         'template-classic': { bottom: 35, right: 25 },
         'template-minimalist': { bottom: 30, right: 25 },
     }
@@ -33,9 +30,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   const getLocalSpacer = (itemId: string) => {
       if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
-
       const marginTop = qrCodeOffsets[itemId];
-      
       return (
           <div 
             style={{ 
@@ -94,11 +89,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return { marginTop: '0px', paddingTop: '30px' };
   };
 
+  // --- A CORREÇÃO ESTÁ AQUI EMBAIXO ---
+  // Adicionei '!transition-none' e '!transform-none' quando isMeasurement é verdadeiro.
+  // O '!' (important) do Tailwind garante que sobrescreva o CSS global.
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
-      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
+      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
+      isMeasurement ? '!transition-none !transform-none !animate-none' : '' 
   ].filter(Boolean).join(' ');
 
   const templateKey = style?.template || 'template-modern';
@@ -106,11 +105,20 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
-    <div id="resume-preview" ref={previewRef} className={containerClasses}>
+    <div id="resume-preview" ref={previewRef} className={containerClasses} style={isMeasurement ? { transition: 'none', transform: 'none' } : undefined}>
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
-                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
+                {personalInfo.profilePicture && (
+                    /* Adicionado width/height explícitos para evitar layout shift durante o load */
+                    <img 
+                        id="profile-pic-img" 
+                        src={personalInfo.profilePicture} 
+                        alt="Foto de Perfil" 
+                        width="100" 
+                        height="100" 
+                    />
+                )}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
@@ -228,7 +236,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO: Removido 'flex flex-wrap gap' para funcionar com float */}
             <div id="resume-languages-list" className="w-full relative block">
             {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
