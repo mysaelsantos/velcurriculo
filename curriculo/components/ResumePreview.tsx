@@ -4,10 +4,10 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Tamanho do espaçador (invisível)
+    // Tamanho do espaçador (invisível) - Mantido em 190px
     spacer: { width: 190, height: 130 }, 
     
-    // Coordenadas para trazer o QR code mais para o canto (valores menores = mais perto da borda)
+    // Coordenadas
     positions: {
         'template-modern': { bottom: 20, right: 20 }, 
         'template-classic': { bottom: 40, right: 40 },
@@ -228,19 +228,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO AQUI: Mudamos de flex para block + inline-block para o float funcionar corretamente */}
-            <div id="resume-languages-list" className="w-full relative block">
-                {getLocalSpacer('languages-block')}
-                {languages && languages.length > 0 ? (
-                    languages.map(lang => (
-                        <div key={lang.id} className="inline-block mr-4 mb-1">
-                            <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
-                            <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
-                )}
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative block`}>
+            {/* Espaçador para o bloco de idiomas inteiro */}
+            {getLocalSpacer('languages-block')}
+            {languages && languages.length > 0 ? (
+                languages.map(lang => (
+                    <div key={lang.id} className="inline-block mr-4 mb-1">
+                        <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
+                        <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
+                    </div>
+                ))
+            ) : (
+                <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
+            )}
             </div>
         </section>
         )}
@@ -249,8 +249,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
-            {/* CORREÇÃO AQUI: Block para permitir wrap em volta do spacer */}
             <div id="resume-skills" className="w-full relative block">
+                {/* Espaçador para skills (bloco inteiro) */}
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
@@ -281,15 +281,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* Container Absoluto do QR Code */}
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              width: 'auto', 
+              // CORREÇÃO: Largura Fixa igual ao espaçador para garantir que a caixa "exista" para os flex items dentro
+              width: `${QR_CONFIG.spacer.width}px`, 
               zIndex: 30, 
               pointerEvents: 'none',
+              display: 'flex',
+              justifyContent: 'flex-end', 
+              alignItems: 'flex-end'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
