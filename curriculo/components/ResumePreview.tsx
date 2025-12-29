@@ -4,14 +4,14 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Tamanho do espaçador (invisível) - Aumentado para 210px para proteger o fundo maior
+    // Mantemos a largura de proteção do texto
     spacer: { width: 210, height: 130 }, 
     
-    // Coordenadas (Valores menores de 'right' movem o elemento para a direita/borda)
+    // CORREÇÃO DE POSIÇÃO: Valores menores aproximam da borda (Direita e Baixo)
     positions: {
-        'template-modern': { bottom: 20, right: 10 }, 
-        'template-classic': { bottom: 40, right: 30 },
-        'template-minimalist': { bottom: 35, right: 30 },
+        'template-modern': { bottom: 15, right: 0 }, // Bem no canto
+        'template-classic': { bottom: 35, right: 25 },
+        'template-minimalist': { bottom: 30, right: 25 },
     }
 };
 
