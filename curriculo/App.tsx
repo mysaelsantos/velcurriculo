@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -19,7 +19,7 @@ interface SavedResume extends ResumeData {
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
 
-// --- CORREÇÃO DA ZONA DE PERIGO ---
+// --- ZONA DE PERIGO (MANTIDA ORIGINAL) ---
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -211,7 +211,6 @@ const TestimonialsSection = React.memo(() => {
 const App: React.FC = () => {
     const isPixTestMode = false;
 
-    // Voltamos ao DEMO_DATA normal, já que o problema é de escala visual
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
     const [isDemoMode, setIsDemoMode] = useState(true);
@@ -274,7 +273,11 @@ const App: React.FC = () => {
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '794px'; 
+        measurementNode.style.width = '794px';
+        // CORREÇÃO CRÍTICA: Adicionar as classes CSS do corpo principal ao nó de medição.
+        // Se isso não for feito, a medição usa fontes diferentes das reais (geralmente menores),
+        // causando o problema de texto invadindo o QR Code.
+        measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
@@ -408,7 +411,8 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 80));
+                // Delay para garantir que a fonte (Inter/Roboto) carregou no elemento oculto
+                await new Promise(r => setTimeout(r, 500));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -628,9 +632,6 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    // --- CORREÇÃO DEFINITIVA DO ZOOM/ENCOLHIMENTO ---
-    // 1. Usamos useLayoutEffect para calcular ANTES da pintura da tela.
-    // 2. Bloqueamos cálculos se a largura for <= 0 para evitar scale(0).
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
@@ -638,8 +639,7 @@ const App: React.FC = () => {
         if (!previewColumn || !previewElement) return;
 
         const columnWidth = previewColumn.offsetWidth;
-        
-        // PROTEÇÃO: Se a largura for inválida, abortamos para não "encolher" o elemento para 0.
+        // Evita divisões por zero que causam o colapso visual (encolhimento)
         if (columnWidth <= 0) return;
 
         const baseWidth = 794;
@@ -648,14 +648,13 @@ const App: React.FC = () => {
         const scale = columnWidth / baseWidth;
         
         previewElement.style.transform = `scale(${scale})`;
-        previewElement.style.transformOrigin = 'top left'; 
+        previewElement.style.transformOrigin = 'top left';
         
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
     }, []);
 
-    // Monitora e recalcula o layout instantaneamente
     useEffect(() => {
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
@@ -668,29 +667,12 @@ const App: React.FC = () => {
         };
     }, [resumeData, paginateResume, fontsLoaded]);
 
-    // VIGILANTE DE TAMANHO (ResizeObserver)
-    // Garante que o zoom se ajusta ao pixel, mesmo se houver animações de layout.
+
     useEffect(() => {
-        if (!fontsLoaded || !previewWrapperRef.current?.parentElement) return;
-
-        const resizeObserver = new ResizeObserver(() => {
-            scalePreview();
-        });
-
-        resizeObserver.observe(previewWrapperRef.current.parentElement);
-
-        // Força execução inicial imediata
-        scalePreview();
-        
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [scalePreview, fontsLoaded, paginatedData]);
-    
-    // Execução extra de segurança
-    useLayoutEffect(() => {
         if(fontsLoaded){ 
             scalePreview();
+            window.addEventListener('resize', scalePreview);
+            return () => window.removeEventListener('resize', scalePreview);
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
@@ -1035,7 +1017,6 @@ const App: React.FC = () => {
                         <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
-                                key={isDemoMode ? 'demo' : 'manual'}
                                 ref={previewRef}
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
