@@ -11,6 +11,7 @@ import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData } from './types';
 
+// Interface atualizada para suportar o offset dinâmico do QR Code
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
@@ -19,21 +20,15 @@ interface PageData extends Partial<ResumeData> {
             visibleHeight?: number;
         };
     };
+    // Substituímos restrictedBlockIds por offsets precisos
     qrCodeOffsets?: {
-        [itemId: string]: number; 
+        [itemId: string]: number; // Distância em px do topo do elemento até o topo do QR Code
     };
 }
 
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
-
-// --- CONFIGURAÇÃO CENTRALIZADA ---
-const QR_LAYOUTS: Record<string, { startY: number; width: number; height: number }> = {
-    'template-modern': { startY: 900, width: 320, height: 200 },
-    'template-classic': { startY: 900, width: 320, height: 200 },
-    'template-minimalist': { startY: 900, width: 320, height: 200 },
-};
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -399,7 +394,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
+    // --- LÓGICA DE PAGINAÇÃO COM "L-SHAPE" ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -446,10 +441,8 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // Layout fixo para evitar "falsos positivos"
-            const currentTemplate = dataToPaginate.style.template;
-            const qrLayout = QR_LAYOUTS[currentTemplate] || QR_LAYOUTS['template-modern'];
-            const dangerZoneStart = qrLayout.startY;
+            // Ponto onde o QR Code começa (visualmente)
+            const QR_CODE_START_Y = 930; 
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -549,7 +542,7 @@ const App: React.FC = () => {
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                qrCodeOffsets: {} 
+                qrCodeOffsets: {} // Inicializa o mapa de offsets
             };
             
             let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
@@ -570,40 +563,37 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
+            const dangerZoneStart = QR_CODE_START_Y;
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // Cálculo de colisão com "Danger Zone" fixa
-                const overlapsDangerZone = currentPageIndex === 0 && hasQr && ((currentY + block.height) > dangerZoneStart);
+                // --- NOVA LÓGICA "L-SHAPE" ---
+                // Verifica se o bloco atual "cai" na zona do QR code (Começa antes, termina depois OU começa dentro)
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // HEADER BUFFER: Compensa a altura do Título/Data para itens compostos
-                    // Isso garante que o offset (buraco) calculado comece na Descrição, não no Título.
-                    // Evita que o espaçador empurre o texto tarde demais.
-                    let contentStartY = currentY;
-                    if (['experiences', 'education', 'courses'].includes(block.type)) {
-                        contentStartY += 45; // ~45px estimativa do cabeçalho do item
-                    }
-
-                    // Calcula offset: Distância entre o início do conteúdo relevante e o QR Code
-                    let offset = dangerZoneStart - contentStartY;
-                    
-                    if (offset < 0) offset = 0; 
+                    // Calcula o offset: quantos pixels de "segurança" (largura total) temos antes de atingir o QR Code
+                    // Se o bloco começa antes de 930 (ex: 800), o offset é 130px.
+                    // Se começa depois (ex: 950), o offset é 0 (espaçador no topo).
+                    const offset = Math.max(0, dangerZoneStart - currentY);
                     
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = offset;
 
-                    // Aumenta a altura para compensar o estreitamento do texto
-                    effectiveHeight = block.height * 1.25; 
+                    // Estimativa de crescimento de altura: 
+                    // Como o texto vai estreitar no final, ele pode crescer um pouco para baixo.
+                    // Adicionamos um fator de segurança conservador apenas para a paginação.
+                    effectiveHeight = block.height * 1.15; 
                 }
 
                 const available = getAvailableSpace();
 
+                // Lógica de títulos (mantém junto do próximo bloco)
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
@@ -618,8 +608,10 @@ const App: React.FC = () => {
                     continue; 
                 }
 
+                // Quebra de página se necessário
                 if (effectiveHeight > available) {
                     createNewPage();
+                    // Na nova página, o offset do QR Code não existe, altura volta ao normal
                     effectiveHeight = block.height;
                     
                     if (block.type === 'summary') {
@@ -634,6 +626,7 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
+                    // Adiciona o dado à página
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
