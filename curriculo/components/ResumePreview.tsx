@@ -228,7 +228,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative block`}>
+            {/* CORREÇÃO: Removido 'flex flex-wrap gap' para funcionar com float */}
+            <div id="resume-languages-list" className="w-full relative block">
             {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
