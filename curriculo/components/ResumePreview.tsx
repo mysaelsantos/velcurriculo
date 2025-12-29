@@ -2,7 +2,6 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { ResumeData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// Interface atualizada para receber o offset calculado no App.tsx
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
@@ -14,7 +13,7 @@ interface PageData extends Partial<ResumeData> {
     qrCodeOffsets?: {
         [itemId: string]: number;
     };
-    restrictedBlockIds?: string[]; // Mantido por compatibilidade
+    restrictedBlockIds?: string[];
 }
 
 interface ResumePreviewProps {
@@ -30,7 +29,7 @@ export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-// --- CONFIGURAÇÃO DA ZONA DO QR CODE (Replicada para garantir sincronia) ---
+// Configuração fixa e idêntica ao App.tsx para evitar desvios
 const QR_LAYOUTS: Record<string, { startY: number; width: number; height: number }> = {
     'template-modern': { startY: 900, width: 320, height: 200 },
     'template-classic': { startY: 900, width: 320, height: 200 },
@@ -53,24 +52,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // Obtém o layout atual
   const currentTemplate = style?.template || 'template-modern';
   const qrLayout = QR_LAYOUTS[currentTemplate] || QR_LAYOUTS['template-modern'];
 
-  // Função auxiliar que gera o espaçador invisível para o fluxo em "L"
   const getSpacerHtml = (itemId: string) => {
       const offset = qrCodeOffsets?.[itemId];
       if (offset === undefined) return '';
-      
-      // Usa largura e altura fixas do layout
+      // Retorna HTML com margin-top para empurrar o "vazio" para a posição correta
       return `<div style="float: right; width: ${qrLayout.width}px; height: ${qrLayout.height}px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
   };
 
   const getSpacerComponent = (itemId: string) => {
       const offset = qrCodeOffsets?.[itemId];
       if (offset === undefined) return null;
-      
-      // Usa largura e altura fixas do layout
       return (
           <div style={{ 
               float: 'right', 
@@ -118,9 +112,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         </div>
       );
     }
-    
-    // Se não é continuação, retornamos o conteúdo normal.
-    // O espaçador já está injetado dentro do conteúdo (children) ou via HTML string.
     return <div className="w-full">{content}</div>;
   };
   
@@ -195,7 +186,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                     <h3 className="section-title">Resumo Profissional</h3>
                      {renderWithContinuation('summary-text',
                         <div id="resume-summary" className="text-gray-700 leading-relaxed block">
-                             {/* Injeção do Espaçador no React Component */}
                             {getSpacerComponent('summary-text')}
                             {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
                         </div>
@@ -209,7 +199,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => {
                         const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
-                        const spacerHtml = getSpacerHtml(exp.id); // Pega o HTML do espaçador se houver offset
+                        const spacerHtml = getSpacerHtml(exp.id); 
                         
                         return (
                             <div key={exp.id} className="w-full">
@@ -223,7 +213,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                     </div>
                                 )}
                                 {exp.description && renderWithContinuation(exp.id, 
-                                    // Injeta o spacerHtml ANTES do texto da descrição
                                     <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} 
                                        dangerouslySetInnerHTML={{ 
                                            __html: spacerHtml + exp.description.replace(/\n/g, '<br />') 
