@@ -1,17 +1,20 @@
 import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
-import type { ResumeData, QrSpacer } from '../types';
+import type { ResumeData } from '../types';
 import QRCodeComponent from './QRCode';
 
+// Interface atualizada para receber o offset calculado no App.tsx
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
             offset: number;
             totalHeight: number;
+            visibleHeight?: number;
         };
     };
-    spacers?: {
-        [itemId: string]: QrSpacer;
+    qrCodeOffsets?: {
+        [itemId: string]: number;
     };
+    restrictedBlockIds?: string[]; // Mantido por compatibilidade, mas a lógica principal usa offsets agora
 }
 
 interface ResumePreviewProps {
@@ -29,7 +32,7 @@ export interface ResumePreviewRef {
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
-  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, spacers } = safeData;
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -43,26 +46,28 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // --- O SEGREDO DO "L-SHAPE" ---
-  // Este componente cria um bloco invisível que "empurra" o texto para a esquerda
-  // apenas quando necessário, usando float: right.
-  const SpacerInjection = ({ itemId }: { itemId: string }) => {
-      const spacer = spacers?.[itemId];
-      if (!spacer) return null;
+  // Função auxiliar que gera o espaçador invisível para o fluxo em "L"
+  const getSpacerHtml = (itemId: string) => {
+      const offset = qrCodeOffsets?.[itemId];
+      if (offset === undefined) return '';
+      
+      // O espaçador flutua à direita, empurrando o texto apenas quando a margem superior (offset) termina.
+      return `<div style="float: right; width: 320px; height: 200px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
+  };
 
+  const getSpacerComponent = (itemId: string) => {
+      const offset = qrCodeOffsets?.[itemId];
+      if (offset === undefined) return null;
+      
       return (
-          <div 
-            style={{
-              float: 'right',
-              clear: 'right',
-              width: `${spacer.width}px`,
-              height: `${spacer.height}px`,
-              marginTop: `${spacer.marginTop}px`,
-              pointerEvents: 'none',
-              shapeOutside: 'margin-box' 
-            }}
-            aria-hidden="true"
-          />
+          <div style={{ 
+              float: 'right', 
+              width: '320px', 
+              height: '200px', 
+              marginTop: `${offset}px`, 
+              clear: 'right', 
+              pointerEvents: 'none' 
+          }} />
       );
   };
 
@@ -83,9 +88,29 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       }
   }, [skills]);
 
-  // Função auxiliar antiga (renderWithContinuation) pode não ser mais necessária com a nova lógica
-  // mas vamos mantê-la simples caso ainda existam casos de borda ou compatibilidade.
-  // Como a paginação agora quebra blocos inteiros (exceto L-shape), ela é menos crítica.
+  const renderWithContinuation = (itemId: string, content: React.ReactNode, isHtmlInjection: boolean = false) => {
+    const continuationInfo = continuation?.[itemId];
+
+    if (continuationInfo) {
+      const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
+      const visibleHeight = isFirstPageOfSplit ? continuationInfo.visibleHeight : continuationInfo.totalHeight - continuationInfo.offset;
+      const topPosition = continuationInfo.offset > 0 ? `-${continuationInfo.offset}px` : '0px';
+
+      if (visibleHeight <= 0) return null; 
+
+      return (
+        <div className="w-full" style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
+            {content}
+          </div>
+        </div>
+      );
+    }
+    
+    // Se não é continuação, retornamos o conteúdo normal.
+    // O espaçador já está injetado dentro do conteúdo (children) ou via HTML string.
+    return <div className="w-full">{content}</div>;
+  };
   
   const shouldShowSection = (content: any, isArray = false) => {
       const hasContent = isArray 
@@ -156,11 +181,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
                 <section id="summary-section">
                     <h3 className="section-title">Resumo Profissional</h3>
-                    <div id="resume-summary" className="text-gray-700 leading-relaxed block">
-                        {/* Injeta o Espaçador Invisível */}
-                        <SpacerInjection itemId="summary-text" />
-                        {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
-                    </div>
+                     {renderWithContinuation('summary-text',
+                        <div id="resume-summary" className="text-gray-700 leading-relaxed block">
+                             {/* Injeção do Espaçador no React Component */}
+                            {getSpacerComponent('summary-text')}
+                            {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                        </div>
+                    )}
                 </section>
         )}
         {shouldShowSection(experiences, true) && (
@@ -169,27 +196,28 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => {
+                        const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
+                        const spacerHtml = getSpacerHtml(exp.id); // Pega o HTML do espaçador se houver offset
+                        
                         return (
                             <div key={exp.id} className="w-full">
-                                <div className="flex justify-between items-baseline flex-wrap">
-                                    <div className="pr-4">
-                                        <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
-                                        <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+                                {!isContinuation && (
+                                    <div className="flex justify-between items-baseline flex-wrap">
+                                        <div className="pr-4">
+                                            <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
+                                            <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+                                        </div>
+                                        <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                                     </div>
-                                    <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
-                                </div>
-                                
-                                {exp.description && (
-                                    <div className="mt-1 text-gray-600 leading-relaxed">
-                                        {/* Injeta o Espaçador Invisível para empurrar o texto da descrição */}
-                                        <SpacerInjection itemId={exp.id} />
-                                        {exp.description.split('\n').map((line, i) => (
-                                            <React.Fragment key={i}>
-                                                {line}
-                                                <br />
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
+                                )}
+                                {exp.description && renderWithContinuation(exp.id, 
+                                    // Injeta o spacerHtml ANTES do texto da descrição
+                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} 
+                                       dangerouslySetInnerHTML={{ 
+                                           __html: spacerHtml + exp.description.replace(/\n/g, '<br />') 
+                                       }} 
+                                    />,
+                                    true
                                 )}
                             </div>
                         )
