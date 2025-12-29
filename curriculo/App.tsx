@@ -20,9 +20,9 @@ const A4_HEIGHT = 1123;
 const MARGIN_BOTTOM = 50; 
 
 // --- CORREÇÃO DA ZONA DE PERIGO ---
-// Aumentado para 1030 para evitar quebra prematura no template Moderno.
-// Isso significa que o texto precisa estar nos últimos 90px da página para desviar do QR.
-const QR_DANGER_ZONE_START = 1030; 
+// Reduzido para 950px. Isso aumenta a área de proteção.
+// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
+const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -37,7 +37,6 @@ const DEMO_DATA: ResumeData = {
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
         profilePicture: 'https://i.postimg.cc/c4k45kS3/Gemini-Generated-Image-igzfl4igzfl4igzf.png'
     },
-    // GARANTIDO: O resumo profissional solicitado está aqui
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
     experiences: [
         { 
@@ -476,8 +475,6 @@ const App: React.FC = () => {
                 }
 
                 if (dataKey === 'summary') {
-                    // CORREÇÃO: Busca pelo ID específico do div que contém o resumo,
-                    // em vez de 'p' que pode não existir se o conteúdo for um div.
                     const summaryEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
                     if (summaryEl) {
                         blocks.push({
@@ -559,10 +556,10 @@ const App: React.FC = () => {
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    const offset = Math.max(0, dangerZoneStart - currentY);
-                    
+                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
+                    // apenas sinalizamos que este bloco colide com o QR code.
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                    currentPageData.qrCodeOffsets[block.id] = offset;
+                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
 
                     effectiveHeight = block.height * 1.1; 
                 }
