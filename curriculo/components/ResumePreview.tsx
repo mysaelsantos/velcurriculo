@@ -94,8 +94,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
-      // IMPORTANTE: Isso desativa animações durante a medição para evitar cortes errados
-      isMeasurement ? '!transition-none !transform-none !animate-none' : 'origin-top-left' 
   ].filter(Boolean).join(' ');
 
   const templateKey = style?.template || 'template-modern';
@@ -103,7 +101,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
-    <div id="resume-preview" ref={previewRef} className={containerClasses} style={isMeasurement ? { transition: 'none', transform: 'none' } : undefined}>
+    <div id="resume-preview" ref={previewRef} className={containerClasses}>
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
@@ -234,6 +232,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
             <div id="resume-languages-list" className="w-full relative block">
+            {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
@@ -254,6 +253,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className="w-full relative block">
+                {/* Espaçador para skills (bloco inteiro) */}
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
@@ -284,6 +284,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
