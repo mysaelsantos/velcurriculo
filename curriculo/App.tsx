@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -33,7 +33,6 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Casado',
         cnh: 'A',
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
-        // Mantemos a imagem local, pois ajuda na performance
         profilePicture: '/perfil.png' 
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
@@ -212,6 +211,7 @@ const TestimonialsSection = React.memo(() => {
 const App: React.FC = () => {
     const isPixTestMode = false;
 
+    // Voltamos ao DEMO_DATA normal, já que o problema é de escala visual
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
     const [isDemoMode, setIsDemoMode] = useState(true);
@@ -555,10 +555,8 @@ const App: React.FC = () => {
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
-                    // apenas sinalizamos que este bloco colide com o QR code.
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
+                    currentPageData.qrCodeOffsets[block.id] = 1; 
 
                     effectiveHeight = block.height * 1.1; 
                 }
@@ -630,7 +628,9 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    // --- FUNÇÃO DE ESCALA CORRIGIDA ---
+    // --- CORREÇÃO DEFINITIVA DO ZOOM/ENCOLHIMENTO ---
+    // 1. Usamos useLayoutEffect para calcular ANTES da pintura da tela.
+    // 2. Bloqueamos cálculos se a largura for <= 0 para evitar scale(0).
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
@@ -638,7 +638,8 @@ const App: React.FC = () => {
         if (!previewColumn || !previewElement) return;
 
         const columnWidth = previewColumn.offsetWidth;
-        // Evita divisões por zero ou escalas negativas
+        
+        // PROTEÇÃO: Se a largura for inválida, abortamos para não "encolher" o elemento para 0.
         if (columnWidth <= 0) return;
 
         const baseWidth = 794;
@@ -654,6 +655,7 @@ const App: React.FC = () => {
         }
     }, []);
 
+    // Monitora e recalcula o layout instantaneamente
     useEffect(() => {
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
@@ -666,9 +668,8 @@ const App: React.FC = () => {
         };
     }, [resumeData, paginateResume, fontsLoaded]);
 
-    // --- CORREÇÃO DEFINITIVA (ResizeObserver) ---
-    // Monitora o tamanho real do container pai e ajusta o zoom
-    // automaticamente, corrigindo o problema de "encolhimento".
+    // VIGILANTE DE TAMANHO (ResizeObserver)
+    // Garante que o zoom se ajusta ao pixel, mesmo se houver animações de layout.
     useEffect(() => {
         if (!fontsLoaded || !previewWrapperRef.current?.parentElement) return;
 
@@ -678,20 +679,18 @@ const App: React.FC = () => {
 
         resizeObserver.observe(previewWrapperRef.current.parentElement);
 
-        // Executa uma vez inicialmente
+        // Força execução inicial imediata
         scalePreview();
         
         return () => {
             resizeObserver.disconnect();
         };
     }, [scalePreview, fontsLoaded, paginatedData]);
-
     
-    useEffect(() => {
+    // Execução extra de segurança
+    useLayoutEffect(() => {
         if(fontsLoaded){ 
             scalePreview();
-            window.addEventListener('resize', scalePreview);
-            return () => window.removeEventListener('resize', scalePreview);
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
