@@ -14,7 +14,7 @@ interface PageData extends Partial<ResumeData> {
     qrCodeOffsets?: {
         [itemId: string]: number;
     };
-    restrictedBlockIds?: string[]; // Mantido por compatibilidade, mas a lógica principal usa offsets agora
+    restrictedBlockIds?: string[]; // Mantido por compatibilidade
 }
 
 interface ResumePreviewProps {
@@ -29,6 +29,13 @@ interface ResumePreviewProps {
 export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
+
+// --- CONFIGURAÇÃO DA ZONA DO QR CODE (Replicada para garantir sincronia) ---
+const QR_LAYOUTS: Record<string, { startY: number; width: number; height: number }> = {
+    'template-modern': { startY: 900, width: 320, height: 200 },
+    'template-classic': { startY: 900, width: 320, height: 200 },
+    'template-minimalist': { startY: 900, width: 320, height: 200 },
+};
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
@@ -46,24 +53,29 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
+  // Obtém o layout atual
+  const currentTemplate = style?.template || 'template-modern';
+  const qrLayout = QR_LAYOUTS[currentTemplate] || QR_LAYOUTS['template-modern'];
+
   // Função auxiliar que gera o espaçador invisível para o fluxo em "L"
   const getSpacerHtml = (itemId: string) => {
       const offset = qrCodeOffsets?.[itemId];
       if (offset === undefined) return '';
       
-      // O espaçador flutua à direita, empurrando o texto apenas quando a margem superior (offset) termina.
-      return `<div style="float: right; width: 320px; height: 200px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
+      // Usa largura e altura fixas do layout
+      return `<div style="float: right; width: ${qrLayout.width}px; height: ${qrLayout.height}px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
   };
 
   const getSpacerComponent = (itemId: string) => {
       const offset = qrCodeOffsets?.[itemId];
       if (offset === undefined) return null;
       
+      // Usa largura e altura fixas do layout
       return (
           <div style={{ 
               float: 'right', 
-              width: '320px', 
-              height: '200px', 
+              width: `${qrLayout.width}px`, 
+              height: `${qrLayout.height}px`, 
               marginTop: `${offset}px`, 
               clear: 'right', 
               pointerEvents: 'none' 
@@ -323,7 +335,23 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         )}
         
       </main>
-      {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
+      
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE FIXO */}
+      {isFirstPage && personalInfo && style && (
+          <div style={{ 
+              position: 'absolute', 
+              top: `${qrLayout.startY}px`, 
+              right: '1.5rem', 
+              zIndex: 20
+          }}>
+             <QRCodeComponent 
+                 phone={personalInfo.phone} 
+                 show={style.showQRCode} 
+                 linkedin={personalInfo.linkedin} 
+                 showLinkedin={style.showLinkedinQr ?? true} 
+             />
+          </div>
+      )}
     </div>
   );
 });
