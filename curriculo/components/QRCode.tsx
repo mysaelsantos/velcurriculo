@@ -33,7 +33,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
       try {
         const dataUrl = await QRCode.toDataURL(whatsappLink, {
           errorCorrectionLevel: 'M',
-          margin: 0, // Margem zero para aproveitar melhor o espaço interno
+          margin: 0,
           width: 80,
         });
         setWhatsappQrUrl(dataUrl);
@@ -74,23 +74,24 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
   if (!whatsappQrUrl && !linkedinQrUrl) return null;
 
   return (
-    // Restaurado o estilo de "Card" flutuante
     <div id="whatsapp-qr-code-container" style={{ 
         display: 'flex', 
         flexDirection: 'row', 
         gap: '15px', 
-        alignItems: 'center', // Centralizado verticalmente
+        alignItems: 'center', 
         justifyContent: 'center',
         pointerEvents: 'none',
         backgroundColor: 'white',
         padding: '10px 15px',
         borderRadius: '8px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', // Sombra suave
-        border: '1px solid #e5e7eb', // Borda sutil
-        maxWidth: '100%' 
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', 
+        border: '1px solid #e5e7eb',
+        maxWidth: '100%',
+        minWidth: 'fit-content' // Garante que a caixa branca sempre envolva o conteúdo
     }}>
        {linkedinQrUrl && (
-          <div className="flex flex-col items-center" style={{ width: 'auto' }}>
+          // flexShrink: 0 IMPEDE que o QR code seja esmagado
+          <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
                 alt="LinkedIn" 
@@ -105,7 +106,8 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
           </div>
        )}
        {whatsappQrUrl && (
-          <div className="flex flex-col items-center" style={{ width: 'auto' }}>
+          // flexShrink: 0 IMPEDE que o QR code seja esmagado
+          <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://files.catbox.moe/cvyrae.svg" 
                 alt="WhatsApp" 
