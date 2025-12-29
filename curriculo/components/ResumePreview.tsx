@@ -1,21 +1,6 @@
 import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
-import type { ResumeData } from '../types';
+import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
-
-// Interface atualizada para receber o offset calculado no App.tsx
-interface PageData extends Partial<ResumeData> {
-    continuation?: {
-        [itemId: string]: {
-            offset: number;
-            totalHeight: number;
-            visibleHeight?: number;
-        };
-    };
-    qrCodeOffsets?: {
-        [itemId: string]: number;
-    };
-    restrictedBlockIds?: string[]; // Mantido por compatibilidade, mas a lógica principal usa offsets agora
-}
 
 interface ResumePreviewProps {
   data: PageData;
@@ -30,9 +15,17 @@ export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
+// --- CONFIGURAÇÃO DE POSIÇÃO PRÉ-DEFINIDA ---
+// Define exatamente onde o QR Code vai ficar (absoluto) e o tamanho da área reservada.
+const TEMPLATE_QR_CONFIG: Record<string, { bottom: number; right: number; width: number; height: number }> = {
+    'template-modern': { bottom: 35, right: 35, width: 140, height: 140 },
+    'template-classic': { bottom: 45, right: 50, width: 140, height: 140 },
+    'template-minimalist': { bottom: 40, right: 50, width: 140, height: 140 },
+};
+
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
-  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, continuation, qrCodeOffsets } = safeData;
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrSpacerMarginTop } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -45,31 +38,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         document.documentElement.style.setProperty('--theme-color', style.color);
     }
   }, [style?.color]);
-
-  // Função auxiliar que gera o espaçador invisível para o fluxo em "L"
-  const getSpacerHtml = (itemId: string) => {
-      const offset = qrCodeOffsets?.[itemId];
-      if (offset === undefined) return '';
-      
-      // O espaçador flutua à direita, empurrando o texto apenas quando a margem superior (offset) termina.
-      return `<div style="float: right; width: 320px; height: 200px; margin-top: ${offset}px; clear: right; pointer-events: none;"></div>`;
-  };
-
-  const getSpacerComponent = (itemId: string) => {
-      const offset = qrCodeOffsets?.[itemId];
-      if (offset === undefined) return null;
-      
-      return (
-          <div style={{ 
-              float: 'right', 
-              width: '320px', 
-              height: '200px', 
-              marginTop: `${offset}px`, 
-              clear: 'right', 
-              pointerEvents: 'none' 
-          }} />
-      );
-  };
 
   const processedSkills = useMemo(() => {
       if (!skills || !Array.isArray(skills)) return [];
@@ -88,30 +56,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       }
   }, [skills]);
 
-  const renderWithContinuation = (itemId: string, content: React.ReactNode, isHtmlInjection: boolean = false) => {
-    const continuationInfo = continuation?.[itemId];
-
-    if (continuationInfo) {
-      const isFirstPageOfSplit = continuationInfo.offset === 0 && typeof continuationInfo.visibleHeight === 'number';
-      const visibleHeight = isFirstPageOfSplit ? continuationInfo.visibleHeight : continuationInfo.totalHeight - continuationInfo.offset;
-      const topPosition = continuationInfo.offset > 0 ? `-${continuationInfo.offset}px` : '0px';
-
-      if (visibleHeight <= 0) return null; 
-
-      return (
-        <div className="w-full" style={{ height: `${visibleHeight}px`, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', width: '100%', top: topPosition }}>
-            {content}
-          </div>
-        </div>
-      );
-    }
-    
-    // Se não é continuação, retornamos o conteúdo normal.
-    // O espaçador já está injetado dentro do conteúdo (children) ou via HTML string.
-    return <div className="w-full">{content}</div>;
-  };
-  
   const shouldShowSection = (content: any, isArray = false) => {
       const hasContent = isArray 
           ? (Array.isArray(content) && content.length > 0)
@@ -124,6 +68,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   };
 
   const isModern = style?.template === 'template-modern';
+  
+  // Ajuste de layout para foto no template moderno
   const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
@@ -149,6 +95,10 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
   ].filter(Boolean).join(' ');
+
+  // Configurações do QR Code para o template atual
+  const qrConfig = style?.template ? TEMPLATE_QR_CONFIG[style.template] : TEMPLATE_QR_CONFIG['template-modern'];
+  const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
     <div id="resume-preview" ref={previewRef} className={containerClasses}>
@@ -178,56 +128,62 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       )}
       
       <main className="space-y-4" style={getMainStyle()}>
-        {shouldShowSection(summary) && (
-                <section id="summary-section">
-                    <h3 className="section-title">Resumo Profissional</h3>
-                     {renderWithContinuation('summary-text',
-                        <div id="resume-summary" className="text-gray-700 leading-relaxed block">
-                             {/* Injeção do Espaçador no React Component */}
-                            {getSpacerComponent('summary-text')}
-                            {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
-                        </div>
-                    )}
-                </section>
+        
+        {/* --- O SEGREDO DO LAYOUT EM L --- */}
+        {/* Este é o espaçador invisível que empurra o texto para a esquerda */}
+        {isFirstPage && showQR && qrSpacerMarginTop !== undefined && (
+            <div 
+                className="qr-ghost-spacer"
+                style={{
+                    float: 'right',
+                    clear: 'both',
+                    width: `${qrConfig.width + 10}px`, // +10px de margem de segurança
+                    height: `${qrConfig.height}px`,
+                    marginTop: `${qrSpacerMarginTop}px`,
+                    // Debug color (remova em produção se quiser, mas é invisível)
+                    // backgroundColor: 'rgba(255,0,0,0.2)', 
+                    pointerEvents: 'none'
+                }}
+            />
         )}
+        
+        {shouldShowSection(summary) && (
+            <section id="summary-section">
+                <h3 className="section-title">Resumo Profissional</h3>
+                <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
+                    {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                </div>
+            </section>
+        )}
+
         {shouldShowSection(experiences, true) && (
         <section id="experience-section">
             <h3 className="section-title">Experiência Profissional</h3>
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
-                    experiences.map(exp => {
-                        const isContinuation = continuation?.[exp.id] && continuation[exp.id].offset > 0;
-                        const spacerHtml = getSpacerHtml(exp.id); // Pega o HTML do espaçador se houver offset
-                        
-                        return (
-                            <div key={exp.id} className="w-full">
-                                {!isContinuation && (
-                                    <div className="flex justify-between items-baseline flex-wrap">
-                                        <div className="pr-4">
-                                            <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
-                                            <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
-                                        </div>
-                                        <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
-                                    </div>
-                                )}
-                                {exp.description && renderWithContinuation(exp.id, 
-                                    // Injeta o spacerHtml ANTES do texto da descrição
-                                    <p className={`${isContinuation ? '' : 'mt-1'} text-gray-600 leading-relaxed`} 
-                                       dangerouslySetInnerHTML={{ 
-                                           __html: spacerHtml + exp.description.replace(/\n/g, '<br />') 
-                                       }} 
-                                    />,
-                                    true
-                                )}
+                    experiences.map(exp => (
+                        <div key={exp.id} className="w-full">
+                            <div className="flex justify-between items-baseline flex-wrap">
+                                <div className="pr-4">
+                                    <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
+                                    <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+                                </div>
+                                <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                             </div>
-                        )
-                    })
+                            {exp.description && (
+                                <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
+                                    {exp.description}
+                                </p>
+                            )}
+                        </div>
+                    ))
                 ) : (
                     <p className="text-gray-400 italic text-sm">Suas experiências profissionais aparecerão aqui...</p>
                 )}
             </div>
         </section>
         )}
+
         {shouldShowSection(education, true) && (
         <section id="education-section">
             <h3 className="section-title">Formação Acadêmica</h3>
@@ -250,6 +206,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
+
         {shouldShowSection(courses, true) && (
         <section id="courses-section" className="w-full">
             <h3 className="section-title">Cursos Complementares</h3>
@@ -272,6 +229,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             </div>
         </section>
         )}
+
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
@@ -323,7 +281,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         )}
         
       </main>
-      {isFirstPage && personalInfo && style && <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />}
+      
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE (Fixo e estável) */}
+      {isFirstPage && personalInfo && showQR && (
+          <div style={{
+              position: 'absolute',
+              bottom: `${qrConfig.bottom}px`,
+              right: `${qrConfig.right}px`,
+              width: `${qrConfig.width}px`,
+              zIndex: 20 // Garante que fica acima de qualquer background, mas o texto flui ao redor do spacer
+          }}>
+              <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
+          </div>
+      )}
     </div>
   );
 });
