@@ -79,12 +79,12 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         flexDirection: 'row', 
         gap: '12px', 
         alignItems: 'flex-end',
+        justifyContent: 'flex-end',
         pointerEvents: 'none',
-        justifyContent: 'flex-end', // Garante alinhamento à direita
-        width: '100%'
+        maxWidth: '100%' // Garante que não estoure o container pai
     }}>
        {linkedinQrUrl && (
-          <div className="flex flex-col items-center" style={{ width: '80px', flexShrink: 0 }}>
+          <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
                 alt="Ícone do LinkedIn" 
@@ -94,12 +94,12 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
                 id="qr-code-linkedin-img" 
                 alt="QR Code do LinkedIn" 
                 src={linkedinQrUrl} 
-                style={{ width: '80px', height: '80px', minWidth: '80px', minHeight: '80px', objectFit: 'contain' }}
+                style={{ width: '70px', height: '70px', objectFit: 'contain' }}
               />
           </div>
        )}
        {whatsappQrUrl && (
-          <div className="flex flex-col items-center" style={{ width: '80px', flexShrink: 0 }}>
+          <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://files.catbox.moe/cvyrae.svg" 
                 alt="Ícone do WhatsApp" 
@@ -109,7 +109,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
                 id="qr-code-img" 
                 alt="QR Code do WhatsApp" 
                 src={whatsappQrUrl} 
-                style={{ width: '80px', height: '80px', minWidth: '80px', minHeight: '80px', objectFit: 'contain' }}
+                style={{ width: '70px', height: '70px', objectFit: 'contain' }}
               />
           </div>
       )}
