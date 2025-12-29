@@ -15,14 +15,11 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// Configurações Globais (Sincronizadas com ResumePreview)
-const QR_CODE_HEIGHT = 140; 
+// Configurações Globais
 const A4_HEIGHT = 1123;
-const TEMPLATE_BOTTOM_MARGINS: Record<string, number> = {
-    'template-modern': 35,
-    'template-classic': 45,
-    'template-minimalist': 40
-};
+// Definimos a zona de perigo visual onde o QR Code realmente começa a ocupar espaço
+// Considerando margem inferior + altura do QR Code (aprox 35px + 100px)
+const QR_CODE_VISUAL_START_FROM_BOTTOM = 150; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -388,8 +385,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO RECONSTRUÍDA ---
-    // Agora calculaoffsets locais para cada bloco
+    // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -416,10 +412,9 @@ const App: React.FC = () => {
                 resolve(previewEl);
             };
             
-            // Renderiza layout completo para medir tudo
-             measurementRootRef.current.render(
+            measurementRootRef.current.render(
                 <ResumePreview 
-                    key={`full-${Date.now()}`}
+                    key={`${dataToPaginate.style.template}-${Date.now()}`}
                     data={dataToPaginate} 
                     isDemoMode={isDemoMode} 
                     isFirstPage={true} 
@@ -433,13 +428,10 @@ const App: React.FC = () => {
             if (document.fonts) await document.fonts.ready;
             const previewEl = await onRenderComplete;
             
-            // 1. Calcular a geometria
-            const A4_HEIGHT = 1123; 
-            const MARGIN_BOTTOM_PAGE = 50; 
-            const headerEl = previewEl.querySelector('header') as HTMLElement;
-            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            const MARGIN_TOP = 50;
+            const MARGIN_BOTTOM = 50; 
             
-            if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+            const qrZoneStart = A4_HEIGHT - QR_CODE_VISUAL_START_FROM_BOTTOM;
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -449,14 +441,13 @@ const App: React.FC = () => {
                 return element.offsetHeight + marginTop + marginBottom;
             };
 
+            const headerEl = previewEl.querySelector('header') as HTMLElement;
+            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            
+            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+
             const headerHeight = getElementHeight(headerEl);
             const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
-
-            const template = dataToPaginate.style.template;
-            const qrBottomMargin = TEMPLATE_BOTTOM_MARGINS[template] || 35;
-            
-            // Coordenada Y (topo) onde o QR Code começa
-            const qrTopGlobalY = A4_HEIGHT - qrBottomMargin - QR_CODE_HEIGHT;
 
             interface ContentBlock {
                 id: string;
@@ -529,22 +520,17 @@ const App: React.FC = () => {
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            // --- MONTANDO AS PÁGINAS ---
             const pages: PageData[] = [];
             
             let currentPageData: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                qrCodeOffsets: {} // Inicializa
+                qrCodeOffsets: {} 
             };
             
-            // Altura inicial usada (Header + Margem Main)
-            let currentY = 50 + headerHeight + mainMarginTop; // 50 = MARGIN_TOP (fixo no PDF print)
+            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
             let currentPageIndex = 0;
-            let pendingTitleHeight = 0;
-            
-            const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
 
             const createNewPage = () => {
                 pages.push(currentPageData);
@@ -554,38 +540,41 @@ const App: React.FC = () => {
                     qrCodeOffsets: {}
                 };
                 currentPageIndex++;
-                currentY = 50 + 30; // Margem topo + padding topo main
+                currentY = MARGIN_TOP + 30; 
             };
+
+            const dangerZoneStart = qrZoneStart;
+            let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
+                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+                
+                // --- CÁLCULO DE COLISÃO COM QR CODE ---
+                // Verifica se o bloco TERMINA dentro ou depois da zona de perigo
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                
                 let effectiveHeight = block.height;
 
-                // --- DETECÇÃO DE COLISÃO COM QR CODE ---
-                if (currentPageIndex === 0 && hasQr) {
-                    // Se o bloco começa antes ou dentro da zona do QR, E termina depois dela
-                    const blockBottom = currentY + effectiveHeight;
-                    if (blockBottom > qrTopGlobalY) {
-                         // Calculamos o offset RELATIVO AO INÍCIO DO BLOCO
-                         // Ex: Se QR começa em 900 e bloco começa em 800, offset é 100.
-                         const offsetInsideBlock = Math.max(0, qrTopGlobalY - currentY);
-                         
-                         if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                         currentPageData.qrCodeOffsets[block.id] = offsetInsideBlock;
+                if (overlapsDangerZone) {
+                    // Calcula onde o espaçador deve começar DENTRO do bloco
+                    // offset = Ponto onde QR começa (global) - Ponto onde Bloco começa (global)
+                    const offset = Math.max(0, dangerZoneStart - currentY);
+                    
+                    if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
+                    currentPageData.qrCodeOffsets[block.id] = offset;
 
-                         // Aumentamos a altura estimada pois o texto vai quebrar e ficar mais alto
-                         effectiveHeight = effectiveHeight * 1.2; 
-                    }
+                    // Aumentamos um pouco a altura estimada para compensar a quebra de linha
+                    effectiveHeight = block.height * 1.15; 
                 }
 
-                const availableSpace = (A4_HEIGHT - MARGIN_BOTTOM_PAGE) - currentY;
+                const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
 
-                // Lógica de títulos (mantém junto do próximo bloco)
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                     
-                    if (availableSpace < (effectiveHeight + nextItemHeight)) {
+                    if (available < (effectiveHeight + nextItemHeight)) {
                         createNewPage();
                         effectiveHeight = block.height; 
                     }
@@ -595,20 +584,29 @@ const App: React.FC = () => {
                     continue; 
                 }
 
-                // Quebra de página
-                if (effectiveHeight > availableSpace) {
+                if (effectiveHeight > available) {
                     createNewPage();
-                    effectiveHeight = block.height; // Na nova página, altura volta ao normal
+                    effectiveHeight = block.height;
                     
-                    // Adiciona dados na nova página
-                    addToPage(currentPageData, block);
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
                     
                     const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                    // Cabe na página atual
-                    addToPage(currentPageData, block);
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
                     currentY += effectiveHeight;
                     pendingTitleHeight = 0; 
                 }
@@ -618,7 +616,7 @@ const App: React.FC = () => {
                pages.push(currentPageData);
             }
             
-             const finalPages = pages.filter(p => {
+            const finalPages = pages.filter(p => {
                 const hasData = p.summary || 
                                 (p.experiences && p.experiences.length > 0) || 
                                 (p.education && p.education.length > 0) ||
@@ -636,16 +634,6 @@ const App: React.FC = () => {
             return [dataToPaginate];
         }
     }, [isDemoMode]);
-
-    const addToPage = (page: PageData, block: any) => {
-        if (block.type === 'summary') {
-            page.summary = block.data;
-        } else if (block.type === 'skills' || block.type === 'languages') {
-            page[block.type] = block.data;
-        } else if (Array.isArray(page[block.type as keyof ResumeData])) {
-            (page[block.type as keyof ResumeData] as any[]).push(block.data);
-        }
-    };
 
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
@@ -1104,7 +1092,7 @@ const App: React.FC = () => {
                          <div>
                             <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
                             <div className="flex space-x-4 justify-center md:justify-start">
-                                <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon"><svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353-.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zM12 15a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg></a>
+                                <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon"><svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353-.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zM12 15a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg></a>
                             </div>
                         </div>
                     </div>
