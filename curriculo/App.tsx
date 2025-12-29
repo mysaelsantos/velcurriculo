@@ -19,10 +19,9 @@ interface SavedResume extends ResumeData {
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
 
-// --- CORREÇÃO DA ZONA DE PERIGO ---
-// Reduzido para 950px. Isso aumenta a área de proteção.
-// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
-const QR_DANGER_ZONE_START = 950; 
+// --- ZONA DE PERIGO (REVERTIDA) ---
+// Voltamos ao valor original/padrão para não afetar o layout agressivamente.
+const QR_DANGER_ZONE_START = 1030; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -231,6 +230,7 @@ const App: React.FC = () => {
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
+    const [isPreviewReady, setIsPreviewReady] = useState(false);
 
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
@@ -556,8 +556,6 @@ const App: React.FC = () => {
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
-                    // apenas sinalizamos que este bloco colide com o QR code.
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
 
@@ -651,16 +649,25 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // STRATÉGIA DE DELAY:
+        // No modo Demo (ou carregamento inicial), usamos 2000ms (2s) para garantir que
+        // a imagem de perfil e fontes carreguem antes do cálculo de paginação.
+        // Nos outros modos (edição), o feedback é rápido (300ms).
+        const delay = isDemoMode ? 2000 : 300;
+        
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
-                paginateResume(resumeData);
+                paginateResume(resumeData).then(() => {
+                    // Após a primeira paginação, liberamos a visualização
+                    setIsPreviewReady(true);
+                });
             }
-        }, 300);
+        }, delay);
 
         return () => {
             clearTimeout(handler);
         };
-    }, [resumeData, paginateResume, fontsLoaded]);
+    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]);
 
 
     useEffect(() => {
@@ -1010,17 +1017,30 @@ const App: React.FC = () => {
                     />
                     <div className="w-full lg:w-2/3">
                         <div ref={previewWrapperRef} className="w-full">
-                           {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                             <ResumePreview
-                                ref={previewRef}
-                                data={paginatedData[currentPage - 1]}
-                                isDemoMode={isDemoMode}
-                                isFirstPage={currentPage === 1}
-                                hideEmptySections={paginatedData.length > 1} 
-                             />
+                           {/* Se não estiver pronto (delay inicial), mostra loading. Se pronto, mostra o preview */}
+                           {!isPreviewReady ? (
+                               <div className="w-full h-[1123px] flex items-center justify-center bg-white rounded-lg shadow-xl text-gray-400">
+                                   <div className="flex flex-col items-center gap-3">
+                                        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <p className="text-sm font-medium">Carregando modelo...</p>
+                                   </div>
+                               </div>
+                           ) : (
+                               paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                <ResumePreview
+                                    ref={previewRef}
+                                    data={paginatedData[currentPage - 1]}
+                                    isDemoMode={isDemoMode}
+                                    isFirstPage={currentPage === 1}
+                                    hideEmptySections={paginatedData.length > 1} 
+                                />
+                               )
                            )}
                         </div>
-                        {paginatedData.length > 1 && (
+                        {isPreviewReady && paginatedData.length > 1 && (
                             <div className="pagination-controls">
                                 {paginatedData.map((_, index) => (
                                     <button
