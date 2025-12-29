@@ -35,7 +35,7 @@ const DEMO_DATA: ResumeData = {
         maritalStatus: 'Casado',
         cnh: 'A',
         linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
-        profilePicture: 'https://i.postimg.cc/c4k45kS3/Gemini-Generated-Image-igzfl4igzfl4igzf.png'
+        profilePicture: '/perfil-demo.png'
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
     experiences: [
