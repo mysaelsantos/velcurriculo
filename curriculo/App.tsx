@@ -651,16 +651,26 @@ const App: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // CORREÇÃO (OPÇÃO 3): Lógica de Recálculo para o Modo Demo
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
                 paginateResume(resumeData);
+
+                // Se estivermos em Modo Demo (onde ocorrem as expansões/animações)
+                // Forçamos um segundo cálculo após 800ms para garantir que tudo (fontes, imagens) esteja pronto.
+                if (isDemoMode) {
+                    setTimeout(() => {
+                        console.log("Recalculando paginação (Modo Demo - Double Check)...");
+                        paginateResume(resumeData);
+                    }, 800);
+                }
             }
         }, 300);
 
         return () => {
             clearTimeout(handler);
         };
-    }, [resumeData, paginateResume, fontsLoaded]);
+    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]); // Adicionado isDemoMode na dependência
 
 
     useEffect(() => {
