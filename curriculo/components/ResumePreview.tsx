@@ -2,17 +2,16 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// --- CONFIGURAÇÃO DE POSIÇÃO E TAMANHO (CALIBRAGEM FINA) ---
-// Define onde o QR Code fica e qual o tamanho do "buraco" no texto
+// CONFIGURAÇÃO GENEROSA DE ESPAÇO
+// Aumentamos para 200px de largura para garantir que nada seja cortado.
 const QR_CONFIG = {
-    // Dimensões da área que o texto deve desviar
-    spacer: { width: 160, height: 140 }, 
+    spacer: { width: 200, height: 130 }, 
     
-    // Posições exatas (bottom/right) para cada template para alinhar com as margens visuais
+    // Coordenadas absolutas (Bottom/Right) ajustadas para cada template
     positions: {
-        'template-modern': { bottom: 25, right: 30 }, // Margens menores do tema moderno
-        'template-classic': { bottom: 40, right: 50 }, // Margens maiores do clássico
-        'template-minimalist': { bottom: 35, right: 50 },
+        'template-modern': { bottom: 30, right: 35 }, 
+        'template-classic': { bottom: 45, right: 55 },
+        'template-minimalist': { bottom: 40, right: 55 },
     }
 };
 
@@ -32,9 +31,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // --- O "ESPAÇADOR FANTASMA" CORRIGIDO ---
+  // --- O "ESPAÇADOR FANTASMA" ---
+  // Injeta um bloco flutuante invisível para empurrar o texto
   const getLocalSpacer = (itemId: string) => {
-      // Se não houver offset calculado para este bloco, não faz nada
       if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
 
       const marginTop = qrCodeOffsets[itemId];
@@ -44,13 +43,10 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             style={{ 
                 float: 'right', 
                 clear: 'right',
-                // Largura ajustada para não criar buracos desnecessários
                 width: `${QR_CONFIG.spacer.width}px`, 
                 height: `${QR_CONFIG.spacer.height}px`, 
                 marginTop: `${marginTop}px`,
                 pointerEvents: 'none',
-                // shapeOutside ajuda navegadores modernos a entenderem melhor o fluxo
-                shapeOutside: 'margin-box' 
             }} 
           />
       );
@@ -107,7 +103,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
   ].filter(Boolean).join(' ');
 
-  // Seleciona a posição correta baseada no template
   const templateKey = style?.template || 'template-modern';
   const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   const showQR = style?.showQRCode || style?.showLinkedinQr;
@@ -288,17 +283,18 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* --- QR CODE: POSICIONAMENTO ABSOLUTO E SEGURO --- */}
+      {/* POSICIONAMENTO ABSOLUTO E SEGURO DO CONTAINER DO QR CODE */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              width: `${QR_CONFIG.spacer.width}px`, // Largura fixa igual ao espaçador
+              width: `${QR_CONFIG.spacer.width}px`, // Largura igual ao espaçador para alinhamento perfeito
               zIndex: 30, 
               pointerEvents: 'none',
+              // Flex-end garante que se o container for maior que o conteúdo, o conteúdo fique colado na margem direita
               display: 'flex',
-              justifyContent: 'flex-end', // Garante que alinhe à direita dentro da caixa
+              justifyContent: 'flex-end', 
               alignItems: 'flex-end'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
