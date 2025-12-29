@@ -33,7 +33,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
       try {
         const dataUrl = await QRCode.toDataURL(whatsappLink, {
           errorCorrectionLevel: 'M',
-          margin: 1, // Margem reduzida para maximizar o código
+          margin: 1, // Margem mínima
           width: 80,
         });
         setWhatsappQrUrl(dataUrl);
@@ -57,7 +57,7 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         try {
             const dataUrl = await QRCode.toDataURL(link, {
                 errorCorrectionLevel: 'M',
-                margin: 1,
+                margin: 1, // Margem mínima
                 width: 80,
             });
             setLinkedinQrUrl(dataUrl);
@@ -79,7 +79,9 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         flexDirection: 'row', 
         gap: '12px', 
         alignItems: 'flex-end',
-        pointerEvents: 'none' // Garante que não interfira no clique
+        pointerEvents: 'none',
+        justifyContent: 'flex-end', // Garante alinhamento à direita
+        width: '100%'
     }}>
        {linkedinQrUrl && (
           <div className="flex flex-col items-center" style={{ width: '80px', flexShrink: 0 }}>
