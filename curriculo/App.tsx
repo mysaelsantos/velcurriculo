@@ -15,11 +15,14 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// Configurações Globais
-const A4_HEIGHT = 1123;
-// Definimos a zona de perigo visual onde o QR Code realmente começa a ocupar espaço
-// Considerando margem inferior + altura do QR Code (aprox 35px + 100px)
-const QR_CODE_VISUAL_START_FROM_BOTTOM = 150; 
+// --- CONSTANTES GLOBAIS DE LAYOUT ---
+const A4_HEIGHT = 1123; // Altura fixa do A4 em px (96dpi)
+const MARGIN_BOTTOM = 50; // Margem inferior de segurança da página
+const QR_AREA_HEIGHT = 140; // Altura reservada para o QR Code (incluindo margens)
+
+// Define onde (Y) a zona segura termina e começa o QR Code.
+// 1123 - 50 (margem) - 140 (QR) = ~933px do topo
+const QR_DANGER_ZONE_START = A4_HEIGHT - MARGIN_BOTTOM - QR_AREA_HEIGHT; 
 
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -385,7 +388,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO ---
+    // --- LÓGICA DE PAGINAÇÃO CALIBRADA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -429,9 +432,8 @@ const App: React.FC = () => {
             const previewEl = await onRenderComplete;
             
             const MARGIN_TOP = 50;
-            const MARGIN_BOTTOM = 50; 
-            
-            const qrZoneStart = A4_HEIGHT - QR_CODE_VISUAL_START_FROM_BOTTOM;
+            // Ponto de corte do QR Code corrigido
+            const dangerZoneStart = QR_DANGER_ZONE_START;
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -543,29 +545,30 @@ const App: React.FC = () => {
                 currentY = MARGIN_TOP + 30; 
             };
 
-            const dangerZoneStart = qrZoneStart;
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- CÁLCULO DE COLISÃO COM QR CODE ---
-                // Verifica se o bloco TERMINA dentro ou depois da zona de perigo
+                // --- CÁLCULO DE COLISÃO PRECISO ---
+                // Verifica se o bloco atual cruza a linha de início do QR Code
                 const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // Calcula onde o espaçador deve começar DENTRO do bloco
-                    // offset = Ponto onde QR começa (global) - Ponto onde Bloco começa (global)
+                    // Calcula o offset DENTRO do bloco.
+                    // Se o texto começa em 900 e o QR começa em 933, temos 33px de texto "largo" antes de estreitar.
+                    // O Math.max(0, ...) garante que se o texto começar depois do QR, o offset é 0 (estreito desde o início).
                     const offset = Math.max(0, dangerZoneStart - currentY);
                     
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = offset;
 
-                    // Aumentamos um pouco a altura estimada para compensar a quebra de linha
-                    effectiveHeight = block.height * 1.15; 
+                    // Ajuste de altura: como o texto fica mais estreito, ele cresce para baixo.
+                    // Fator 1.1 é conservador o suficiente.
+                    effectiveHeight = block.height * 1.1; 
                 }
 
                 const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
