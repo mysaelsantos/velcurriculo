@@ -2,16 +2,16 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// CONFIGURAÇÃO GENEROSA DE ESPAÇO
-// Aumentamos para 200px de largura para garantir que nada seja cortado.
+// CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    spacer: { width: 200, height: 130 }, 
+    // Tamanho do espaçador (invisível)
+    spacer: { width: 190, height: 130 }, 
     
-    // Coordenadas absolutas (Bottom/Right) ajustadas para cada template
+    // Coordenadas para trazer o QR code mais para o canto (valores menores = mais perto da borda)
     positions: {
-        'template-modern': { bottom: 30, right: 35 }, 
-        'template-classic': { bottom: 45, right: 55 },
-        'template-minimalist': { bottom: 40, right: 55 },
+        'template-modern': { bottom: 20, right: 20 }, 
+        'template-classic': { bottom: 40, right: 40 },
+        'template-minimalist': { bottom: 35, right: 40 },
     }
 };
 
@@ -31,8 +31,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // --- O "ESPAÇADOR FANTASMA" ---
-  // Injeta um bloco flutuante invisível para empurrar o texto
   const getLocalSpacer = (itemId: string) => {
       if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
 
@@ -230,19 +228,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative`}>
-            {/* Espaçador para o bloco de idiomas inteiro */}
-            {getLocalSpacer('languages-block')}
-            {languages && languages.length > 0 ? (
-                languages.map(lang => (
-                    <div key={lang.id} className="flex items-baseline">
-                        <h4 className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</h4>
-                        <p className="text-gray-700">{lang.proficiency || 'Nível'}</p>
-                    </div>
-                ))
-            ) : (
-                <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
-            )}
+            {/* CORREÇÃO AQUI: Mudamos de flex para block + inline-block para o float funcionar corretamente */}
+            <div id="resume-languages-list" className="w-full relative block">
+                {getLocalSpacer('languages-block')}
+                {languages && languages.length > 0 ? (
+                    languages.map(lang => (
+                        <div key={lang.id} className="inline-block mr-4 mb-1">
+                            <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
+                            <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
+                )}
             </div>
         </section>
         )}
@@ -251,13 +249,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
-            <div id="resume-skills" className="w-full relative">
-                {/* Espaçador para skills (bloco inteiro) */}
+            {/* CORREÇÃO AQUI: Block para permitir wrap em volta do spacer */}
+            <div id="resume-skills" className="w-full relative block">
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
-                            <span key={index}>
+                            <span key={index} className="inline-block">
                                 {skill}
                                 {index < processedSkills.length - 1 && (
                                     <span className="mx-2 font-bold text-gray-400">•</span>
@@ -266,11 +264,11 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="block">
                         {processedSkills.map((skill, index) => (
                             <span 
                                 key={index} 
-                                className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1"
+                                className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1 mr-2"
                             >
                                 {skill}
                             </span>
@@ -283,19 +281,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO E SEGURO DO CONTAINER DO QR CODE */}
+      {/* Container Absoluto do QR Code */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              width: `${QR_CONFIG.spacer.width}px`, // Largura igual ao espaçador para alinhamento perfeito
+              width: 'auto', 
               zIndex: 30, 
               pointerEvents: 'none',
-              // Flex-end garante que se o container for maior que o conteúdo, o conteúdo fique colado na margem direita
-              display: 'flex',
-              justifyContent: 'flex-end', 
-              alignItems: 'flex-end'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
