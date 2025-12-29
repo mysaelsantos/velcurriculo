@@ -15,17 +15,16 @@ export interface ResumePreviewRef {
   getElement: () => HTMLDivElement | null;
 }
 
-// --- CONFIGURAÇÃO DE POSIÇÃO PRÉ-DEFINIDA ---
-// Define exatamente onde o QR Code vai ficar (absoluto) e o tamanho da área reservada.
+// Configuração exata da posição dos QR Codes
 const TEMPLATE_QR_CONFIG: Record<string, { bottom: number; right: number; width: number; height: number }> = {
-    'template-modern': { bottom: 35, right: 35, width: 140, height: 140 },
-    'template-classic': { bottom: 45, right: 50, width: 140, height: 140 },
-    'template-minimalist': { bottom: 40, right: 50, width: 140, height: 140 },
+    'template-modern': { bottom: 35, right: 35, width: 180, height: 120 }, // Largura aumentada para caber 2 QRs
+    'template-classic': { bottom: 45, right: 50, width: 180, height: 120 },
+    'template-minimalist': { bottom: 40, right: 50, width: 180, height: 120 },
 };
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
-  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrSpacerMarginTop } = safeData;
+  const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +37,29 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         document.documentElement.style.setProperty('--theme-color', style.color);
     }
   }, [style?.color]);
+
+  // Função auxiliar para gerar o espaçador local
+  const getLocalSpacer = (itemId: string) => {
+      // Se não há offset calculado para este item, não renderiza nada.
+      if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
+
+      const marginTop = qrCodeOffsets[itemId];
+      const qrConfig = style?.template ? TEMPLATE_QR_CONFIG[style.template] : TEMPLATE_QR_CONFIG['template-modern'];
+      
+      // Retorna uma DIV flutuante que empurra o texto APENAS neste ponto
+      return (
+          <div 
+            style={{ 
+                float: 'right', 
+                clear: 'right',
+                width: `${qrConfig.width + 10}px`, 
+                height: `${qrConfig.height}px`, 
+                marginTop: `${marginTop}px`,
+                pointerEvents: 'none'
+            }} 
+          />
+      );
+  };
 
   const processedSkills = useMemo(() => {
       if (!skills || !Array.isArray(skills)) return [];
@@ -68,8 +90,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   };
 
   const isModern = style?.template === 'template-modern';
-  
-  // Ajuste de layout para foto no template moderno
   const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
@@ -81,12 +101,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
           }
           return { marginTop: isModern ? '0' : '4px' };
       }
-      
-      if (isModern) {
-          return { paddingTop: '60px' };
-      } else {
-          return { marginTop: '0px', paddingTop: '30px' };
-      }
+      if (isModern) return { paddingTop: '60px' };
+      return { marginTop: '0px', paddingTop: '30px' };
   };
 
   const containerClasses = [
@@ -96,7 +112,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
   ].filter(Boolean).join(' ');
 
-  // Configurações do QR Code para o template atual
   const qrConfig = style?.template ? TEMPLATE_QR_CONFIG[style.template] : TEMPLATE_QR_CONFIG['template-modern'];
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
@@ -128,30 +143,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       )}
       
       <main className="space-y-4" style={getMainStyle()}>
-        
-        {/* --- O SEGREDO DO LAYOUT EM L --- */}
-        {/* Este é o espaçador invisível que empurra o texto para a esquerda */}
-        {isFirstPage && showQR && qrSpacerMarginTop !== undefined && (
-            <div 
-                className="qr-ghost-spacer"
-                style={{
-                    float: 'right',
-                    clear: 'both',
-                    width: `${qrConfig.width + 10}px`, // +10px de margem de segurança
-                    height: `${qrConfig.height}px`,
-                    marginTop: `${qrSpacerMarginTop}px`,
-                    // Debug color (remova em produção se quiser, mas é invisível)
-                    // backgroundColor: 'rgba(255,0,0,0.2)', 
-                    pointerEvents: 'none'
-                }}
-            />
-        )}
-        
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
-                    {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                {/* Injeção do Espaçador Local no Resumo */}
+                <div className="relative">
+                    {getLocalSpacer('summary-text')}
+                    <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
+                        {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+                    </div>
                 </div>
             </section>
         )}
@@ -162,7 +162,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => (
-                        <div key={exp.id} className="w-full">
+                        <div key={exp.id} className="w-full relative">
                             <div className="flex justify-between items-baseline flex-wrap">
                                 <div className="pr-4">
                                     <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
@@ -170,10 +170,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 </div>
                                 <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                             </div>
+                            
+                            {/* Injeção do Espaçador Local na Descrição da Experiência */}
                             {exp.description && (
-                                <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
-                                    {exp.description}
-                                </p>
+                                <div>
+                                    {getLocalSpacer(exp.id)}
+                                    <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
+                                        {exp.description}
+                                    </p>
+                                </div>
                             )}
                         </div>
                     ))
@@ -190,7 +195,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    <div key={edu.id} className="w-full">
+                    <div key={edu.id} className="w-full relative">
+                         {/* Injeção do Espaçador Local na Educação (caso raro, mas possível) */}
+                         {getLocalSpacer(edu.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
@@ -213,7 +220,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
-                    <div key={course.id} className="w-full">
+                    <div key={course.id} className="w-full relative">
+                        {getLocalSpacer(course.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
@@ -234,6 +242,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
             <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full`}>
+            {/* O espaçador para idiomas deve ser tratado no bloco pai, se necessário, mas aqui simplificamos */}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="flex items-baseline">
@@ -252,7 +261,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
-            <div id="resume-skills" className="w-full">
+            <div id="resume-skills" className="w-full relative">
+                {/* Espaçador para skills (bloco inteiro) */}
+                {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
@@ -282,14 +293,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO DO QR CODE (Fixo e estável) */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrConfig.bottom}px`,
               right: `${qrConfig.right}px`,
               width: `${qrConfig.width}px`,
-              zIndex: 20 // Garante que fica acima de qualquer background, mas o texto flui ao redor do spacer
+              zIndex: 20 
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
