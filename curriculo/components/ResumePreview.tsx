@@ -89,15 +89,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return { marginTop: '0px', paddingTop: '30px' };
   };
 
-  // --- A CORREÇÃO ESTÁ AQUI EMBAIXO ---
-  // Adicionei '!transition-none' e '!transform-none' quando isMeasurement é verdadeiro.
-  // O '!' (important) do Tailwind garante que sobrescreva o CSS global.
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
-      isMeasurement ? '!transition-none !transform-none !animate-none' : '' 
+      // IMPORTANTE: Isso desativa animações durante a medição para evitar cortes errados
+      isMeasurement ? '!transition-none !transform-none !animate-none' : 'origin-top-left' 
   ].filter(Boolean).join(' ');
 
   const templateKey = style?.template || 'template-modern';
@@ -110,7 +108,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
                 {personalInfo.profilePicture && (
-                    /* Adicionado width/height explícitos para evitar layout shift durante o load */
                     <img 
                         id="profile-pic-img" 
                         src={personalInfo.profilePicture} 
@@ -237,7 +234,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
             <div id="resume-languages-list" className="w-full relative block">
-            {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
@@ -258,7 +254,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className="w-full relative block">
-                {/* Espaçador para skills (bloco inteiro) */}
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
@@ -289,7 +284,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
