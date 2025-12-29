@@ -2,25 +2,18 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-interface ResumePreviewProps {
-  data: PageData;
-  isDemoMode: boolean;
-  isFirstPage: boolean;
-  isMeasurement?: boolean;
-  hideEmptySections?: boolean;
-  isPrint?: boolean;
-}
-
-export interface ResumePreviewRef {
-  getElement: () => HTMLDivElement | null;
-}
-
-// CONFIGURAÇÃO DE POSIÇÃO ABSOLUTA E EXATA
-// Ajustado para garantir que fique no canto inferior direito, dentro da margem de impressão
-const TEMPLATE_QR_CONFIG: Record<string, { bottom: number; right: number; width: number; height: number }> = {
-    'template-modern': { bottom: 30, right: 30, width: 180, height: 100 }, 
-    'template-classic': { bottom: 40, right: 50, width: 180, height: 100 },
-    'template-minimalist': { bottom: 35, right: 50, width: 180, height: 100 },
+// --- CONFIGURAÇÃO DE POSIÇÃO E TAMANHO (CALIBRAGEM FINA) ---
+// Define onde o QR Code fica e qual o tamanho do "buraco" no texto
+const QR_CONFIG = {
+    // Dimensões da área que o texto deve desviar
+    spacer: { width: 160, height: 140 }, 
+    
+    // Posições exatas (bottom/right) para cada template para alinhar com as margens visuais
+    positions: {
+        'template-modern': { bottom: 25, right: 30 }, // Margens menores do tema moderno
+        'template-classic': { bottom: 40, right: 50 }, // Margens maiores do clássico
+        'template-minimalist': { bottom: 35, right: 50 },
+    }
 };
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
@@ -39,24 +32,25 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // --- CORREÇÃO DO ESPAÇADOR ---
-  // Reduzimos a largura para 180px (antes estava 320px, causando o buraco)
+  // --- O "ESPAÇADOR FANTASMA" CORRIGIDO ---
   const getLocalSpacer = (itemId: string) => {
+      // Se não houver offset calculado para este bloco, não faz nada
       if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
 
       const marginTop = qrCodeOffsets[itemId];
-      const templateName = style?.template || 'template-modern';
-      const config = TEMPLATE_QR_CONFIG[templateName];
       
       return (
           <div 
             style={{ 
                 float: 'right', 
                 clear: 'right',
-                width: `${config.width}px`, // Largura corrigida para não empurrar texto demais
-                height: `${config.height}px`, 
+                // Largura ajustada para não criar buracos desnecessários
+                width: `${QR_CONFIG.spacer.width}px`, 
+                height: `${QR_CONFIG.spacer.height}px`, 
                 marginTop: `${marginTop}px`,
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                // shapeOutside ajuda navegadores modernos a entenderem melhor o fluxo
+                shapeOutside: 'margin-box' 
             }} 
           />
       );
@@ -113,7 +107,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
   ].filter(Boolean).join(' ');
 
-  const qrConfig = style?.template ? TEMPLATE_QR_CONFIG[style.template] : TEMPLATE_QR_CONFIG['template-modern'];
+  // Seleciona a posição correta baseada no template
+  const templateKey = style?.template || 'template-modern';
+  const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
@@ -240,7 +236,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
             <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative`}>
-            {/* Espaçador para o bloco de idiomas inteiro, se necessário */}
+            {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
@@ -292,15 +288,18 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO FIXO DO QR CODE */}
+      {/* --- QR CODE: POSICIONAMENTO ABSOLUTO E SEGURO --- */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
-              bottom: `${qrConfig.bottom}px`,
-              right: `${qrConfig.right}px`,
-              width: `${qrConfig.width}px`,
-              zIndex: 30, // Z-index alto para ficar acima de tudo
-              pointerEvents: 'none' // Não atrapalhar cliques
+              bottom: `${qrPosition.bottom}px`,
+              right: `${qrPosition.right}px`,
+              width: `${QR_CONFIG.spacer.width}px`, // Largura fixa igual ao espaçador
+              zIndex: 30, 
+              pointerEvents: 'none',
+              display: 'flex',
+              justifyContent: 'flex-end', // Garante que alinhe à direita dentro da caixa
+              alignItems: 'flex-end'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
