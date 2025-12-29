@@ -30,6 +30,15 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
+// --- CONFIGURAÇÃO DA ZONA DO QR CODE ---
+// Define onde começa o QR Code (startY) e seu tamanho (width/height) para cada template.
+// Baseado em uma página A4 de 1123px de altura.
+const QR_LAYOUTS: Record<string, { startY: number; width: number; height: number }> = {
+    'template-modern': { startY: 900, width: 320, height: 200 },
+    'template-classic': { startY: 900, width: 320, height: 200 },
+    'template-minimalist': { startY: 900, width: 320, height: 200 },
+};
+
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Marcos MJ Santos',
@@ -394,7 +403,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO COM "L-SHAPE" ---
+    // --- LÓGICA DE PAGINAÇÃO COM "L-SHAPE" CORRIGIDA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -441,8 +450,11 @@ const App: React.FC = () => {
             const MARGIN_TOP = 50;
             const MARGIN_BOTTOM = 50; 
             
-            // Ponto onde o QR Code começa (visualmente)
-            const QR_CODE_START_Y = 930; 
+            // --- USO DA CONFIGURAÇÃO FIXA ---
+            const currentTemplate = dataToPaginate.style.template;
+            const qrLayout = QR_LAYOUTS[currentTemplate] || QR_LAYOUTS['template-modern'];
+            const dangerZoneStart = qrLayout.startY;
+            // --------------------------------
 
             const getElementHeight = (element: HTMLElement) => {
                 if (!element) return 0;
@@ -563,37 +575,32 @@ const App: React.FC = () => {
                 return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
             };
 
-            const dangerZoneStart = QR_CODE_START_Y;
             let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- NOVA LÓGICA "L-SHAPE" ---
-                // Verifica se o bloco atual "cai" na zona do QR code (Começa antes, termina depois OU começa dentro)
-                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                // --- NOVA LÓGICA "L-SHAPE" USANDO VALORES FIXOS ---
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && ((currentY + block.height) > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // Calcula o offset: quantos pixels de "segurança" (largura total) temos antes de atingir o QR Code
-                    // Se o bloco começa antes de 930 (ex: 800), o offset é 130px.
-                    // Se começa depois (ex: 950), o offset é 0 (espaçador no topo).
-                    const offset = Math.max(0, dangerZoneStart - currentY);
+                    // Calcula o offset exato
+                    let offset = dangerZoneStart - currentY;
+                    if (offset < 0) offset = 0; // Já começa lado a lado
                     
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = offset;
 
-                    // Estimativa de crescimento de altura: 
-                    // Como o texto vai estreitar no final, ele pode crescer um pouco para baixo.
-                    // Adicionamos um fator de segurança conservador apenas para a paginação.
-                    effectiveHeight = block.height * 1.15; 
+                    // Margem de segurança para o texto estreitado
+                    effectiveHeight = block.height * 1.25; 
                 }
 
                 const available = getAvailableSpace();
 
-                // Lógica de títulos (mantém junto do próximo bloco)
+                // Lógica de títulos
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
                     const nextItemHeight = nextBlock ? nextBlock.height : 40; 
@@ -611,7 +618,6 @@ const App: React.FC = () => {
                 // Quebra de página se necessário
                 if (effectiveHeight > available) {
                     createNewPage();
-                    // Na nova página, o offset do QR Code não existe, altura volta ao normal
                     effectiveHeight = block.height;
                     
                     if (block.type === 'summary') {
@@ -626,7 +632,6 @@ const App: React.FC = () => {
                     currentY += titleHeight + effectiveHeight; 
                     pendingTitleHeight = 0;
                 } else {
-                    // Adiciona o dado à página
                     if (block.type === 'summary') {
                         currentPageData.summary = block.data;
                     } else if (block.type === 'skills' || block.type === 'languages') {
