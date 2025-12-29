@@ -9,25 +9,20 @@ import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
-import type { ResumeData, QrSpacer } from './types';
+import type { ResumeData } from './types';
 
-// --- CONFIGURAÇÃO DA ÁREA DO QR CODE POR TEMPLATE ---
-// Define a altura e largura reservada para o QR Code no rodapé
-const TEMPLATE_CONFIG: Record<string, { qrHeight: number; qrWidth: number }> = {
-    'template-modern': { qrHeight: 180, qrWidth: 350 },
-    'template-classic': { qrHeight: 160, qrWidth: 340 },
-    'template-minimalist': { qrHeight: 160, qrWidth: 340 }
-};
-
+// Interface atualizada para suportar o offset dinâmico do QR Code
 interface PageData extends Partial<ResumeData> {
     continuation?: {
         [itemId: string]: {
             offset: number;
             totalHeight: number;
+            visibleHeight?: number;
         };
     };
-    spacers?: {
-        [itemId: string]: QrSpacer;
+    // Substituímos restrictedBlockIds por offsets precisos
+    qrCodeOffsets?: {
+        [itemId: string]: number; // Distância em px do topo do elemento até o topo do QR Code
     };
 }
 
@@ -399,7 +394,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO RECONSTRUÍDA E ROBUSTA ---
+    // --- LÓGICA DE PAGINAÇÃO COM "L-SHAPE" ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -412,19 +407,20 @@ const App: React.FC = () => {
                 if (!previewEl) {
                     requestAnimationFrame(checkRender); return;
                 }
+    
                 const images = Array.from(previewEl.querySelectorAll('img'));
                 const imagePromises = images.map(img => {
                     if (img.complete) return Promise.resolve();
                     return new Promise(res => { img.onload = res; img.onerror = res; });
                 });
+    
                 await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 100)); // Estabilização
+                await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
             };
             
-            // Renderiza para medição exata
             measurementRootRef.current.render(
                 <ResumePreview 
                     key={`${dataToPaginate.style.template}-${Date.now()}`}
@@ -442,32 +438,34 @@ const App: React.FC = () => {
             const previewEl = await onRenderComplete;
             
             const A4_HEIGHT = 1123; 
-            const PAGE_MARGIN_BOTTOM = 50;
-            const USABLE_HEIGHT = A4_HEIGHT - PAGE_MARGIN_BOTTOM;
-
-            // Configuração do QR Code para o template atual
-            const templateKey = dataToPaginate.style.template || 'template-modern';
-            const qrConfig = TEMPLATE_CONFIG[templateKey] || TEMPLATE_CONFIG['template-modern'];
-            const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+            const MARGIN_TOP = 50;
+            const MARGIN_BOTTOM = 50; 
             
-            // Onde começa a zona proibida (rodapé) na primeira página
-            const qrZoneStartY = A4_HEIGHT - PAGE_MARGIN_BOTTOM - qrConfig.qrHeight;
+            // Ponto onde o QR Code começa (visualmente)
+            const QR_CODE_START_Y = 930; 
 
-            // Função helper para obter métricas DOM
-            const getBlockMetrics = (element: HTMLElement) => {
-                if (!element) return null;
-                const top = element.offsetTop;
-                const height = element.offsetHeight;
+            const getElementHeight = (element: HTMLElement) => {
+                if (!element) return 0;
                 const style = window.getComputedStyle(element);
+                const marginTop = parseFloat(style.marginTop) || 0;
                 const marginBottom = parseFloat(style.marginBottom) || 0;
-                return { top, height, totalHeight: height + marginBottom };
+                return element.offsetHeight + marginTop + marginBottom;
             };
+
+            const headerEl = previewEl.querySelector('header') as HTMLElement;
+            const mainEl = previewEl.querySelector('main') as HTMLElement;
+            
+            if (!mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+
+            const headerHeight = getElementHeight(headerEl);
+            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
 
             interface ContentBlock {
                 id: string;
                 type: keyof ResumeData; 
                 data: any; 
-                metrics: { top: number, height: number, totalHeight: number };
+                height: number;
+                node: HTMLElement;
             }
 
             const blocks: ContentBlock[] = [];
@@ -478,15 +476,25 @@ const App: React.FC = () => {
 
                 const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
                 if (titleEl) {
-                    const m = getBlockMetrics(titleEl);
-                    if (m) blocks.push({ id: `${dataKey}-title`, type: dataKey, data: null, metrics: m });
+                    blocks.push({
+                        id: `${dataKey}-title`,
+                        type: dataKey,
+                        data: null, 
+                        height: getElementHeight(titleEl) + 10,
+                        node: titleEl
+                    });
                 }
 
                 if (dataKey === 'summary') {
-                    const pEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
+                    const pEl = sectionEl.querySelector('p') as HTMLElement;
                     if (pEl) {
-                        const m = getBlockMetrics(pEl);
-                        if (m) blocks.push({ id: 'summary-text', type: 'summary', data: dataToPaginate.summary, metrics: m });
+                        blocks.push({
+                            id: 'summary-text',
+                            type: 'summary',
+                            data: dataToPaginate.summary,
+                            height: getElementHeight(pEl),
+                            node: pEl
+                        });
                     }
                 } else if (listId) {
                     const listContainer = sectionEl.querySelector(`#${listId}`);
@@ -498,15 +506,25 @@ const App: React.FC = () => {
                     items.forEach((itemEl, index) => {
                         const itemData = dataList[index];
                         if (itemData) {
-                            const m = getBlockMetrics(itemEl);
-                            if (m) blocks.push({ id: itemData.id, type: dataKey, data: itemData, metrics: m });
+                            blocks.push({
+                                id: itemData.id,
+                                type: dataKey,
+                                data: itemData,
+                                height: getElementHeight(itemEl),
+                                node: itemEl
+                            });
                         }
                     });
                 } else if (dataKey === 'skills' || dataKey === 'languages') {
                      const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
                      if(contentDiv) {
-                         const m = getBlockMetrics(contentDiv);
-                         if (m) blocks.push({ id: `${dataKey}-block`, type: dataKey, data: dataToPaginate[dataKey], metrics: m });
+                         blocks.push({
+                             id: `${dataKey}-block`,
+                             type: dataKey,
+                             data: dataToPaginate[dataKey],
+                             height: getElementHeight(contentDiv),
+                             node: contentDiv
+                         });
                      }
                 }
             };
@@ -518,99 +536,120 @@ const App: React.FC = () => {
             if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
             if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            // Garante a ordem visual
-            blocks.sort((a, b) => a.metrics.top - b.metrics.top);
-
             const pages: PageData[] = [];
-            let currentPageIndex = 0;
-            let currentY = 0; // Y virtual
             
             let currentPageData: PageData = { 
                 personalInfo: dataToPaginate.personalInfo, 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                spacers: {}
+                qrCodeOffsets: {} // Inicializa o mapa de offsets
             };
-
-            // Pega o top do primeiro bloco para inicializar o Y (ignora o header que já foi renderizado)
-            currentY = blocks.length > 0 ? blocks[0].metrics.top : 0;
+            
+            let currentY = MARGIN_TOP + headerHeight + mainMarginTop;
+            let currentPageIndex = 0;
 
             const createNewPage = () => {
                 pages.push(currentPageData);
                 currentPageData = { 
                     style: dataToPaginate.style,
                     experiences: [], education: [], courses: [], languages: [], skills: [],
-                    spacers: {}
+                    qrCodeOffsets: {}
                 };
                 currentPageIndex++;
-                currentY = 50; // Margem topo da nova página
+                currentY = MARGIN_TOP + 30; 
             };
+
+            const getAvailableSpace = () => {
+                return (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
+            };
+
+            const dangerZoneStart = QR_CODE_START_Y;
+            let pendingTitleHeight = 0;
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
-                let blockHeight = block.metrics.totalHeight;
+                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+                
+                // --- NOVA LÓGICA "L-SHAPE" ---
+                // Verifica se o bloco atual "cai" na zona do QR code (Começa antes, termina depois OU começa dentro)
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                
+                let effectiveHeight = block.height;
 
-                // Títulos não devem ficar sozinhos no rodapé
-                const isTitle = block.id.endsWith('-title');
-                if (isTitle) {
-                    const nextBlock = blocks[i+1];
-                    const combinedHeight = blockHeight + (nextBlock ? nextBlock.metrics.totalHeight : 0);
-                    if (currentY + combinedHeight > USABLE_HEIGHT) {
-                        createNewPage();
-                    }
-                }
-
-                // Verifica se cabe na página
-                if (currentY + blockHeight > USABLE_HEIGHT) {
-                    if (blockHeight < USABLE_HEIGHT) {
-                         createNewPage();
-                    }
-                }
-
-                // LÓGICA DE ESPAÇADOR (L-SHAPE)
-                if (currentPageIndex === 0 && hasQr) {
-                    const blockBottom = currentY + blockHeight;
+                if (overlapsDangerZone) {
+                    // Calcula o offset: quantos pixels de "segurança" (largura total) temos antes de atingir o QR Code
+                    // Se o bloco começa antes de 930 (ex: 800), o offset é 130px.
+                    // Se começa depois (ex: 950), o offset é 0 (espaçador no topo).
+                    const offset = Math.max(0, dangerZoneStart - currentY);
                     
-                    // Se o bloco invade a área do QR code
-                    if (blockBottom > qrZoneStartY) {
-                        let marginTop = qrZoneStartY - currentY;
-                        if (marginTop < 0) marginTop = 0;
+                    if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
+                    currentPageData.qrCodeOffsets[block.id] = offset;
 
-                        if (!currentPageData.spacers) currentPageData.spacers = {};
-                        currentPageData.spacers[block.id] = {
-                            height: qrConfig.qrHeight,
-                            width: qrConfig.qrWidth,
-                            marginTop: marginTop
-                        };
-                        
-                        // Compensa o crescimento vertical que o texto terá ao estreitar
-                        currentY += 40; 
+                    // Estimativa de crescimento de altura: 
+                    // Como o texto vai estreitar no final, ele pode crescer um pouco para baixo.
+                    // Adicionamos um fator de segurança conservador apenas para a paginação.
+                    effectiveHeight = block.height * 1.15; 
+                }
+
+                const available = getAvailableSpace();
+
+                // Lógica de títulos (mantém junto do próximo bloco)
+                if (block.id.endsWith('-title')) {
+                    const nextBlock = blocks[i+1];
+                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
+                    
+                    if (available < (effectiveHeight + nextItemHeight)) {
+                        createNewPage();
+                        effectiveHeight = block.height; 
                     }
+                    
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = effectiveHeight; 
+                    continue; 
                 }
 
-                // Adiciona dados
-                if (block.type === 'summary') {
-                    currentPageData.summary = block.data;
-                } else if (block.type === 'skills' || block.type === 'languages') {
-                    currentPageData[block.type] = block.data;
-                } else if (Array.isArray(currentPageData[block.type])) {
-                    (currentPageData[block.type] as any[]).push(block.data);
+                // Quebra de página se necessário
+                if (effectiveHeight > available) {
+                    createNewPage();
+                    // Na nova página, o offset do QR Code não existe, altura volta ao normal
+                    effectiveHeight = block.height;
+                    
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
+                    
+                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
+                    currentY += titleHeight + effectiveHeight; 
+                    pendingTitleHeight = 0;
+                } else {
+                    // Adiciona o dado à página
+                    if (block.type === 'summary') {
+                        currentPageData.summary = block.data;
+                    } else if (block.type === 'skills' || block.type === 'languages') {
+                        currentPageData[block.type] = block.data;
+                    } else if (Array.isArray(currentPageData[block.type])) {
+                        (currentPageData[block.type] as any[]).push(block.data);
+                    } 
+                    currentY += effectiveHeight;
+                    pendingTitleHeight = 0; 
                 }
-
-                currentY += blockHeight;
             }
 
             if (Object.keys(currentPageData).length > 0) {
                pages.push(currentPageData);
             }
             
-            const finalPages = pages.filter((p, idx) => {
+            const finalPages = pages.filter(p => {
                 const hasData = p.summary || 
                                 (p.experiences && p.experiences.length > 0) || 
                                 (p.education && p.education.length > 0) ||
                                 (p.courses && p.courses.length > 0) ||
                                 (p.skills && p.skills.length > 0);
-                return hasData || (p.personalInfo && idx === 0);
+                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
             });
 
             setPaginatedData(finalPages);
