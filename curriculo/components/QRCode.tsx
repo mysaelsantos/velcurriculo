@@ -33,8 +33,8 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
       try {
         const dataUrl = await QRCode.toDataURL(whatsappLink, {
           errorCorrectionLevel: 'M',
-          margin: 1, // Margem mínima
-          width: 80,
+          margin: 1, 
+          width: 85, // Ligeiramente maior para leitura fácil
         });
         setWhatsappQrUrl(dataUrl);
       } catch (err) {
@@ -57,8 +57,8 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         try {
             const dataUrl = await QRCode.toDataURL(link, {
                 errorCorrectionLevel: 'M',
-                margin: 1, // Margem mínima
-                width: 80,
+                margin: 1, 
+                width: 85,
             });
             setLinkedinQrUrl(dataUrl);
         } catch (err) {
@@ -77,24 +77,27 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
     <div id="whatsapp-qr-code-container" style={{ 
         display: 'flex', 
         flexDirection: 'row', 
-        gap: '12px', 
+        gap: '10px', 
         alignItems: 'flex-end',
         justifyContent: 'flex-end',
         pointerEvents: 'none',
-        maxWidth: '100%' // Garante que não estoure o container pai
+        width: '100%',
+        padding: '0', // Remove padding interno que causava desalinhamento
+        background: 'transparent',
+        boxShadow: 'none' // Remove sombra interna se houver
     }}>
        {linkedinQrUrl && (
           <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
-                alt="Ícone do LinkedIn" 
-                className="h-6 mb-1 object-contain" 
+                alt="LinkedIn" 
+                className="h-5 mb-1 object-contain" 
               />
               <img 
                 id="qr-code-linkedin-img" 
-                alt="QR Code do LinkedIn" 
+                alt="QR LinkedIn" 
                 src={linkedinQrUrl} 
-                style={{ width: '70px', height: '70px', objectFit: 'contain' }}
+                style={{ width: '75px', height: '75px', objectFit: 'contain', display: 'block' }}
               />
           </div>
        )}
@@ -102,14 +105,14 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
           <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://files.catbox.moe/cvyrae.svg" 
-                alt="Ícone do WhatsApp" 
-                className="h-6 mb-1 object-contain" 
+                alt="WhatsApp" 
+                className="h-5 mb-1 object-contain" 
               />
               <img 
                 id="qr-code-img" 
-                alt="QR Code do WhatsApp" 
+                alt="QR WhatsApp" 
                 src={whatsappQrUrl} 
-                style={{ width: '70px', height: '70px', objectFit: 'contain' }}
+                style={{ width: '75px', height: '75px', objectFit: 'contain', display: 'block' }}
               />
           </div>
       )}
