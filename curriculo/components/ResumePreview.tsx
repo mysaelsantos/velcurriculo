@@ -4,12 +4,12 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Largura total de segurança (QR + margens)
-    safetyWidth: 220, 
+    // Mantemos a largura de proteção do texto
+    spacer: { width: 210, height: 130 }, 
     
-    // POSIÇÃO ABSOLUTA DO QR CODE
+    // CORREÇÃO DE POSIÇÃO: Valores menores aproximam da borda (Direita e Baixo)
     positions: {
-        'template-modern': { bottom: 15, right: 0 }, 
+        'template-modern': { bottom: 15, right: 0 }, // Bem no canto
         'template-classic': { bottom: 35, right: 25 },
         'template-minimalist': { bottom: 30, right: 25 },
     }
@@ -31,16 +31,23 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
-  // CORREÇÃO: Padding no container para evitar colisão com o QR Code
-  const getContainerStyle = (itemId: string) => {
-      if (!qrCodeOffsets || !qrCodeOffsets[itemId]) return {};
+  const getLocalSpacer = (itemId: string) => {
+      if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
 
-      // Se houver colisão detectada, aplicamos padding à direita
-      return { 
-          paddingRight: `${QR_CONFIG.safetyWidth}px`,
-          boxSizing: 'border-box' as const,
-          width: '100%'
-      };
+      const marginTop = qrCodeOffsets[itemId];
+      
+      return (
+          <div 
+            style={{ 
+                float: 'right', 
+                clear: 'right',
+                width: `${QR_CONFIG.spacer.width}px`, 
+                height: `${QR_CONFIG.spacer.height}px`, 
+                marginTop: `${marginTop}px`,
+                pointerEvents: 'none',
+            }} 
+          />
+      );
   };
 
   const processedSkills = useMemo(() => {
@@ -129,7 +136,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                <div className="relative" style={getContainerStyle('summary-text')}>
+                <div className="relative">
+                    {getLocalSpacer('summary-text')}
                     <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
                         {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
                     </div>
@@ -143,7 +151,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => (
-                        <div key={exp.id} className="w-full relative" style={getContainerStyle(exp.id)}>
+                        <div key={exp.id} className="w-full relative">
                             <div className="flex justify-between items-baseline flex-wrap">
                                 <div className="pr-4">
                                     <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
@@ -154,6 +162,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                             
                             {exp.description && (
                                 <div>
+                                    {getLocalSpacer(exp.id)}
                                     <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
                                         {exp.description}
                                     </p>
@@ -174,7 +183,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    <div key={edu.id} className="w-full relative" style={getContainerStyle(edu.id)}>
+                    <div key={edu.id} className="w-full relative">
+                         {getLocalSpacer(edu.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
@@ -197,7 +207,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
-                    <div key={course.id} className="w-full relative" style={getContainerStyle(course.id)}>
+                    <div key={course.id} className="w-full relative">
+                        {getLocalSpacer(course.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
                                 <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
@@ -217,8 +228,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO MANTIDA: Removida a classe 'block' para evitar conflito com 'flex' */}
-            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative`} style={getContainerStyle('languages-block')}>
+            <div id="resume-languages-list" className={`flex flex-wrap gap-x-4 gap-y-1 w-full relative block`}>
+            {/* Espaçador para o bloco de idiomas inteiro */}
+            {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
                     <div key={lang.id} className="inline-block mr-4 mb-1">
@@ -237,7 +249,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
             
-            <div id="resume-skills" className="w-full relative block" style={getContainerStyle('skills-block')}>
+            <div id="resume-skills" className="w-full relative block">
+                {/* Espaçador para skills (bloco inteiro) */}
+                {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
                         {processedSkills.map((skill, index) => (
@@ -273,13 +287,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              width: `${QR_CONFIG.safetyWidth}px`, 
+              width: `${QR_CONFIG.spacer.width}px`, 
               zIndex: 30, 
               pointerEvents: 'none',
               display: 'flex',
               justifyContent: 'flex-end', 
-              alignItems: 'flex-end',
-              paddingRight: '15px' // Margem interna para não colar na borda
+              alignItems: 'flex-end'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
