@@ -82,15 +82,15 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
         justifyContent: 'center',
         pointerEvents: 'none',
         backgroundColor: 'white',
-        padding: '10px 15px',
+        // PADDING AUMENTADO AQUI
+        padding: '12px 20px', 
         borderRadius: '8px',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', 
         border: '1px solid #e5e7eb',
         maxWidth: '100%',
-        minWidth: 'fit-content' // Garante que a caixa branca sempre envolva o conteúdo
+        minWidth: 'fit-content'
     }}>
        {linkedinQrUrl && (
-          // flexShrink: 0 IMPEDE que o QR code seja esmagado
           <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
@@ -106,7 +106,6 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
           </div>
        )}
        {whatsappQrUrl && (
-          // flexShrink: 0 IMPEDE que o QR code seja esmagado
           <div className="flex flex-col items-center" style={{ width: 'auto', flexShrink: 0 }}>
               <img 
                 src="https://files.catbox.moe/cvyrae.svg" 
