@@ -12,13 +12,13 @@ const ContinueProgressModal: React.FC<ContinueProgressModalProps> = ({ isOpen, o
   return (
     <div 
         className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        style={{ animation: 'fadeIn 0.2s ease-out' }}
+        // Removido o style inline para evitar conflitos de renderização no mobile
     >
-      {/* Correção do Bug:
-          Substituído 'transform transition-all' por 'animate-fade-in-scale'.
-          Isso garante que o modal surja do centro (scale 0.95 -> 1) sem deslizar lateralmente.
+      {/* Correções aplicadas:
+          1. 'm-auto': Força o elemento para o centro mesmo se o flexbox demorar 1 frame para calcular.
+          2. 'will-change-transform': Prepara a GPU do celular para a animação, evitando o "pulo" lateral.
       */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-fade-in-scale flex flex-col items-center text-center">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-fade-in-scale flex flex-col items-center text-center m-auto will-change-transform">
         
         {/* Ícone de Destaque */}
         <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-blue-600">
