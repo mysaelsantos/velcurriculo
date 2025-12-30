@@ -296,8 +296,8 @@ const App: React.FC = () => {
                 setFontsLoaded(true); // Libera mesmo com erro
             }
 
-            // Aguarda o tempo do "branding"
-            await new Promise(resolve => setTimeout(resolve, 3500));
+            // Aguarda o tempo do "branding" (AGORA 2 SEGUNDOS)
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Remove a sobreposição
             setIsLoading(false);
