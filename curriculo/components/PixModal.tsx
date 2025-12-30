@@ -43,11 +43,12 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   useEffect(() => {
     if (status === 'success') {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        // AUMENTADO DE 3000ms para 8000ms (8 Segundos)
         setTimeout(() => {
             onPaymentSuccess();
-        }, 3000);
+        }, 8000);
     }
-  }, [status, onPaymentSuccess]); // Adicionado onPaymentSuccess ao array de dependências
+  }, [status, onPaymentSuccess]); 
 
 
   useEffect(() => {
@@ -99,7 +100,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                        </svg>
                     </div>
-                    {/* **** MUDANÇA (ETAPA 1) **** */}
                     <h3 className="text-2xl font-bold text-gray-800 mt-6">Pagamento Confirmado!</h3>
                     <p className="text-gray-600 mt-2">Seu currículo está pronto para download.</p>
                 </div>
@@ -113,7 +113,15 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                         </svg>
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mt-6">Código Pix Expirado</h3>
-                    <p className="text-gray-600 mt-2 max-w-xs">O tempo para pagamento acabou. Por favor, feche esta janela e tente novamente para gerar um novo código.</p>
+                    <p className="text-gray-600 mt-2 max-w-xs">O tempo para pagamento acabou. Por favor, gere um novo código.</p>
+                    <div className="flex flex-col gap-3 mt-6 w-full">
+                        <button onClick={onClose} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                            Gerar Novo Código
+                        </button>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 font-medium">
+                            Voltar
+                        </button>
+                    </div>
                 </div>
             );
         case 'error':
@@ -122,8 +130,18 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <div className="flex items-center justify-center bg-red-100 rounded-full w-24 h-24">
                         <svg className="w-14 h-14 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
                      </div>
-                    <h3 className="text-2xl font-bold text-gray-800 mt-6">Ocorreu um Erro</h3>
-                    <p className="text-gray-600 mt-2 max-w-xs">Não foi possível verificar o pagamento. Por favor, tente novamente mais tarde.</p>
+                    {/* ALTERADO: Texto de erro para 'Código Expirado' ou erro genérico com opções */}
+                    <h3 className="text-2xl font-bold text-gray-800 mt-6">Código Pix Expirado</h3>
+                    <p className="text-gray-600 mt-2 max-w-xs">O código de pagamento não é mais válido. Por favor, gere um novo.</p>
+                    
+                    <div className="flex flex-col gap-3 mt-6 w-full">
+                        <button onClick={onClose} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                            Gerar Novo Código
+                        </button>
+                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 font-medium">
+                            Voltar
+                        </button>
+                    </div>
                 </div>
             );
         case 'pending':
@@ -137,7 +155,6 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                 <>
                     <h3 className="text-xl font-semibold text-center text-gray-800">Pague com Pix para Baixar</h3>
                     
-                    {/* (Mudança da sessão anterior: texto com degradê) */}
                     <p className="text-3xl font-bold text-center mt-2 mb-2 gradient-text">
                         {formattedAmount}
                     </p>
