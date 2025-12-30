@@ -31,7 +31,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
-      // Se tiver offset calculado pela paginação, usa-o
+      // Se tiver offset calculado (ou chumbado no modo demo), usa-o
       if (qrCodeOffsets && qrCodeOffsets[itemId] !== undefined) {
           const marginTop = qrCodeOffsets[itemId];
           return (
