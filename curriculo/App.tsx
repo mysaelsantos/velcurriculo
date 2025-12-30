@@ -18,8 +18,6 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
-
-// --- ZONA DE PERIGO (MANTIDA ORIGINAL) ---
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -273,11 +271,7 @@ const App: React.FC = () => {
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '794px';
-        // CORREÇÃO CRÍTICA: Adicionar as classes CSS do corpo principal ao nó de medição.
-        // Se isso não for feito, a medição usa fontes diferentes das reais (geralmente menores),
-        // causando o problema de texto invadindo o QR Code.
-        measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
+        measurementNode.style.width = '794px'; 
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
@@ -392,6 +386,14 @@ const App: React.FC = () => {
     
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
+        // CORREÇÃO ARTIFICIAL: Se for Modo Demo, NÃO calcula paginação.
+        // Assume que o Demo Data cabe numa página (foi feito para caber).
+        // Isso elimina qualquer erro de medição ou fonte não carregada.
+        if (isDemoMode) {
+            setPaginatedData([dataToPaginate]);
+            return [dataToPaginate];
+        }
+
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
@@ -411,8 +413,7 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                // Delay para garantir que a fonte (Inter/Roboto) carregou no elemento oculto
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 100)); // Pequeno delay seguro para dados reais
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -632,18 +633,31 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
+    // --- CORREÇÃO ARTIFICIAL DA ESCALA (ZOOM) ---
+    // No Modo Demo, calculamos a escala baseada na janela, ignorando o container instável.
+    // Isso evita o "encolhimento" visual.
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
         
         if (!previewColumn || !previewElement) return;
 
-        const columnWidth = previewColumn.offsetWidth;
-        // Evita divisões por zero que causam o colapso visual (encolhimento)
-        if (columnWidth <= 0) return;
-
+        let columnWidth = previewColumn.offsetWidth;
         const baseWidth = 794;
         const baseHeight = 1123;
+
+        // SE FOR DEMO E A LARGURA FOR SUSPEITA (Pequena demais ou zero)
+        // Forçamos uma largura baseada na tela para garantir o visual correto.
+        if (isDemoMode && columnWidth < 300) {
+             const screenWidth = window.innerWidth;
+             if (screenWidth >= 1024) { // Desktop
+                 columnWidth = screenWidth * 0.5; // Aproximação da coluna da direita (2/3)
+             } else {
+                 columnWidth = screenWidth - 40; // Mobile padding
+             }
+        }
+        
+        if (columnWidth <= 0) return;
         
         const scale = columnWidth / baseWidth;
         
@@ -653,7 +667,7 @@ const App: React.FC = () => {
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
-    }, []);
+    }, [isDemoMode]);
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -667,14 +681,20 @@ const App: React.FC = () => {
         };
     }, [resumeData, paginateResume, fontsLoaded]);
 
-
     useEffect(() => {
-        if(fontsLoaded){ 
+        if (!fontsLoaded || !previewWrapperRef.current?.parentElement) return;
+
+        const resizeObserver = new ResizeObserver(() => {
             scalePreview();
-            window.addEventListener('resize', scalePreview);
-            return () => window.removeEventListener('resize', scalePreview);
-        }
-    }, [scalePreview, paginatedData, fontsLoaded]);
+        });
+
+        resizeObserver.observe(previewWrapperRef.current.parentElement);
+        scalePreview();
+        
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [scalePreview, fontsLoaded, paginatedData]);
     
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
@@ -1017,6 +1037,7 @@ const App: React.FC = () => {
                         <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
+                                key={isDemoMode ? 'demo' : 'manual'}
                                 ref={previewRef}
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
