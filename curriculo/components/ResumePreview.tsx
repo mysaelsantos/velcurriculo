@@ -105,15 +105,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
-                {personalInfo.profilePicture && (
-                    <img 
-                        id="profile-pic-img" 
-                        src={personalInfo.profilePicture} 
-                        alt="Foto de Perfil" 
-                        width="100" 
-                        height="100" 
-                    />
-                )}
+                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
@@ -279,23 +271,34 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                     </div>
                 )}
             </div>
+            
+            {/* CORREÇÃO COSMÉTICA ARTIFICIAL: 
+                Este bloco só existe no modo Demo. Ele força um espaço vazio gigante 
+                no final do documento para garantir que o texto NUNCA chegue perto do QR Code.
+            */}
+            {isDemoMode && (
+                <div className="w-full h-40" aria-hidden="true"></div>
+            )}
         </section>
         )}
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE COM BLINDAGEM */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
               width: `${QR_CONFIG.spacer.width}px`, 
-              zIndex: 30, 
+              zIndex: 50, /* Z-Index alto para ficar por cima de qualquer texto invasor */
               pointerEvents: 'none',
               display: 'flex',
               justifyContent: 'flex-end', 
-              alignItems: 'flex-end'
+              alignItems: 'flex-end',
+              backgroundColor: 'white', /* Fundo branco para "apagar" o que estiver por baixo */
+              padding: '10px 0 0 10px', /* Pequeno padding para garantir a cobertura */
+              borderTopLeftRadius: '8px'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
