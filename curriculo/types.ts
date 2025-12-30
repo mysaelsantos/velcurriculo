@@ -65,6 +65,7 @@ export interface ResumeData {
 // Interface estendida para a paginação
 export interface PageData extends Partial<ResumeData> {
     // Distância exata do topo do <main> até onde o QR Code começa.
-    // Isso posiciona o espaçador fantasma.
     qrSpacerMarginTop?: number; 
+    // Mapa de offsets para itens que colidem com o QR Code
+    qrCodeOffsets?: Record<string, number>;
 }
