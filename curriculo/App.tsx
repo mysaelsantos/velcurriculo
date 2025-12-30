@@ -406,6 +406,7 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
+                // Pequeno delay extra para garantir que o layout settle
                 await new Promise(r => setTimeout(r, 100));
 
                 clearTimeout(timeout);
@@ -549,15 +550,15 @@ const App: React.FC = () => {
                 
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
+                // --- LÓGICA DE COLISÃO COM QR CODE ---
                 const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
-
-                    effectiveHeight = block.height * 1.1; 
+                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada: Ativa o espaçador
+                    effectiveHeight = block.height * 1.1; // Reserva mais espaço
                 }
 
                 const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
@@ -655,27 +656,42 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
+    // --- CORREÇÃO DE ESTABILIDADE DO DEMO ---
     useEffect(() => {
-        // CORREÇÃO (OPÇÃO 3): Lógica de Recálculo para o Modo Demo
-        const handler = setTimeout(() => {
-            if (fontsLoaded) { 
-                paginateResume(resumeData);
+        let isMounted = true;
+        
+        const runPagination = async () => {
+             if (!fontsLoaded) return;
+             
+             // Para o modo Demo, garantimos que a imagem de perfil esteja carregada
+             // para que o calculo de altura (e a colisão do QR Code) seja exato na primeira vez.
+             // Isso evita recálculos e pulos visuais.
+             if (isDemoMode && resumeData.personalInfo.profilePicture) {
+                 try {
+                     await new Promise((resolve) => {
+                         const img = new Image();
+                         img.src = resumeData.personalInfo.profilePicture;
+                         img.onload = resolve;
+                         img.onerror = resolve; // Prossegue mesmo se falhar
+                     });
+                 } catch (e) { /* ignore */ }
+             }
 
-                // Se estivermos em Modo Demo (onde ocorrem as expansões/animações)
-                // Forçamos um segundo cálculo após 800ms para garantir que tudo (fontes, imagens) esteja pronto.
-                if (isDemoMode) {
-                    setTimeout(() => {
-                        console.log("Recalculando paginação (Modo Demo - Double Check)...");
-                        paginateResume(resumeData);
-                    }, 800);
-                }
-            }
-        }, 300);
-
-        return () => {
-            clearTimeout(handler);
+             // Pequeno delay para garantir ciclo de renderização do React
+             await new Promise(r => setTimeout(r, 100));
+             
+             if (isMounted) {
+                 paginateResume(resumeData);
+             }
         };
-    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]); // Adicionado isDemoMode na dependência
+
+        const handler = setTimeout(runPagination, 300);
+
+        return () => { 
+            isMounted = false; 
+            clearTimeout(handler); 
+        };
+    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]);
 
 
     useEffect(() => {
