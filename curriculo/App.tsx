@@ -18,7 +18,10 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
-// Mantemos a zona de perigo para cálculos reais, mas no demo confiaremos no CSS Float
+
+// --- CORREÇÃO DA ZONA DE PERIGO ---
+// Reduzido para 950px. Isso aumenta a área de proteção.
+// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -273,7 +276,6 @@ const App: React.FC = () => {
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
         measurementNode.style.width = '794px'; 
-        measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
@@ -407,7 +409,7 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 100));
+                await new Promise(r => setTimeout(r, 80));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -547,14 +549,22 @@ const App: React.FC = () => {
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
+                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // MANTEMOS A ALTURA TOTAL: 
-                // Removemos qualquer lógica de "corte antecipado".
-                const pageHeightLimit = A4_HEIGHT - MARGIN_BOTTOM;
-
-                const available = pageHeightLimit - currentY;
-
+                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+                
                 let effectiveHeight = block.height;
+
+                if (overlapsDangerZone) {
+                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
+                    // apenas sinalizamos que este bloco colide com o QR code.
+                    if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
+                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
+
+                    effectiveHeight = block.height * 1.1; 
+                }
+
+                const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
 
                 if (block.id.endsWith('-title')) {
                     const nextBlock = blocks[i+1];
@@ -627,55 +637,49 @@ const App: React.FC = () => {
         
         if (!previewColumn || !previewElement) return;
 
-        let columnWidth = previewColumn.offsetWidth;
+        const columnWidth = previewColumn.offsetWidth;
         const baseWidth = 794;
         const baseHeight = 1123;
-
-        if (isDemoMode) {
-             const screenWidth = window.innerWidth;
-             if (columnWidth < 300) {
-                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
-             }
-        }
-        
-        if (columnWidth <= 0) return;
         
         const scale = columnWidth / baseWidth;
         
         previewElement.style.transform = `scale(${scale})`;
-        previewElement.style.transformOrigin = 'top left';
         
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
-    }, [isDemoMode]);
+    }, []);
 
     useEffect(() => {
+        // CORREÇÃO (OPÇÃO 3): Lógica de Recálculo para o Modo Demo
         const handler = setTimeout(() => {
             if (fontsLoaded) { 
                 paginateResume(resumeData);
+
+                // Se estivermos em Modo Demo (onde ocorrem as expansões/animações)
+                // Forçamos um segundo cálculo após 800ms para garantir que tudo (fontes, imagens) esteja pronto.
+                if (isDemoMode) {
+                    setTimeout(() => {
+                        console.log("Recalculando paginação (Modo Demo - Double Check)...");
+                        paginateResume(resumeData);
+                    }, 800);
+                }
             }
         }, 300);
 
         return () => {
             clearTimeout(handler);
         };
-    }, [resumeData, paginateResume, fontsLoaded]);
+    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]); // Adicionado isDemoMode na dependência
+
 
     useEffect(() => {
-        if (!fontsLoaded || !previewWrapperRef.current?.parentElement) return;
-
-        const resizeObserver = new ResizeObserver(() => {
+        if(fontsLoaded){ 
             scalePreview();
-        });
-
-        resizeObserver.observe(previewWrapperRef.current.parentElement);
-        scalePreview();
-        
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [scalePreview, fontsLoaded, paginatedData]);
+            window.addEventListener('resize', scalePreview);
+            return () => window.removeEventListener('resize', scalePreview);
+        }
+    }, [scalePreview, paginatedData, fontsLoaded]);
     
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
@@ -1018,7 +1022,6 @@ const App: React.FC = () => {
                         <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
-                                key={isDemoMode ? 'demo' : 'manual'}
                                 ref={previewRef}
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
@@ -1110,3 +1113,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+}
