@@ -262,6 +262,12 @@ const App: React.FC = () => {
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
+    // --- ESTADOS DE DESENVOLVEDOR ---
+    const [isDevModeActive, setIsDevModeActive] = useState(false); // Ativa os botões
+    const [devClickCount, setDevClickCount] = useState(0); // Conta cliques no rodapé
+    const [showDevModal, setShowDevModal] = useState(false); // Mostra modal de senha
+    const [devPassword, setDevPassword] = useState(''); // Senha digitada
+
     // --- ESTADO PARA O GREETING DO HEADER ---
     const [showLogo, setShowLogo] = useState(true); 
     const [headerMessage, setHeaderMessage] = useState('');
@@ -296,7 +302,7 @@ const App: React.FC = () => {
                 setFontsLoaded(true); // Libera mesmo com erro
             }
 
-            // Aguarda o tempo do "branding" (AGORA 2 SEGUNDOS)
+            // Aguarda o tempo do "branding" (2 SEGUNDOS)
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Remove a sobreposição
@@ -965,6 +971,30 @@ const App: React.FC = () => {
             .catch(err => alert("Erro ao copiar JSON: " + err));
     };
 
+    // --- LÓGICA DO RODAPÉ (CLICKS DEV) ---
+    const handleFooterLogoClick = () => {
+        if (isDevModeActive) return; // Se já ativo, ignora
+        const newCount = devClickCount + 1;
+        setDevClickCount(newCount);
+        if (newCount === 5) {
+            setShowDevModal(true);
+            setDevClickCount(0); // Reseta contador
+        }
+    };
+
+    // --- LÓGICA DE VERIFICAÇÃO DE SENHA DEV ---
+    const handleDevLogin = () => {
+        if (devPassword === '2707') {
+            setIsDevModeActive(true);
+            setShowDevModal(false);
+            setDevPassword('');
+            alert("Modo Desenvolvedor Ativado!");
+        } else {
+            alert("Senha incorreta.");
+            setDevPassword('');
+        }
+    };
+
     return (
         <>
         {/* TELA DE LOADING (SOBREPOSIÇÃO) */}
@@ -976,16 +1006,44 @@ const App: React.FC = () => {
                         alt="Vel Currículo" 
                         className="w-48 md:w-56 mx-auto mb-2 object-contain" 
                     />
-                    {/* TEXTO ATUALIZADO COM QUEBRA DE LINHA EXPLICITA */}
                     <p className="text-gray-500 font-medium text-sm md:text-base text-center leading-relaxed">
                         Feito para quem precisa de <br /> resultados
                     </p>
                 </div>
 
-                {/* SPINNER MOVIDO PARA CIMA (bottom-32) PARA EVITAR QUE SEJA COBERTO */}
                 <div className="absolute bottom-32 left-0 right-0 flex flex-col items-center">
                      <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                      <p className="text-gray-400 text-xs font-medium">Carregando editor...</p>
+                </div>
+            </div>
+        )}
+
+        {/* MODAL DE DESENVOLVEDOR (Senha) */}
+        {showDevModal && (
+            <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">Acesso Dev</h3>
+                    <input 
+                        type="password" 
+                        placeholder="Senha" 
+                        value={devPassword}
+                        onChange={(e) => setDevPassword(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setShowDevModal(false)}
+                            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={handleDevLogin}
+                            className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+                        >
+                            Entrar
+                        </button>
+                    </div>
                 </div>
             </div>
         )}
@@ -1063,29 +1121,35 @@ const App: React.FC = () => {
             </div>
         )}
         
-        {/* BOTÃO DEV DE EXPORTAÇÃO */}
-        <button
-            type="button"
-            onClick={handleExportJson}
-            className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105"
-            title="Exportar JSON do Currículo Atual"
-            aria-label="Exportar JSON"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        </button>
+        {/* BOTÕES DEV DE EXPORTAÇÃO (SÓ APARECEM SE O MODO DEV ESTIVER ATIVO) */}
+        {isDevModeActive && (
+            <>
+                <button
+                    type="button"
+                    onClick={handleExportJson}
+                    className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105"
+                    title="Exportar JSON do Currículo Atual"
+                    aria-label="Exportar JSON"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </button>
 
-        <button
-            type="button"
-            onClick={() => exportToPdf(resumeData)}
-            className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105"
-            title="Pular pagamento e baixar PDF (Apenas para Teste)"
-            aria-label="Baixar PDF para teste"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>
-        </button>
+                <button
+                    type="button"
+                    onClick={() => exportToPdf(resumeData)}
+                    className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105"
+                    title="Pular pagamento e baixar PDF (Apenas para Teste)"
+                    aria-label="Baixar PDF para teste"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>
+                </button>
+            </>
+        )}
+
         <header className="fixed top-6 left-6 right-6 bg-blue-800/80 backdrop-blur-lg z-50 border border-white/10 rounded-full shadow-lg">
             <div className="px-6 py-3 flex justify-between items-center">
-                <a href="https://velsites.com.br/" className="flex items-center relative h-6 w-64 overflow-hidden">
+                {/* ALTERADO: Substituído <a> por <div> para remover o link externo */}
+                <div className="flex items-center relative h-6 w-64 overflow-hidden select-none cursor-default">
                     {/* LOGO */}
                     <img 
                         src="/logo-header.png" 
@@ -1099,7 +1163,7 @@ const App: React.FC = () => {
                     >
                         {headerMessage}
                     </span>
-                </a>
+                </div>
                 <nav className="relative">
                      <button 
                         onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -1250,7 +1314,8 @@ const App: React.FC = () => {
             <div className="container mx-auto px-4 max-w-7xl">
                 <div className="flex flex-col md:flex-row justify-between items-center">
                     <div className="mb-6 md:mb-0 text-center md:text-left">
-                        <div className="mb-4 mx-auto md:mx-0" style={{width: 'fit-content'}}>
+                        {/* ALTERADO: Adicionado onClick no container da logo do rodapé para ativar o modo Dev */}
+                        <div className="mb-4 mx-auto md:mx-0 cursor-pointer select-none" style={{width: 'fit-content'}} onClick={handleFooterLogoClick}>
                             <img src="https://i.postimg.cc/D0pp6j3q/Subcabe-alho-39.png" alt="Vel Sites Logo Rodapé" className="footer-logo" />
                         </div>
                         <p className="text-gray-400 max-w-md">A Vel nasceu pra quem não espera, pra quem resolve. Se você move o mundo com seu ofício, a gente move sua marca no digital.</p>
