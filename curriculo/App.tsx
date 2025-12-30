@@ -16,8 +16,6 @@ interface SavedResume extends ResumeData {
 }
 
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
-const A4_HEIGHT = 1123; 
-const MARGIN_BOTTOM = 50; 
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -389,43 +387,44 @@ const App: React.FC = () => {
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
         // =================================================================================
-        // MODO DEMO: PAGINAÇÃO 100% MANUAL (SEM CÁLCULOS)
+        // MODO DEMO: CONFIGURAÇÃO DETERMINÍSTICA (SEM CÁLCULOS)
         // =================================================================================
         if (isDemoMode) {
-            // PÁGINA 1
-            // Conteúdo fixo para garantir que o layout bata com o print do usuário.
-            // Inclui: Resumo, TODAS as 3 experiências, a única Educação, e os cursos 1 e 2.
+            // Definição Manual da Distribuição de Conteúdo por Template
+            // Isso garante que o layout seja idêntico ao esperado, sem surpresas.
+            
+            // Padrão Geral (Funciona para Moderno e base para outros)
+            // Pg 1: Resumo, Exp(Todos), Edu(Todos), Cursos(1 e 2)
+            // Pg 2: Cursos(3 e 4), Idiomas, Skills
+            
+            let coursesSplitIndex = 2; // Índice onde os cursos quebram (2 cursos na pg 1)
+            let qrCodeOffsets = { '1': 0, '2': 0 }; // Onde o espaçador do QR deve entrar
+
+            // Se quiséssemos ajustar por template, faríamos aqui:
+            // if (dataToPaginate.style.template === 'template-classic') { ... }
+
             const page1: PageData = {
                 ...dataToPaginate,
                 experiences: dataToPaginate.experiences,
                 education: dataToPaginate.education,
-                courses: dataToPaginate.courses.slice(0, 2), // Apenas os 2 primeiros cursos
+                courses: dataToPaginate.courses.slice(0, coursesSplitIndex),
                 languages: [],
                 skills: [],
-                // FORÇAR O ESPAÇADOR DO QR CODE:
-                // No template moderno, o QR Code fica em cima dos cursos da página 1.
-                // Forçamos o 'offset' nos IDs '1' e '2' (os cursos que estão nesta página).
-                qrCodeOffsets: { 
-                    '1': 0, 
-                    '2': 0 
-                } 
+                qrCodeOffsets: qrCodeOffsets
             };
 
-            // PÁGINA 2
-            // O restante do conteúdo.
             const page2: PageData = {
                 ...dataToPaginate,
                 personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, 
                 summary: '',
                 experiences: [],
                 education: [],
-                courses: dataToPaginate.courses.slice(2), // Restante dos cursos
+                courses: dataToPaginate.courses.slice(coursesSplitIndex),
                 languages: dataToPaginate.languages,
                 skills: dataToPaginate.skills,
                 qrCodeOffsets: {}
             };
 
-            // Retorna imediatamente, ignorando qualquer lógica de medição abaixo.
             const demoPages = [page1, page2];
             setPaginatedData(demoPages);
             return demoPages;
@@ -705,9 +704,6 @@ const App: React.FC = () => {
         
         const runPagination = async () => {
              if (!fontsLoaded) return;
-             
-             // Modo Demo agora ignora completamente o carregamento de imagem para cálculo
-             // pois o cálculo foi removido.
              
              // Pequeno delay para garantir ciclo de renderização do React
              await new Promise(r => setTimeout(r, 100));
