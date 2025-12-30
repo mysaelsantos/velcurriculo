@@ -387,48 +387,9 @@ const App: React.FC = () => {
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
         // =================================================================================
-        // MODO DEMO: CONFIGURAÇÃO DETERMINÍSTICA (SEM CÁLCULOS)
-        // =================================================================================
-        if (isDemoMode) {
-            // Definição Manual da Distribuição de Conteúdo por Template
-            // Isso garante que o layout seja idêntico ao esperado, sem surpresas.
-            
-            // Padrão Geral (Funciona para Moderno e base para outros)
-            // Pg 1: Resumo, Exp(Todos), Edu(Todos), Cursos(1 e 2)
-            // Pg 2: Cursos(3 e 4), Idiomas, Skills
-            
-            let coursesSplitIndex = 2; // Índice onde os cursos quebram (2 cursos na pg 1)
-            let qrCodeOffsets = { '1': 0, '2': 0 }; // Onde o espaçador do QR deve entrar
-
-            // Se quiséssemos ajustar por template, faríamos aqui:
-            // if (dataToPaginate.style.template === 'template-classic') { ... }
-
-            const page1: PageData = {
-                ...dataToPaginate,
-                experiences: dataToPaginate.experiences,
-                education: dataToPaginate.education,
-                courses: dataToPaginate.courses.slice(0, coursesSplitIndex),
-                languages: [],
-                skills: [],
-                qrCodeOffsets: qrCodeOffsets
-            };
-
-            const page2: PageData = {
-                ...dataToPaginate,
-                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, 
-                summary: '',
-                experiences: [],
-                education: [],
-                courses: dataToPaginate.courses.slice(coursesSplitIndex),
-                languages: dataToPaginate.languages,
-                skills: dataToPaginate.skills,
-                qrCodeOffsets: {}
-            };
-
-            const demoPages = [page1, page2];
-            setPaginatedData(demoPages);
-            return demoPages;
-        }
+        // ALTERAÇÃO PARA DEBATE: Removido o bypass do Modo Demo.
+        // Agora, mesmo sendo Demo, o código passa pelo cálculo real abaixo.
+        // Isso garante que o layout seja dinâmico e use a lógica de colisão do QR Code.
         // =================================================================================
         
         // LÓGICA PADRÃO PARA O USUÁRIO (CÁLCULO DINÂMICO)
@@ -913,6 +874,14 @@ const App: React.FC = () => {
             return updated;
         });
     };
+    
+    // FUNÇÃO AUXILIAR PARA O MODO DEV (EXPORTAR JSON)
+    const handleExportJson = () => {
+        const json = JSON.stringify(resumeData, null, 2);
+        navigator.clipboard.writeText(json)
+            .then(() => alert("JSON do currículo copiado para a área de transferência!"))
+            .catch(err => alert("Erro ao copiar JSON: " + err));
+    };
 
     if (!fontsLoaded) {
         return (
@@ -1000,6 +969,18 @@ const App: React.FC = () => {
                 </div>
             </div>
         )}
+        
+        {/* BOTÃO DEV DE EXPORTAÇÃO */}
+        <button
+            type="button"
+            onClick={handleExportJson}
+            className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105"
+            title="Exportar JSON do Currículo Atual"
+            aria-label="Exportar JSON"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </button>
+
         <button
             type="button"
             onClick={() => exportToPdf(resumeData)}
