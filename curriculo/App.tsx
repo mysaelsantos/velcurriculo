@@ -387,6 +387,49 @@ const App: React.FC = () => {
     
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
+        
+        // --- CORREÇÃO PARA O MODO DEMO ---
+        // Se estivermos em modo demo, usamos uma paginação pré-calculada e perfeita.
+        // Isso evita bugs de cálculo na primeira renderização, "assiste" o layout
+        // e garante que o usuário veja a paginação e o desvio do QR Code funcionando.
+        if (isDemoMode) {
+            const exp1 = dataToPaginate.experiences.find(e => e.id === '1');
+            const exp2 = dataToPaginate.experiences.find(e => e.id === '2');
+            const exp3 = dataToPaginate.experiences.find(e => e.id === '3');
+
+            // Página 1: Resumo + 2 primeiras experiências
+            // Injetamos 'qrCodeOffsets' para o item '2' para demonstrar o texto desviando do QR Code
+            const page1: PageData = {
+                ...dataToPaginate,
+                experiences: [exp1!, exp2!].filter(Boolean),
+                education: [],
+                courses: [],
+                languages: [],
+                skills: [],
+                qrCodeOffsets: { '2': 0 } // Isso ativa o espaçador no ResumePreview para a experiência 2
+            };
+
+            // Página 2: O restante do conteúdo
+            const page2: PageData = {
+                ...dataToPaginate,
+                // Mantemos personalInfo para o cabeçalho, mas sem foto na pg 2 (controlado pelo componente)
+                summary: '', 
+                experiences: [exp3!].filter(Boolean),
+                education: dataToPaginate.education,
+                courses: dataToPaginate.courses,
+                languages: dataToPaginate.languages,
+                skills: dataToPaginate.skills,
+                qrCodeOffsets: {}
+            };
+
+            const demoPages = [page1, page2];
+            setPaginatedData(demoPages);
+            return demoPages;
+        }
+        
+        // --- FIM DA LÓGICA DO DEMO ---
+        // Abaixo continua o motor normal de cálculo para os dados do usuário
+
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
