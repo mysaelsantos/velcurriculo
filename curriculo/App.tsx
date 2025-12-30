@@ -18,7 +18,7 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const QR_DANGER_ZONE_START = 950; 
 
-// DADOS DE DEMONSTRAÇÃO (Atualizados com o seu JSON)
+// DADOS DE DEMONSTRAÇÃO
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: "Marcos Mj Santos",
@@ -258,6 +258,7 @@ const App: React.FC = () => {
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
@@ -348,6 +349,18 @@ const App: React.FC = () => {
             }
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
+    
+    // Fechar menu ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const nav = document.querySelector('header nav');
+            if (isMenuOpen && nav && !nav.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMenuOpen]);
 
     const handleContinueProgress = () => {
         if (pendingSavedData) {
@@ -418,9 +431,6 @@ const App: React.FC = () => {
     
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
-        
-        // AGORA O MODO DEMO TAMBÉM PASSA POR AQUI!
-        // Removida a verificação `if (isDemoMode)`
         
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -1022,10 +1032,43 @@ const App: React.FC = () => {
         <header className="fixed top-6 left-6 right-6 bg-blue-800/80 backdrop-blur-lg z-50 border border-white/10 rounded-full shadow-lg">
             <div className="px-6 py-3 flex justify-between items-center">
                 <a href="https://velsites.com.br/" className="flex items-center">
-                    <img src="https://i.postimg.cc/yNWrvPQJ/Subcabe-alho-76.png" alt="Vel Sites Logo" className="h-5 mr-3" />
+                    <img src="/logo-header.png" alt="Vel Sites Logo" className="h-5 mr-3" />
                 </a>
-                <nav>
-                    <a href="https://velsites.com.br/" className="text-white hover:text-blue-200 font-medium transition">Início</a>
+                <nav className="relative">
+                     <button 
+                        onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                        className="text-white p-2 rounded-full hover:bg-white/10 transition focus:outline-none"
+                        aria-label="Menu"
+                    >
+                        {isMenuOpen ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                        )}
+                    </button>
+
+                    {isMenuOpen && (
+                        <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100">
+                            <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contato</p>
+                            </div>
+                            
+                            <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                WhatsApp
+                            </a>
+                            
+                            <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                                E-mail
+                            </a>
+
+                            <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
+                                Instagram
+                            </a>
+                        </div>
+                    )}
                 </nav>
             </div>
         </header>
