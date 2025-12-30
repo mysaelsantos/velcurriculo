@@ -96,35 +96,6 @@ const DEMO_DATA: ResumeData = {
     }
 };
 
-// --- DADOS PRÉ-CALCULADOS PARA O MODO DEMO (SOLUÇÃO DE ESTABILIDADE) ---
-// Isso simula o resultado exato da função paginateResume, garantindo
-// que o Demo sempre mostre 2 páginas e o QR Code colidindo corretamente.
-const STATIC_DEMO_PAGES: PageData[] = [
-    // PÁGINA 1
-    {
-        personalInfo: DEMO_DATA.personalInfo,
-        style: DEMO_DATA.style,
-        summary: DEMO_DATA.summary,
-        experiences: [DEMO_DATA.experiences[0], DEMO_DATA.experiences[1]], // Apenas as 2 primeiras
-        education: [],
-        courses: [],
-        languages: [],
-        skills: [],
-        // AQUI ESTÁ A MÁGICA: Forçamos o sistema a "pensar" que o item '2' colidiu com o QR Code
-        qrCodeOffsets: { '2': 1 } 
-    },
-    // PÁGINA 2
-    {
-        style: DEMO_DATA.style,
-        experiences: [DEMO_DATA.experiences[2]], // A 3ª experiência vai para a pág 2
-        education: DEMO_DATA.education,
-        courses: DEMO_DATA.courses,
-        languages: DEMO_DATA.languages,
-        skills: DEMO_DATA.skills,
-        qrCodeOffsets: {}
-    }
-];
-
 const INITIAL_DATA: ResumeData = {
     personalInfo: { name: '', jobTitle: '', email: '', phone: '', address: '', age: '', maritalStatus: '', cnh: '', linkedin: '', profilePicture: '' },
     summary: '',
@@ -692,12 +663,18 @@ const App: React.FC = () => {
         const runPagination = async () => {
              if (!fontsLoaded) return;
              
-             // *** SOLUÇÃO DO DEMO ***
-             // Se estivermos em modo Demo, usamos os dados estáticos imediatamente.
-             // Isso evita recálculos desnecessários e bugs de renderização inicial.
-             if (isDemoMode) {
-                 setPaginatedData(STATIC_DEMO_PAGES);
-                 return;
+             // Para o modo Demo, garantimos que a imagem de perfil esteja carregada
+             // para que o calculo de altura (e a colisão do QR Code) seja exato na primeira vez.
+             // Isso evita recálculos e pulos visuais.
+             if (isDemoMode && resumeData.personalInfo.profilePicture) {
+                 try {
+                     await new Promise((resolve) => {
+                         const img = new Image();
+                         img.src = resumeData.personalInfo.profilePicture;
+                         img.onload = resolve;
+                         img.onerror = resolve; // Prossegue mesmo se falhar
+                     });
+                 } catch (e) { /* ignore */ }
              }
 
              // Pequeno delay para garantir ciclo de renderização do React
