@@ -18,10 +18,6 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
-
-// --- CORREÇÃO DA ZONA DE PERIGO ---
-// Reduzido para 950px. Isso aumenta a área de proteção.
-// Se o conteúdo passar desta linha, ele será forçado a estreitar para não bater no QR.
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -276,6 +272,7 @@ const App: React.FC = () => {
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
         measurementNode.style.width = '794px'; 
+        measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
         measurementContainerRef.current = measurementNode;
@@ -409,7 +406,7 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 80));
+                await new Promise(r => setTimeout(r, 100));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -549,6 +546,7 @@ const App: React.FC = () => {
 
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
+                
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
                 const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
@@ -556,8 +554,6 @@ const App: React.FC = () => {
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
-                    // CORREÇÃO: Em vez de calcular offsets complexos que falham,
-                    // apenas sinalizamos que este bloco colide com o QR code.
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                     currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada
 
@@ -637,9 +633,18 @@ const App: React.FC = () => {
         
         if (!previewColumn || !previewElement) return;
 
-        const columnWidth = previewColumn.offsetWidth;
+        let columnWidth = previewColumn.offsetWidth;
         const baseWidth = 794;
         const baseHeight = 1123;
+
+        if (isDemoMode) {
+             const screenWidth = window.innerWidth;
+             if (columnWidth < 300) {
+                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
+             }
+        }
+        
+        if (columnWidth <= 0) return;
         
         const scale = columnWidth / baseWidth;
         
@@ -648,7 +653,7 @@ const App: React.FC = () => {
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
-    }, []);
+    }, [isDemoMode]);
 
     useEffect(() => {
         // CORREÇÃO (OPÇÃO 3): Lógica de Recálculo para o Modo Demo
