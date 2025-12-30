@@ -105,7 +105,15 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
-                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
+                {personalInfo.profilePicture && (
+                    <img 
+                        id="profile-pic-img" 
+                        src={personalInfo.profilePicture} 
+                        alt="Foto de Perfil" 
+                        width="100" 
+                        height="100" 
+                    />
+                )}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
