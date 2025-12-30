@@ -18,8 +18,6 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
-
-// --- DANGER ZONE (Ignorada no método força bruta, mas mantida para compatibilidade) ---
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -273,8 +271,7 @@ const App: React.FC = () => {
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '794px';
-        // Mantemos as classes para precisão
+        measurementNode.style.width = '794px'; 
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
@@ -388,7 +385,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO "FORÇA BRUTA" ---
+    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -409,7 +406,7 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 100)); // Pequeno delay
+                await new Promise(r => setTimeout(r, 100));
 
                 clearTimeout(timeout);
                 resolve(previewEl);
@@ -550,10 +547,11 @@ const App: React.FC = () => {
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 
-                // MENTIRA COSMÉTICA: Se for Modo Demo, a página 1 é MUITO mais curta.
-                // Isso força o conteúdo a quebrar para a página 2 muito antes de chegar ao QR Code.
+                // MENTIRA COSMÉTICA EQUILIBRADA: 
+                // Cortamos apenas 180px da primeira página no Demo Mode.
+                // Isso força a quebra exata antes do QR Code, sem deixar um buraco gigante.
                 const pageHeightLimit = (isDemoMode && currentPageIndex === 0) 
-                    ? A4_HEIGHT - 300 // Margem gigante para garantir que nada encoste no QR
+                    ? A4_HEIGHT - 180 
                     : A4_HEIGHT - MARGIN_BOTTOM;
 
                 const available = pageHeightLimit - currentY;
@@ -625,7 +623,7 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    // --- ZOOM ARTIFICIAL (CORREÇÃO DE ENCOLHIMENTO) ---
+    // --- ZOOM ARTIFICIAL (MANTIDO) ---
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
@@ -633,20 +631,17 @@ const App: React.FC = () => {
         if (!previewColumn || !previewElement) return;
 
         let columnWidth = previewColumn.offsetWidth;
-        
-        // NO MODO DEMO: Ignoramos medições instáveis e usamos a tela como referência.
+        const baseWidth = 794;
+        const baseHeight = 1123;
+
         if (isDemoMode) {
              const screenWidth = window.innerWidth;
-             // Se a medição for muito pequena (erro), usamos um valor fixo baseado na tela
              if (columnWidth < 300) {
                  columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
              }
         }
         
         if (columnWidth <= 0) return;
-
-        const baseWidth = 794;
-        const baseHeight = 1123;
         
         const scale = columnWidth / baseWidth;
         
