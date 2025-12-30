@@ -96,39 +96,6 @@ const DEMO_DATA: ResumeData = {
     }
 };
 
-// --- CONFIGURAÇÃO MANUAL DA DEMO (ESTABILIDADE) ---
-// Dividimos manualmente os dados em páginas para que o modo Demo
-// não dependa de cálculos de layout em tempo real (que podem falhar no load).
-const DEMO_PAGES: PageData[] = [
-    // PÁGINA 1
-    {
-        personalInfo: DEMO_DATA.personalInfo,
-        summary: DEMO_DATA.summary,
-        // Colocamos as 2 primeiras experiências na página 1
-        experiences: [DEMO_DATA.experiences[0], DEMO_DATA.experiences[1]], 
-        education: [],
-        courses: [],
-        languages: [],
-        skills: [],
-        style: DEMO_DATA.style,
-        // SIMULAÇÃO DE COLISÃO QR CODE:
-        // O ID '2' é a segunda experiência. Adicionamos um offset para 
-        // ativar a lógica de "Spacer" no ResumePreview, simulando o desvio do texto.
-        qrCodeOffsets: { '2': 0 } 
-    },
-    // PÁGINA 2
-    {
-        // Info pessoal undefined para não repetir cabeçalho (exceto nome pequeno se o template pedir)
-        experiences: [DEMO_DATA.experiences[2]], // Restante das experiências
-        education: DEMO_DATA.education,
-        courses: DEMO_DATA.courses,
-        languages: DEMO_DATA.languages,
-        skills: DEMO_DATA.skills,
-        style: DEMO_DATA.style,
-        qrCodeOffsets: {}
-    }
-];
-
 const INITIAL_DATA: ResumeData = {
     personalInfo: { name: '', jobTitle: '', email: '', phone: '', address: '', age: '', maritalStatus: '', cnh: '', linkedin: '', profilePicture: '' },
     summary: '',
@@ -243,8 +210,7 @@ const App: React.FC = () => {
     const isPixTestMode = false;
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
-    // INICIALIZAÇÃO CORRIGIDA: Começa já com os dados paginados da Demo
-    const [paginatedData, setPaginatedData] = useState<PageData[]>(DEMO_PAGES);
+    const [paginatedData, setPaginatedData] = useState<PageData[]>([DEMO_DATA]);
     const [isDemoMode, setIsDemoMode] = useState(true);
     const [currentStep, setCurrentStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
@@ -377,7 +343,6 @@ const App: React.FC = () => {
     const handleStartEditing = () => {
         setIsDemoMode(false);
         setResumeData(INITIAL_DATA);
-        setPaginatedData([INITIAL_DATA]); // Limpa a paginação demo
         setCurrentStep(0);
         setIsFinished(false);
         setHasPaidInSession(false);
@@ -698,10 +663,20 @@ const App: React.FC = () => {
         const runPagination = async () => {
              if (!fontsLoaded) return;
              
-             // CORREÇÃO CRÍTICA: Se estiver em Modo Demo, NÃO execute a paginação dinâmica.
-             // Usamos os dados pré-calculados (DEMO_PAGES) para estabilidade total.
-             if (isDemoMode) return;
-             
+             // Para o modo Demo, garantimos que a imagem de perfil esteja carregada
+             // para que o calculo de altura (e a colisão do QR Code) seja exato na primeira vez.
+             // Isso evita recálculos e pulos visuais.
+             if (isDemoMode && resumeData.personalInfo.profilePicture) {
+                 try {
+                     await new Promise((resolve) => {
+                         const img = new Image();
+                         img.src = resumeData.personalInfo.profilePicture;
+                         img.onload = resolve;
+                         img.onerror = resolve; // Prossegue mesmo se falhar
+                     });
+                 } catch (e) { /* ignore */ }
+             }
+
              // Pequeno delay para garantir ciclo de renderização do React
              await new Promise(r => setTimeout(r, 100));
              
