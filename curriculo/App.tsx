@@ -18,77 +18,110 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const QR_DANGER_ZONE_START = 950; 
 
+// DADOS DE DEMONSTRAÇÃO (Atualizados com o seu JSON)
 const DEMO_DATA: ResumeData = {
     personalInfo: {
-        name: 'Marcos MJ Santos',
-        jobTitle: 'Desenvolvedor Full Stack & Criador de Soluções',
-        email: 'l.mysaelsantos@gmail.com',
-        phone: '(37) 9 9974-5723',
-        address: 'Nova Serrana, Romeu Duarte',
-        age: '22',
-        maritalStatus: 'Casado(a)',
-        cnh: 'A+B',
-        linkedin: 'linkedin.com/in/marcos-mj-santos',
-        profilePicture: '/perfil.png' 
+        name: "Marcos Mj Santos",
+        jobTitle: "Desenvolvedor Full Stack & Criador de Soluções",
+        email: "marcos@velsites.com.br",
+        phone: "(37) 9 2707-2025",
+        address: "Nova Serrana, Romeu Duarte",
+        age: "22",
+        maritalStatus: "Casado(a)",
+        cnh: "A+B",
+        linkedin: "https://www.linkedin.com/in/marcos-mj-santos-aa696a233",
+        profilePicture: "/perfil.png" 
     },
-    summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
+    summary: "Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.",
     experiences: [
-        { 
-            id: '1', 
-            jobTitle: 'Fundador & Desenvolvedor Lead', 
-            company: 'Vel Sites / VelCurrículo', 
-            location: 'Nova Serrana, MG', 
-            startDate: 'Jan 2023', 
-            endDate: 'Atual', 
-            description: 'Fundador e desenvolvedor responsável pela criação da plataforma VelCurrículo. Atuo do início ao fim do projeto, cuidando da estrutura do sistema, integrações externas e da experiência do usuário, com foco em soluções simples, funcionais e que resolvem problemas reais.' 
+        {
+            id: "1767032047032",
+            jobTitle: "Fundador & Desenvolvedor Lead",
+            company: "Vel Sites / VelCurrículo",
+            location: "Nova Serrana, MG",
+            startDate: "Jan 2023",
+            endDate: "Atual",
+            description: "Fundador e desenvolvedor responsável pela criação da plataforma VelCurrículo. Atuo do início ao fim do projeto, cuidando da estrutura do sistema, integrações externas e da experiência do usuário, com foco em soluções simples, funcionais e que resolvem problemas reais."
         },
-        { 
-            id: '2', 
-            jobTitle: 'Desenvolvedor Front-End Pleno', 
-            company: 'Tech Solutions (Remoto)', 
-            location: 'Divinópolis, MG', 
-            startDate: 'Mar 2021', 
-            endDate: 'Dez 2022', 
-            description: 'Desenvolvedor Front-End atuando no desenvolvimento e manutenção de interfaces para sistemas de gestão (ERP), com foco em usabilidade e clareza. Participei da modernização de sistemas antigos, padronização visual dos projetos e trabalho colaborativo em equipe ágil.' 
+        {
+            id: "1767032148023",
+            jobTitle: "Desenvolvedor Front-End Pleno",
+            company: "Tech Solutions (Remoto)",
+            location: "Divinópolis, MG",
+            startDate: "Mar 2021",
+            endDate: "Dez 2022",
+            description: "Desenvolvedor Front-End atuando no desenvolvimento e manutenção de interfaces para sistemas de gestão (ERP), com foco em usabilidade e clareza. Participei da modernização de sistemas antigos, padronização visual dos projetos e trabalho colaborativo em equipe ágil."
         },
-        { 
-            id: '3', 
-            jobTitle: 'Freelancer Full Stack', 
-            company: 'Autônomo', 
-            location: 'Minas Gerais', 
-            startDate: 'Jan 2020', 
-            endDate: 'Fev 2021', 
-            description: 'Atuação como desenvolvedor freelancer, criando sites e lojas virtuais para pequenos negócios. Cuido desde a parte técnica até a entrega final, com atenção à performance, presença online e soluções simples para facilitar o contato com clientes.' 
+        {
+            id: "1767032304188",
+            jobTitle: "Freelancer Full Stack",
+            company: "Autônomo ",
+            location: "Minas Gerais",
+            startDate: "Jan 2020",
+            endDate: "Fev 2021",
+            description: "Atuação como desenvolvedor freelancer, criando sites e lojas virtuais para pequenos negócios. Cuido desde a parte técnica até a entrega final, com atenção à performance, presença online e soluções simples para facilitar o contato com clientes."
         }
     ],
     education: [
-        { 
-            id: '1', 
-            degree: 'Análise e Desenvolvimento de Sistemas', 
-            institution: 'Faculdade Tecnológica', 
-            startDate: '2020', 
-            endDate: '2024' 
+        {
+            id: "1767032767322",
+            degree: "Análise e Desenvolvimento de Sistemas",
+            institution: "Faculdade Tecnológica",
+            startDate: "2020",
+            endDate: "2024"
         }
     ],
     courses: [
-        { id: '1', name: 'Arquitetura de Software e Cloud Computing', institution: 'AWS Training', completionDate: '2024' },
-        { id: '2', name: 'Domínio de React, Redux e Next.js', institution: 'Code Academy', completionDate: '2023' },
-        { id: '3', name: 'Integrações de API e Microsserviços', institution: 'Alura', completionDate: '2022' },
-        { id: '4', name: 'UX/UI Design para Desenvolvedores', institution: 'Origamid', completionDate: '2021' }
+        {
+            id: "1767032486343",
+            name: "Arquitetura de Software e Cloud Computing",
+            institution: "AWS Training",
+            completionDate: "2024"
+        },
+        {
+            id: "1767102359574",
+            name: "Domínio de React, Redux e Next.js",
+            institution: "Code Academy",
+            completionDate: "2023"
+        },
+        {
+            id: "1767102374315",
+            name: "Integrações de API e Microsserviços",
+            institution: "Alura",
+            completionDate: "2022"
+        },
+        {
+            id: "1767102385192",
+            name: "UX/UI Design para Desenvolvedores",
+            institution: "Origamid",
+            completionDate: "2021"
+        }
     ],
     languages: [
-        { id: '1', language: 'Português', proficiency: 'Fluente' },
-        { id: '2', language: 'Inglês', proficiency: 'Avançado' }
+        {
+            id: "1767102453063",
+            language: "Português",
+            proficiency: "Fluente"
+        },
+        {
+            id: "1767102464734",
+            language: "Inglês",
+            proficiency: "Avançado"
+        }
     ],
     skills: [
-        'React.js', 'TypeScript', 'Node.js', 'Netlify Functions', 
-        'Google Gemini AI', 'Tailwind CSS', 'Integração de Pagamentos', 
-        'Git/GitHub', 'Arquitetura Serverless', 'UI/UX Design', 
-        'Resolução de Problemas', 'Liderança Técnica'
+        "Comunicação Efetiva",
+        "Atendimento Ao Cliente",
+        "Gestão De Tempo",
+        "Proatividade",
+        "Organização",
+        "Liderança",
+        "Pacote Office",
+        "Excel Avançado"
     ],
     style: {
-        template: 'template-modern',
-        color: '#002e9e',
+        template: "template-modern",
+        color: "#002e9e",
         showQRCode: true,
         showLinkedinQr: true
     }
@@ -386,13 +419,9 @@ const App: React.FC = () => {
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
-        // =================================================================================
-        // ALTERAÇÃO PARA DEBATE: Removido o bypass do Modo Demo.
-        // Agora, mesmo sendo Demo, o código passa pelo cálculo real abaixo.
-        // Isso garante que o layout seja dinâmico e use a lógica de colisão do QR Code.
-        // =================================================================================
+        // AGORA O MODO DEMO TAMBÉM PASSA POR AQUI!
+        // Removida a verificação `if (isDemoMode)`
         
-        // LÓGICA PADRÃO PARA O USUÁRIO (CÁLCULO DINÂMICO)
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
