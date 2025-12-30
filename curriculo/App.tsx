@@ -18,6 +18,7 @@ interface SavedResume extends ResumeData {
 // --- CONSTANTES GLOBAIS DE LAYOUT ---
 const A4_HEIGHT = 1123; 
 const MARGIN_BOTTOM = 50; 
+// Mantemos a zona de perigo para cálculos reais, mas no demo confiaremos no CSS Float
 const QR_DANGER_ZONE_START = 950; 
 
 const DEMO_DATA: ResumeData = {
@@ -385,7 +386,7 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA ---
+    // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
@@ -547,12 +548,9 @@ const App: React.FC = () => {
             for (let i = 0; i < blocks.length; i++) {
                 const block = blocks[i];
                 
-                // MENTIRA COSMÉTICA EQUILIBRADA: 
-                // Cortamos apenas 180px da primeira página no Demo Mode.
-                // Isso força a quebra exata antes do QR Code, sem deixar um buraco gigante.
-                const pageHeightLimit = (isDemoMode && currentPageIndex === 0) 
-                    ? A4_HEIGHT - 180 
-                    : A4_HEIGHT - MARGIN_BOTTOM;
+                // MANTEMOS A ALTURA TOTAL: 
+                // Removemos qualquer lógica de "corte antecipado".
+                const pageHeightLimit = A4_HEIGHT - MARGIN_BOTTOM;
 
                 const available = pageHeightLimit - currentY;
 
@@ -623,7 +621,6 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    // --- ZOOM ARTIFICIAL (MANTIDO) ---
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
