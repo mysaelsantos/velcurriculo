@@ -388,51 +388,51 @@ const App: React.FC = () => {
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
-        // --- PAGINAÇÃO MANUAL PARA MODO DEMO ---
-        // Isso evita "falsos positivos" de cálculo e garante a aparência exata do print.
+        // =================================================================================
+        // MODO DEMO: PAGINAÇÃO 100% MANUAL (SEM CÁLCULOS)
+        // =================================================================================
         if (isDemoMode) {
-            
-            // PÁGINA 1:
-            // Contém: Resumo, TODAS as 3 experiências, Educação e os primeiros 2 Cursos.
+            // PÁGINA 1
+            // Conteúdo fixo para garantir que o layout bata com o print do usuário.
+            // Inclui: Resumo, TODAS as 3 experiências, a única Educação, e os cursos 1 e 2.
             const page1: PageData = {
                 ...dataToPaginate,
-                experiences: dataToPaginate.experiences, // Todas as 3 exps
-                education: dataToPaginate.education,     // Toda a educação (1 item)
-                courses: dataToPaginate.courses.slice(0, 2), // Cursos 1 e 2
-                languages: [], // Vai para pg 2
-                skills: [],    // Vai para pg 2
-                
-                // --- ATENÇÃO AQUI ---
-                // No template Moderno, o QR Code fica embaixo à direita.
-                // Ele vai colidir com os "Cursos Complementares".
-                // Ativamos o espaçador nos IDs dos cursos que estão na primeira página.
+                experiences: dataToPaginate.experiences,
+                education: dataToPaginate.education,
+                courses: dataToPaginate.courses.slice(0, 2), // Apenas os 2 primeiros cursos
+                languages: [],
+                skills: [],
+                // FORÇAR O ESPAÇADOR DO QR CODE:
+                // No template moderno, o QR Code fica em cima dos cursos da página 1.
+                // Forçamos o 'offset' nos IDs '1' e '2' (os cursos que estão nesta página).
                 qrCodeOffsets: { 
-                    '1': 0, // Curso ID '1'
-                    '2': 0  // Curso ID '2'
+                    '1': 0, 
+                    '2': 0 
                 } 
             };
 
-            // PÁGINA 2:
-            // Contém: Resto dos cursos, Idiomas e Habilidades.
+            // PÁGINA 2
+            // O restante do conteúdo.
             const page2: PageData = {
                 ...dataToPaginate,
-                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, // Sem foto na pg 2
+                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, 
                 summary: '',
                 experiences: [],
                 education: [],
-                courses: dataToPaginate.courses.slice(2), // Cursos 3 e 4
+                courses: dataToPaginate.courses.slice(2), // Restante dos cursos
                 languages: dataToPaginate.languages,
                 skills: dataToPaginate.skills,
                 qrCodeOffsets: {}
             };
 
+            // Retorna imediatamente, ignorando qualquer lógica de medição abaixo.
             const demoPages = [page1, page2];
             setPaginatedData(demoPages);
             return demoPages;
         }
+        // =================================================================================
         
-        // --- FIM DA LÓGICA MANUAL DO DEMO ---
-
+        // LÓGICA PADRÃO PARA O USUÁRIO (CÁLCULO DINÂMICO)
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
         const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
@@ -452,7 +452,6 @@ const App: React.FC = () => {
                 });
     
                 await Promise.all(imagePromises);
-                // Pequeno delay extra para garantir que o layout settle
                 await new Promise(r => setTimeout(r, 100));
 
                 clearTimeout(timeout);
@@ -596,15 +595,14 @@ const App: React.FC = () => {
                 
                 const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
                 
-                // --- LÓGICA DE COLISÃO COM QR CODE ---
                 const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
                 
                 let effectiveHeight = block.height;
 
                 if (overlapsDangerZone) {
                     if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                    currentPageData.qrCodeOffsets[block.id] = 1; // 1 = Colisão detectada: Ativa o espaçador
-                    effectiveHeight = block.height * 1.1; // Reserva mais espaço
+                    currentPageData.qrCodeOffsets[block.id] = 1; 
+                    effectiveHeight = block.height * 1.1; 
                 }
 
                 const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
@@ -702,27 +700,15 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    // --- CORREÇÃO DE ESTABILIDADE DO DEMO ---
     useEffect(() => {
         let isMounted = true;
         
         const runPagination = async () => {
              if (!fontsLoaded) return;
              
-             // Para o modo Demo, garantimos que a imagem de perfil esteja carregada
-             // para que o calculo de altura (e a colisão do QR Code) seja exato na primeira vez.
-             // Isso evita recálculos e pulos visuais.
-             if (isDemoMode && resumeData.personalInfo.profilePicture) {
-                 try {
-                     await new Promise((resolve) => {
-                         const img = new Image();
-                         img.src = resumeData.personalInfo.profilePicture;
-                         img.onload = resolve;
-                         img.onerror = resolve; // Prossegue mesmo se falhar
-                     });
-                 } catch (e) { /* ignore */ }
-             }
-
+             // Modo Demo agora ignora completamente o carregamento de imagem para cálculo
+             // pois o cálculo foi removido.
+             
              // Pequeno delay para garantir ciclo de renderização do React
              await new Promise(r => setTimeout(r, 100));
              
