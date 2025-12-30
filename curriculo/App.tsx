@@ -24,13 +24,13 @@ const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: 'Marcos MJ Santos',
         jobTitle: 'Desenvolvedor Full Stack & Criador de Soluções',
-        email: 'marcos@velsites.com.br',
-        phone: '(37) 92707-2025',
-        address: 'Nova Serrana, MG',
+        email: 'l.mysaelsantos@gmail.com',
+        phone: '(37) 9 9974-5723',
+        address: 'Nova Serrana, Romeu Duarte',
         age: '22',
-        maritalStatus: 'Casado',
-        cnh: 'A',
-        linkedin: 'linkedin.com/in/marcos-mj-santos-aa696a233',
+        maritalStatus: 'Casado(a)',
+        cnh: 'A+B',
+        linkedin: 'linkedin.com/in/marcos-mj-santos',
         profilePicture: '/perfil.png' 
     },
     summary: 'Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.',
@@ -68,8 +68,8 @@ const DEMO_DATA: ResumeData = {
             id: '1', 
             degree: 'Análise e Desenvolvimento de Sistemas', 
             institution: 'Faculdade Tecnológica', 
-            startDate: '2021', 
-            endDate: '2023' 
+            startDate: '2020', 
+            endDate: '2024' 
         }
     ],
     courses: [
@@ -80,7 +80,7 @@ const DEMO_DATA: ResumeData = {
     ],
     languages: [
         { id: '1', language: 'Português', proficiency: 'Fluente' },
-        { id: '2', language: 'Inglês', proficiency: 'Avançado (Leitura Técnica)' }
+        { id: '2', language: 'Inglês', proficiency: 'Avançado' }
     ],
     skills: [
         'React.js', 'TypeScript', 'Node.js', 'Netlify Functions', 
@@ -388,35 +388,31 @@ const App: React.FC = () => {
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
-        // --- CORREÇÃO PARA O MODO DEMO ---
-        // Se estivermos em modo demo, usamos uma paginação pré-calculada e perfeita.
-        // Isso evita bugs de cálculo na primeira renderização, "assiste" o layout
-        // e garante que o usuário veja a paginação e o desvio do QR Code funcionando.
+        // --- LÓGICA DE DEMO OTIMIZADA PARA O PRINT ---
         if (isDemoMode) {
-            const exp1 = dataToPaginate.experiences.find(e => e.id === '1');
-            const exp2 = dataToPaginate.experiences.find(e => e.id === '2');
-            const exp3 = dataToPaginate.experiences.find(e => e.id === '3');
-
-            // Página 1: Resumo + 2 primeiras experiências
-            // Injetamos 'qrCodeOffsets' para o item '2' para demonstrar o texto desviando do QR Code
+            // Pagina 1 do Demo: Contém Resumo + TODAS as 3 experiências + Educação + Primeiros 2 cursos.
+            // Isso replica exatamente o print onde o QR Code fica no canto inferior direito,
+            // ao lado/sobre os cursos, demonstrando a funcionalidade de desvio de texto.
+            
             const page1: PageData = {
                 ...dataToPaginate,
-                experiences: [exp1!, exp2!].filter(Boolean),
-                education: [],
-                courses: [],
-                languages: [],
-                skills: [],
-                qrCodeOffsets: { '2': 0 } // Isso ativa o espaçador no ResumePreview para a experiência 2
+                experiences: dataToPaginate.experiences, // Todas as 3 experiências
+                education: dataToPaginate.education,     // Toda a educação
+                courses: dataToPaginate.courses.slice(0, 2), // Primeiros 2 cursos
+                languages: [], // Ficam na pag 2
+                skills: [],    // Ficam na pag 2
+                // Ativamos o offset no primeiro curso (ID '1') para criar o "desvio" visual do QR Code
+                qrCodeOffsets: { '1': 0 } 
             };
 
-            // Página 2: O restante do conteúdo
             const page2: PageData = {
                 ...dataToPaginate,
-                // Mantemos personalInfo para o cabeçalho, mas sem foto na pg 2 (controlado pelo componente)
-                summary: '', 
-                experiences: [exp3!].filter(Boolean),
-                education: dataToPaginate.education,
-                courses: dataToPaginate.courses,
+                // Sem foto na pag 2
+                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, 
+                summary: '',
+                experiences: [],
+                education: [],
+                courses: dataToPaginate.courses.slice(2), // Restante dos cursos
                 languages: dataToPaginate.languages,
                 skills: dataToPaginate.skills,
                 qrCodeOffsets: {}
