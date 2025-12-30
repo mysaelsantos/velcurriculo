@@ -4,12 +4,10 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
 const QR_CONFIG = {
-    // Mantemos a largura de proteção do texto
-    spacer: { width: 210, height: 130 }, 
+    spacer: { width: 230, height: 160 }, 
     
-    // CORREÇÃO DE POSIÇÃO: Valores menores aproximam da borda (Direita e Baixo)
     positions: {
-        'template-modern': { bottom: 15, right: 0 }, // Bem no canto
+        'template-modern': { bottom: 15, right: 0 },
         'template-classic': { bottom: 35, right: 25 },
         'template-minimalist': { bottom: 30, right: 25 },
     }
@@ -31,23 +29,25 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
+  // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
-      if (!qrCodeOffsets || qrCodeOffsets[itemId] === undefined) return null;
-
-      const marginTop = qrCodeOffsets[itemId];
-      
-      return (
-          <div 
-            style={{ 
-                float: 'right', 
-                clear: 'right',
-                width: `${QR_CONFIG.spacer.width}px`, 
-                height: `${QR_CONFIG.spacer.height}px`, 
-                marginTop: `${marginTop}px`,
-                pointerEvents: 'none',
-            }} 
-          />
-      );
+      // Se tiver offset calculado pela paginação, usa-o
+      if (qrCodeOffsets && qrCodeOffsets[itemId] !== undefined) {
+          const marginTop = qrCodeOffsets[itemId];
+          return (
+              <div 
+                style={{ 
+                    float: 'right', 
+                    clear: 'right',
+                    width: `${QR_CONFIG.spacer.width}px`, 
+                    height: `${QR_CONFIG.spacer.height}px`, 
+                    marginTop: `${marginTop}px`,
+                    pointerEvents: 'none',
+                }} 
+              />
+          );
+      }
+      return null;
   };
 
   const processedSkills = useMemo(() => {
@@ -98,7 +98,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       'resume-preview bg-white text-gray-900',
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
-      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : ''
+      (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
   ].filter(Boolean).join(' ');
 
   const templateKey = style?.template || 'template-modern';
@@ -228,13 +228,13 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO: Removido 'flex flex-wrap gap' para funcionar com float */}
+            {/* CORREÇÃO CRÍTICA: 'block' em vez de 'flex' para permitir o float funcionar */}
             <div id="resume-languages-list" className="w-full relative block">
-            {/* Espaçador para o bloco de idiomas inteiro */}
             {getLocalSpacer('languages-block')}
             {languages && languages.length > 0 ? (
                 languages.map(lang => (
-                    <div key={lang.id} className="inline-block mr-4 mb-1">
+                    // CORREÇÃO: 'inline-block' para ficar lado a lado e quebrar quando bater no float
+                    <div key={lang.id} className="inline-block mr-4 mb-2">
                         <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
                         <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
                     </div>
@@ -251,7 +251,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <h3 className="section-title">Habilidades e Competências</h3>
             
             <div id="resume-skills" className="w-full relative block">
-                {/* Espaçador para skills (bloco inteiro) */}
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
                     <div className="text-gray-700 text-sm leading-relaxed">
@@ -289,11 +288,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
               width: `${QR_CONFIG.spacer.width}px`, 
-              zIndex: 30, 
+              zIndex: 50, 
               pointerEvents: 'none',
               display: 'flex',
               justifyContent: 'flex-end', 
-              alignItems: 'flex-end'
+              alignItems: 'flex-end',
+              backgroundColor: 'white', 
+              padding: '10px 0 0 10px', 
+              borderTopLeftRadius: '8px'
           }}>
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
