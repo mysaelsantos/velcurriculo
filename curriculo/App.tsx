@@ -259,6 +259,9 @@ const App: React.FC = () => {
     const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // --- ESTADO PARA O GREETING DO HEADER ---
+    const [showGreeting, setShowGreeting] = useState(false);
 
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
@@ -350,6 +353,21 @@ const App: React.FC = () => {
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
     
+    // --- LÓGICA DO GREETING NO HEADER ---
+    useEffect(() => {
+        // Se o usuário passou do passo 1 (Informações Pessoais, que é index 1)
+        // E existe um nome preenchido
+        if (currentStep > 1 && resumeData.personalInfo.name.trim().length > 0) {
+            const timer = setTimeout(() => {
+                setShowGreeting(true);
+            }, 5000); // 5 segundos após mudar de seção
+            
+            return () => clearTimeout(timer);
+        } else if (currentStep <= 1) {
+            setShowGreeting(false); // Reseta se voltar para informações pessoais
+        }
+    }, [currentStep, resumeData.personalInfo.name]);
+
     // Fechar menu ao clicar fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -934,6 +952,8 @@ const App: React.FC = () => {
         );
     }
 
+    const firstName = resumeData.personalInfo.name.split(' ')[0] || "Visitante";
+
     return (
         <>
         <div id="print-container">
@@ -1031,8 +1051,17 @@ const App: React.FC = () => {
         </button>
         <header className="fixed top-6 left-6 right-6 bg-blue-800/80 backdrop-blur-lg z-50 border border-white/10 rounded-full shadow-lg">
             <div className="px-6 py-3 flex justify-between items-center">
-                <a href="https://velsites.com.br/" className="flex items-center">
-                    <img src="/logo-header.png" alt="Vel Sites Logo" className="h-5 mr-3" />
+                <a href="https://velsites.com.br/" className="flex items-center relative h-6">
+                    <img 
+                        src="/logo-header.png" 
+                        alt="Vel Sites Logo" 
+                        className={`h-5 mr-3 transition-opacity duration-700 ease-in-out absolute left-0 top-1/2 -translate-y-1/2 ${showGreeting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} 
+                    />
+                    <span 
+                        className={`text-white font-poppins font-medium text-lg whitespace-nowrap transition-opacity duration-700 ease-in-out absolute left-0 top-1/2 -translate-y-1/2 ${showGreeting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                    >
+                        Olá, {firstName}!
+                    </span>
                 </a>
                 <nav className="relative">
                      <button 
