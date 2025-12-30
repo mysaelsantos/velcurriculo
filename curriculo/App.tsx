@@ -388,31 +388,39 @@ const App: React.FC = () => {
     // --- LÓGICA DE PAGINAÇÃO ---
     const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
         
-        // --- LÓGICA DE DEMO OTIMIZADA PARA O PRINT ---
+        // --- PAGINAÇÃO MANUAL PARA MODO DEMO ---
+        // Isso evita "falsos positivos" de cálculo e garante a aparência exata do print.
         if (isDemoMode) {
-            // Pagina 1 do Demo: Contém Resumo + TODAS as 3 experiências + Educação + Primeiros 2 cursos.
-            // Isso replica exatamente o print onde o QR Code fica no canto inferior direito,
-            // ao lado/sobre os cursos, demonstrando a funcionalidade de desvio de texto.
             
+            // PÁGINA 1:
+            // Contém: Resumo, TODAS as 3 experiências, Educação e os primeiros 2 Cursos.
             const page1: PageData = {
                 ...dataToPaginate,
-                experiences: dataToPaginate.experiences, // Todas as 3 experiências
-                education: dataToPaginate.education,     // Toda a educação
-                courses: dataToPaginate.courses.slice(0, 2), // Primeiros 2 cursos
-                languages: [], // Ficam na pag 2
-                skills: [],    // Ficam na pag 2
-                // Ativamos o offset no primeiro curso (ID '1') para criar o "desvio" visual do QR Code
-                qrCodeOffsets: { '1': 0 } 
+                experiences: dataToPaginate.experiences, // Todas as 3 exps
+                education: dataToPaginate.education,     // Toda a educação (1 item)
+                courses: dataToPaginate.courses.slice(0, 2), // Cursos 1 e 2
+                languages: [], // Vai para pg 2
+                skills: [],    // Vai para pg 2
+                
+                // --- ATENÇÃO AQUI ---
+                // No template Moderno, o QR Code fica embaixo à direita.
+                // Ele vai colidir com os "Cursos Complementares".
+                // Ativamos o espaçador nos IDs dos cursos que estão na primeira página.
+                qrCodeOffsets: { 
+                    '1': 0, // Curso ID '1'
+                    '2': 0  // Curso ID '2'
+                } 
             };
 
+            // PÁGINA 2:
+            // Contém: Resto dos cursos, Idiomas e Habilidades.
             const page2: PageData = {
                 ...dataToPaginate,
-                // Sem foto na pag 2
-                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, 
+                personalInfo: { ...dataToPaginate.personalInfo, profilePicture: '' }, // Sem foto na pg 2
                 summary: '',
                 experiences: [],
                 education: [],
-                courses: dataToPaginate.courses.slice(2), // Restante dos cursos
+                courses: dataToPaginate.courses.slice(2), // Cursos 3 e 4
                 languages: dataToPaginate.languages,
                 skills: dataToPaginate.skills,
                 qrCodeOffsets: {}
@@ -423,8 +431,7 @@ const App: React.FC = () => {
             return demoPages;
         }
         
-        // --- FIM DA LÓGICA DO DEMO ---
-        // Abaixo continua o motor normal de cálculo para os dados do usuário
+        // --- FIM DA LÓGICA MANUAL DO DEMO ---
 
         if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
     
