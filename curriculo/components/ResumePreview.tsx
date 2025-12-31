@@ -3,7 +3,8 @@ import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
-const QR_CONFIG = {
+// [ALTERAÇÃO] Adicionado 'export' para uso no cálculo de colisão no App.tsx
+export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
     positions: {
@@ -102,6 +103,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   ].filter(Boolean).join(' ');
 
   const templateKey = style?.template || 'template-modern';
+  // @ts-ignore
   const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
