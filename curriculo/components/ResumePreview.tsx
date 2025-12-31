@@ -18,13 +18,13 @@ export const QR_CONFIG = {
         'template-classic': { 
             bottom: 35, 
             right: 25,
-            safetyPadding: 15, 
+            safetyPadding: 22, 
             overrideSpacer: { width: 230, height: 100 }
         },
         'template-minimalist': { 
             bottom: 30, 
             right: 25,
-            safetyPadding: 30, 
+            safetyPadding: 34, 
             overrideSpacer: { width: 230, height: 100 }
         },
     }
