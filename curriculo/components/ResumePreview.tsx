@@ -2,7 +2,7 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// CONFIGURAÇÃO DE POSIÇÃO (Exportada para uso no App.tsx)
+// CONFIGURAÇÃO DE POSIÇÃO
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
@@ -137,7 +137,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                {/* ALTERAÇÃO: 'block' garante que o float funcione corretamente */}
                 <div className="relative block">
                     {getLocalSpacer('summary-text')}
                     <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
@@ -230,7 +229,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* ALTERAÇÃO: block em vez de flex */}
             <div id="resume-languages-list" className="w-full relative block">
                 {getLocalSpacer('languages-block')}
                 {languages && languages.length > 0 ? (
@@ -250,7 +248,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* ALTERAÇÃO: block aqui também */}
             <div id="resume-skills" className="w-full relative block">
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
