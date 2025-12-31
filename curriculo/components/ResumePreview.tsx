@@ -10,7 +10,7 @@ export const QR_CONFIG = {
         'template-modern': { 
             bottom: 15, 
             right: 0,
-            safetyPadding: 10,
+            safetyPadding: 15,
             // CONTROLE MANUAL DE ALTURA PARA O TEMPLATE MODERNO
             // Altere o 'height' aqui para ajustar o raio da área protegida (Ex: 80, 100, 120)
             overrideSpacer: { width: 230, height: 100 }
