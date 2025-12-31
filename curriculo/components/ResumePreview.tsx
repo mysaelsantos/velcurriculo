@@ -59,9 +59,31 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   // @ts-ignore
   const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   
-  // LÓGICA DE CONTROLE MANUAL: Verifica se existe um tamanho personalizado (override)
+  // --- INÍCIO DA LÓGICA DINÂMICA (OPÇÃO 1) ---
+  
+  // 1. Recupera as dimensões base do template (altura é a prioridade aqui)
   // @ts-ignore
-  const activeSpacer = qrPosition.overrideSpacer || QR_CONFIG.spacer;
+  const configSpacer = qrPosition.overrideSpacer || QR_CONFIG.spacer;
+
+  // 2. Verifica quantos QR Codes estão realmente ativos (têm dados E estão habilitados)
+  const hasWhatsapp = !!personalInfo?.phone && !!style?.showQRCode;
+  // LinkedIn é opcional no type, então assumimos true se undefined para manter compatibilidade, mas checamos se existe link
+  const hasLinkedin = !!personalInfo?.linkedin && (style?.showLinkedinQr ?? true);
+  
+  const activeQrCount = (hasWhatsapp ? 1 : 0) + (hasLinkedin ? 1 : 0);
+
+  // 3. Define a largura dinâmica:
+  // Se tiver APENAS 1 QR Code, reduzimos para 130px.
+  // Caso contrário (2 códigos ou nenhum), mantemos a largura original do template (230px).
+  const dynamicWidth = activeQrCount === 1 ? 130 : configSpacer.width;
+
+  // 4. Cria o objeto final de dimensões que será usado nos espaçadores
+  const activeSpacer = {
+      width: dynamicWidth,
+      height: configSpacer.height
+  };
+  
+  // --- FIM DA LÓGICA DINÂMICA ---
 
   // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
@@ -73,7 +95,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                 style={{ 
                     float: 'right', 
                     clear: 'right',
-                    // Usa as dimensões ativas (personalizadas ou padrão)
+                    // Usa as dimensões dinâmicas calculadas acima
                     width: `${activeSpacer.width}px`, 
                     height: `${activeSpacer.height}px`, 
                     marginTop: `${marginTop}px`,
@@ -333,7 +355,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
               position: 'absolute',
               bottom: `${qrPosition.bottom}px`,
               right: `${qrPosition.right}px`,
-              width: `${QR_CONFIG.spacer.width}px`, 
+              // USO DA LARGURA DINÂMICA
+              width: `${activeSpacer.width}px`, 
               zIndex: 50, 
               pointerEvents: 'none',
               display: 'flex',
