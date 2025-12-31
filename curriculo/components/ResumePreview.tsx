@@ -11,7 +11,7 @@ export const QR_CONFIG = {
         'template-modern': { 
             bottom: 15, 
             right: 0,
-            safetyPadding: 10 // Margem apertada para o Moderno (aproveita mais espaço)
+            safetyPadding: 7 // Margem apertada para o Moderno (aproveita mais espaço)
         },
         'template-classic': { 
             bottom: 35, 
