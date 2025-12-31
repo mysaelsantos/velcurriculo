@@ -2,14 +2,27 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// CONFIGURAÇÃO DE POSIÇÃO
+// CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
+// Agora definimos o padding de segurança individualmente para cada template
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
     positions: {
-        'template-modern': { bottom: 15, right: 0 },
-        'template-classic': { bottom: 35, right: 25 },
-        'template-minimalist': { bottom: 30, right: 25 },
+        'template-modern': { 
+            bottom: 15, 
+            right: 0,
+            safetyPadding: 10 // Margem apertada para o Moderno (aproveita mais espaço)
+        },
+        'template-classic': { 
+            bottom: 35, 
+            right: 25,
+            safetyPadding: 40 // Margem robusta para o Clássico
+        },
+        'template-minimalist': { 
+            bottom: 30, 
+            right: 25,
+            safetyPadding: 40 // Margem robusta para o Minimalista
+        },
     }
 };
 
