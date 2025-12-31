@@ -1,5 +1,4 @@
 import { Handler } from '@netlify/functions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,12 +40,8 @@ const handler: Handler = async (event) => {
       };
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
     // --- CONSTRUÇÃO DO PROMPT "SUPER SEGURO" ---
     
-    // Instruções Específicas baseadas no tipo de campo
     let specificInstruction = '';
     
     if (type === 'summary') {
@@ -62,7 +57,6 @@ const handler: Handler = async (event) => {
         - PROIBIÇÃO: NÃO transforme texto corrido em bullet points se o original for um parágrafo. Mantenha o formato original.
       `;
     } else {
-      // Fallback para outros campos (educação, etc)
       specificInstruction = `
         - CONTEXTO: Texto geral de currículo.
         - INSTRUÇÃO: Melhore a clareza e formalidade.
@@ -87,17 +81,32 @@ const handler: Handler = async (event) => {
       VERSÃO OTIMIZADA:
     `;
 
-    // Configuração para evitar criatividade excessiva (Temperature mais baixa)
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3, // Baixa temperatura para ser mais fiel e menos "alucinado"
-        maxOutputTokens: 500, // Limite forçado de tokens
-      },
+    // --- CHAMADA DIRETA À API (SEM BIBLIOTECA) ---
+    // Usamos o modelo gemini-1.5-flash que é rápido e eficiente para texto
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{ text: prompt }]
+            }],
+            generationConfig: {
+                temperature: 0.3, // Baixa criatividade para evitar alucinação
+                maxOutputTokens: 500
+            }
+        })
     });
 
-    const response = await result.response;
-    const enhancedText = response.text().trim();
+    if (!response.ok) {
+        throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // Extração segura da resposta
+    const enhancedText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
 
     return {
       statusCode: 200,
@@ -106,10 +115,12 @@ const handler: Handler = async (event) => {
     };
   } catch (error) {
     console.error('Error enhancing text:', error);
+    // Em caso de erro, devolvemos o texto original para não quebrar a experiência do usuário
+    const originalText = JSON.parse(event.body || '{}').text || '';
     return {
-      statusCode: 500,
+      statusCode: 200, // Retornamos 200 para o frontend não travar
       headers: corsHeaders,
-      body: JSON.stringify({ error: 'Failed to enhance text' }),
+      body: JSON.stringify({ enhancedText: originalText, error: 'AI processing failed' }),
     };
   }
 };
