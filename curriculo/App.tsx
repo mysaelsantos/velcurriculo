@@ -5,7 +5,8 @@ import { toPng } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 import ResumeForm from './components/ResumeForm';
-import ResumePreview, { ResumePreviewRef } from './components/ResumePreview';
+// [ALTERAÇÃO] Importado QR_CONFIG para cálculo geométrico
+import ResumePreview, { ResumePreviewRef, QR_CONFIG } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
@@ -15,8 +16,7 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// --- CONSTANTES GLOBAIS DE LAYOUT ---
-const QR_DANGER_ZONE_START = 950; 
+// REMOVIDO: const QR_DANGER_ZONE_START = 950; (Agora é calculado dinamicamente)
 
 // DADOS DE DEMONSTRAÇÃO
 const DEMO_DATA: ResumeData = {
@@ -498,246 +498,248 @@ const App: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- LÓGICA DE PAGINAÇÃO ---
-    const paginateResume = useCallback(async (dataToPaginate: ResumeData) => {
-        
-        if (!measurementRootRef.current || !measurementContainerRef.current) return [dataToPaginate];
-    
-        const onRenderComplete = new Promise<HTMLElement>(async (resolve, reject) => {
-            const container = measurementContainerRef.current;
-            const timeout = setTimeout(() => reject(new Error("Pagination render timeout")), 6000);
-    
-            const checkRender = async () => {
-                const previewEl = container?.firstChild as HTMLElement;
-                if (!previewEl) {
-                    requestAnimationFrame(checkRender); return;
-                }
-    
-                const images = Array.from(previewEl.querySelectorAll('img'));
-                const imagePromises = images.map(img => {
-                    if (img.complete) return Promise.resolve();
-                    return new Promise(res => { img.onload = res; img.onerror = res; });
-                });
-    
-                await Promise.all(imagePromises);
-                await new Promise(r => setTimeout(r, 100));
-
-                clearTimeout(timeout);
-                resolve(previewEl);
-            };
-            
+    // --- ALTERAÇÃO: Renderização do componente de medição (Hidden) ---
+    // Este useEffect mantém o DOM de medição sempre atualizado com os dados mais recentes.
+    useEffect(() => {
+        if (measurementRootRef.current) {
             measurementRootRef.current.render(
                 <ResumePreview 
-                    key={`${dataToPaginate.style.template}-${Date.now()}`}
-                    data={dataToPaginate} 
+                    data={resumeData} 
                     isDemoMode={isDemoMode} 
                     isFirstPage={true} 
                     isMeasurement={true} 
                 />
             );
-            requestAnimationFrame(checkRender);
-        });
+        }
+    }, [resumeData, isDemoMode]);
+
+    // --- ALTERAÇÃO: ResizeObserver para detecção instantânea ---
+    // Este useEffect substitui o loop de setTimeout. Ele "escuta" o container.
+    useEffect(() => {
+        if (!measurementContainerRef.current) return;
+
+        const handleResize = (entries: ResizeObserverEntry[]) => {
+            // Assim que o tamanho mudar, recalculamos a paginação.
+            // Passamos 'resumeData' atual para a função de cálculo.
+            calculatePagination(resumeData);
+        };
+
+        const ro = new ResizeObserver(handleResize);
+        ro.observe(measurementContainerRef.current);
+
+        return () => ro.disconnect();
+    }, [resumeData]); // Dependência em resumeData garante que o cálculo use os dados corretos
+
+    // --- NOVA LÓGICA DE PAGINAÇÃO (GEOMÉTRICA E DINÂMICA) ---
+    const calculatePagination = useCallback(async (dataToPaginate: ResumeData) => {
+        const container = measurementContainerRef.current;
+        if (!container || !container.firstChild) {
+            setPaginatedData([dataToPaginate]);
+            return;
+        }
+
+        const previewEl = container.firstChild as HTMLElement;
+        const A4_HEIGHT = 1123; 
+        const MARGIN_BOTTOM = 50; 
         
-        try {
-            if (document.fonts) await document.fonts.ready;
-            const previewEl = await onRenderComplete;
-            
-            const A4_HEIGHT = 1123; 
-            const MARGIN_BOTTOM = 50; 
-            const headerEl = previewEl.querySelector('header') as HTMLElement;
-            const mainEl = previewEl.querySelector('main') as HTMLElement;
-            
-            if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return [dataToPaginate]; }
+        // --- CÁLCULO DE COLISÃO GEOMÉTRICA ---
+        const templateKey = dataToPaginate.style.template || 'template-modern';
+        // @ts-ignore
+        const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
+        const qrHeight = QR_CONFIG.spacer.height;
+        const qrPadding = 20; // Buffer de segurança
 
-            const getElementHeight = (element: HTMLElement) => {
-                if (!element) return 0;
-                const style = window.getComputedStyle(element);
-                const marginTop = parseFloat(style.marginTop) || 0;
-                const marginBottom = parseFloat(style.marginBottom) || 0;
-                return element.offsetHeight + marginTop + marginBottom;
-            };
+        // Zona Proibida começa aqui (Top Y coordinate)
+        const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding;
 
-            const headerHeight = getElementHeight(headerEl);
-            const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+        const headerEl = previewEl.querySelector('header') as HTMLElement;
+        const mainEl = previewEl.querySelector('main') as HTMLElement;
+        
+        if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return; }
 
-            const dangerZoneStart = QR_DANGER_ZONE_START;
+        const getElementHeight = (element: HTMLElement) => {
+            if (!element) return 0;
+            const style = window.getComputedStyle(element);
+            const marginTop = parseFloat(style.marginTop) || 0;
+            const marginBottom = parseFloat(style.marginBottom) || 0;
+            return element.offsetHeight + marginTop + marginBottom;
+        };
 
-            interface ContentBlock {
-                id: string;
-                type: keyof ResumeData; 
-                data: any; 
-                height: number;
+        const headerHeight = getElementHeight(headerEl);
+        const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+
+        interface ContentBlock {
+            id: string;
+            type: keyof ResumeData; 
+            data: any; 
+            height: number;
+        }
+
+        const blocks: ContentBlock[] = [];
+
+        const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
+            const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
+            if (!sectionEl) return;
+
+            const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
+            if (titleEl) {
+                blocks.push({
+                    id: `${dataKey}-title`,
+                    type: dataKey,
+                    data: null, 
+                    height: getElementHeight(titleEl) + 10,
+                });
             }
 
-            const blocks: ContentBlock[] = [];
-
-            const extractBlocks = (sectionId: string, dataKey: keyof ResumeData, listId?: string) => {
-                const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
-                if (!sectionEl) return;
-
-                const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
-                if (titleEl) {
+            if (dataKey === 'summary') {
+                const summaryEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
+                if (summaryEl) {
                     blocks.push({
-                        id: `${dataKey}-title`,
-                        type: dataKey,
-                        data: null, 
-                        height: getElementHeight(titleEl) + 10,
+                        id: 'summary-text',
+                        type: 'summary',
+                        data: dataToPaginate.summary,
+                        height: getElementHeight(summaryEl),
                     });
                 }
+            } else if (listId) {
+                const listContainer = sectionEl.querySelector(`#${listId}`);
+                if (!listContainer) return;
+                
+                const items = Array.from(listContainer.children) as HTMLElement[];
+                const dataList = dataToPaginate[dataKey] as any[];
 
-                if (dataKey === 'summary') {
-                    const summaryEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
-                    if (summaryEl) {
+                items.forEach((itemEl, index) => {
+                    const itemData = dataList[index];
+                    if (itemData) {
                         blocks.push({
-                            id: 'summary-text',
-                            type: 'summary',
-                            data: dataToPaginate.summary,
-                            height: getElementHeight(summaryEl),
+                            id: itemData.id,
+                            type: dataKey,
+                            data: itemData,
+                            height: getElementHeight(itemEl),
                         });
                     }
-                } else if (listId) {
-                    const listContainer = sectionEl.querySelector(`#${listId}`);
-                    if (!listContainer) return;
-                    
-                    const items = Array.from(listContainer.children) as HTMLElement[];
-                    const dataList = dataToPaginate[dataKey] as any[];
+                });
+            } else if (dataKey === 'skills' || dataKey === 'languages') {
+                    const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                    if(contentDiv) {
+                        blocks.push({
+                            id: `${dataKey}-block`,
+                            type: dataKey,
+                            data: dataToPaginate[dataKey],
+                            height: getElementHeight(contentDiv),
+                        });
+                    }
+            }
+        };
 
-                    items.forEach((itemEl, index) => {
-                        const itemData = dataList[index];
-                        if (itemData) {
-                            blocks.push({
-                                id: itemData.id,
-                                type: dataKey,
-                                data: itemData,
-                                height: getElementHeight(itemEl),
-                            });
-                        }
-                    });
-                } else if (dataKey === 'skills' || dataKey === 'languages') {
-                     const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
-                     if(contentDiv) {
-                         blocks.push({
-                             id: `${dataKey}-block`,
-                             type: dataKey,
-                             data: dataToPaginate[dataKey],
-                             height: getElementHeight(contentDiv),
-                         });
-                     }
-                }
-            };
+        if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
+        if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
+        if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
+        if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
+        if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
+        if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
-            if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
-            if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
-            if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
-            if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
-            if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
-            if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
+        const pages: PageData[] = [];
+        
+        let currentPageData: PageData = { 
+            personalInfo: dataToPaginate.personalInfo, 
+            style: dataToPaginate.style,
+            experiences: [], education: [], courses: [], languages: [], skills: [],
+            qrCodeOffsets: {} 
+        };
+        
+        let currentY = 50 + headerHeight + mainMarginTop;
+        let currentPageIndex = 0;
 
-            const pages: PageData[] = [];
-            
-            let currentPageData: PageData = { 
-                personalInfo: dataToPaginate.personalInfo, 
+        const createNewPage = () => {
+            pages.push(currentPageData);
+            currentPageData = { 
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
-                qrCodeOffsets: {} 
+                qrCodeOffsets: {}
             };
+            currentPageIndex++;
+            currentY = 50 + 30; 
+        };
+
+        let pendingTitleHeight = 0;
+
+        for (let i = 0; i < blocks.length; i++) {
+            const block = blocks[i];
             
-            let currentY = 50 + headerHeight + mainMarginTop;
-            let currentPageIndex = 0;
+            const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+            
+            // --- DETECÇÃO DE COLISÃO MELHORADA ---
+            // Verifica se o bloco atual invade a zona onde o QR code reside
+            const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+            
+            let effectiveHeight = block.height;
 
-            const createNewPage = () => {
-                pages.push(currentPageData);
-                currentPageData = { 
-                    style: dataToPaginate.style,
-                    experiences: [], education: [], courses: [], languages: [], skills: [],
-                    qrCodeOffsets: {}
-                };
-                currentPageIndex++;
-                currentY = 50 + 30; 
-            };
+            if (overlapsDangerZone) {
+                if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
+                currentPageData.qrCodeOffsets[block.id] = 1; 
+                // Pequeno ajuste para garantir que o float limpe corretamente
+                effectiveHeight = block.height * 1.05; 
+            }
 
-            let pendingTitleHeight = 0;
+            const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
 
-            for (let i = 0; i < blocks.length; i++) {
-                const block = blocks[i];
+            if (block.id.endsWith('-title')) {
+                const nextBlock = blocks[i+1];
+                const nextItemHeight = nextBlock ? nextBlock.height : 40; 
                 
-                const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
-                
-                const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
-                
-                let effectiveHeight = block.height;
-
-                if (overlapsDangerZone) {
-                    if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                    currentPageData.qrCodeOffsets[block.id] = 1; 
-                    effectiveHeight = block.height * 1.1; 
-                }
-
-                const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
-
-                if (block.id.endsWith('-title')) {
-                    const nextBlock = blocks[i+1];
-                    const nextItemHeight = nextBlock ? nextBlock.height : 40; 
-                    
-                    if (available < (effectiveHeight + nextItemHeight)) {
-                        createNewPage();
-                        effectiveHeight = block.height; 
-                    }
-                    
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = effectiveHeight; 
-                    continue; 
-                }
-
-                if (effectiveHeight > available) {
+                if (available < (effectiveHeight + nextItemHeight)) {
                     createNewPage();
-                    effectiveHeight = block.height;
-                    
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    
-                    const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                    currentY += titleHeight + effectiveHeight; 
-                    pendingTitleHeight = 0;
-                } else {
-                    if (block.type === 'summary') {
-                        currentPageData.summary = block.data;
-                    } else if (block.type === 'skills' || block.type === 'languages') {
-                        currentPageData[block.type] = block.data;
-                    } else if (Array.isArray(currentPageData[block.type])) {
-                        (currentPageData[block.type] as any[]).push(block.data);
-                    } 
-                    currentY += effectiveHeight;
-                    pendingTitleHeight = 0; 
+                    effectiveHeight = block.height; 
                 }
+                
+                currentY += effectiveHeight;
+                pendingTitleHeight = effectiveHeight; 
+                continue; 
             }
 
-            if (Object.keys(currentPageData).length > 0) {
-               pages.push(currentPageData);
+            if (effectiveHeight > available) {
+                createNewPage();
+                effectiveHeight = block.height;
+                
+                if (block.type === 'summary') {
+                    currentPageData.summary = block.data;
+                } else if (block.type === 'skills' || block.type === 'languages') {
+                    currentPageData[block.type] = block.data;
+                } else if (Array.isArray(currentPageData[block.type])) {
+                    (currentPageData[block.type] as any[]).push(block.data);
+                } 
+                
+                const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
+                currentY += titleHeight + effectiveHeight; 
+                pendingTitleHeight = 0;
+            } else {
+                if (block.type === 'summary') {
+                    currentPageData.summary = block.data;
+                } else if (block.type === 'skills' || block.type === 'languages') {
+                    currentPageData[block.type] = block.data;
+                } else if (Array.isArray(currentPageData[block.type])) {
+                    (currentPageData[block.type] as any[]).push(block.data);
+                } 
+                currentY += effectiveHeight;
+                pendingTitleHeight = 0; 
             }
-            
-            const finalPages = pages.filter(p => {
-                const hasData = p.summary || 
-                                (p.experiences && p.experiences.length > 0) || 
-                                (p.education && p.education.length > 0) ||
-                                (p.courses && p.courses.length > 0) ||
-                                (p.skills && p.skills.length > 0);
-                return hasData || (p.personalInfo && pages.indexOf(p) === 0);
-            });
-
-            setPaginatedData(finalPages);
-            return finalPages;
-
-        } catch (error) {
-            console.error("Pagination failed:", error);
-            setPaginatedData([dataToPaginate]);
-            return [dataToPaginate];
         }
+
+        if (Object.keys(currentPageData).length > 0) {
+            pages.push(currentPageData);
+        }
+        
+        const finalPages = pages.filter(p => {
+            const hasData = p.summary || 
+                            (p.experiences && p.experiences.length > 0) || 
+                            (p.education && p.education.length > 0) ||
+                            (p.courses && p.courses.length > 0) ||
+                            (p.skills && p.skills.length > 0);
+            return hasData || (p.personalInfo && pages.indexOf(p) === 0);
+        });
+
+        setPaginatedData(finalPages);
     }, [isDemoMode]);
 
     const scalePreview = useCallback(() => {
@@ -768,30 +770,8 @@ const App: React.FC = () => {
         }
     }, [isDemoMode]);
 
-    useEffect(() => {
-        let isMounted = true;
-        
-        const runPagination = async () => {
-             // ALTERAÇÃO CRÍTICA: Removido 'if (isLoading) return;' 
-             // Agora o layout é calculado mesmo durante o loading screen.
-             if (!fontsLoaded) return;
-             
-             // Pequeno delay para garantir ciclo de renderização do React
-             await new Promise(r => setTimeout(r, 100));
-             
-             if (isMounted) {
-                 paginateResume(resumeData);
-             }
-        };
-
-        const handler = setTimeout(runPagination, 300);
-
-        return () => { 
-            isMounted = false; 
-            clearTimeout(handler); 
-        };
-    }, [resumeData, paginateResume, fontsLoaded, isDemoMode]);
-
+    // --- REMOVIDO: O antigo useEffect de paginação (loop de setTimeout) ---
+    // A paginação agora é reativa via ResizeObserver acima.
 
     useEffect(() => {
         if(fontsLoaded){ 
