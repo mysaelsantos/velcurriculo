@@ -535,7 +535,14 @@ const App: React.FC = () => {
         // @ts-ignore
         const qrConfig = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
         const qrPosition = qrConfig;
-        const qrHeight = QR_CONFIG.spacer.height;
+
+        // --- INÍCIO DA ALTERAÇÃO ---
+        // Verifica se existe overrideSpacer e usa o height dele
+        // @ts-ignore
+        const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
+        const qrHeight = currentSpacerDims.height;
+        // --- FIM DA ALTERAÇÃO ---
+
         // Padding agora vem do template, garantindo a customização
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
 
