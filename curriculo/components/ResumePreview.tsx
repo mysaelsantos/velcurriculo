@@ -10,7 +10,10 @@ export const QR_CONFIG = {
         'template-modern': { 
             bottom: 15, 
             right: 0,
-            safetyPadding: 1 
+            safetyPadding: 10,
+            // CONTROLE MANUAL DE ALTURA PARA O TEMPLATE MODERNO
+            // Altere o 'height' aqui para ajustar o raio da área protegida (Ex: 80, 100, 120)
+            overrideSpacer: { width: 230, height: 100 }
         },
         'template-classic': { 
             bottom: 35, 
@@ -50,6 +53,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
     }
   }, [style?.color]);
 
+  const templateKey = style?.template || 'template-modern';
+  // @ts-ignore
+  const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
+  
+  // LÓGICA DE CONTROLE MANUAL: Verifica se existe um tamanho personalizado (override)
+  // @ts-ignore
+  const activeSpacer = qrPosition.overrideSpacer || QR_CONFIG.spacer;
+
   // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
       if (qrCodeOffsets && qrCodeOffsets[itemId] !== undefined) {
@@ -60,8 +71,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                 style={{ 
                     float: 'right', 
                     clear: 'right',
-                    width: `${QR_CONFIG.spacer.width}px`, 
-                    height: `${QR_CONFIG.spacer.height}px`, 
+                    // Usa as dimensões ativas (personalizadas ou padrão)
+                    width: `${activeSpacer.width}px`, 
+                    height: `${activeSpacer.height}px`, 
                     marginTop: `${marginTop}px`,
                     pointerEvents: 'none',
                 }} 
@@ -130,9 +142,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
   ].filter(Boolean).join(' ');
 
-  const templateKey = style?.template || 'template-modern';
-  // @ts-ignore
-  const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
