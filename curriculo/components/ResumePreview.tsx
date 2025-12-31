@@ -3,7 +3,6 @@ import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
-// Agora definimos o padding de segurança individualmente para cada template
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
@@ -11,20 +10,29 @@ export const QR_CONFIG = {
         'template-modern': { 
             bottom: 15, 
             right: 0,
-            safetyPadding: 7 // Margem apertada para o Moderno (aproveita mais espaço)
+            safetyPadding: 10 
         },
         'template-classic': { 
             bottom: 35, 
             right: 25,
-            safetyPadding: 40 // Margem robusta para o Clássico
+            safetyPadding: 40 
         },
         'template-minimalist': { 
             bottom: 30, 
             right: 25,
-            safetyPadding: 40 // Margem robusta para o Minimalista
+            safetyPadding: 40 
         },
     }
 };
+
+// Componente visual para secções vazias (Ocupa pouco espaço)
+const CollapsedPlaceholder = ({ label }: { label: string }) => (
+    <div className="w-full py-1.5 my-1 border border-dashed border-gray-300 rounded bg-gray-50/50 flex items-center justify-center select-none group hover:bg-gray-100 transition-colors">
+        <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider group-hover:text-gray-500">
+            {label} (Vazio)
+        </span>
+    </div>
+);
 
 const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
   const safeData = data || {};
@@ -91,6 +99,14 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       return true; 
   };
 
+  // Verificadores de conteúdo para decidir entre Renderizar Full vs Placeholder
+  const hasSummary = summary && summary.trim().length > 0;
+  const hasExperiences = experiences && experiences.length > 0;
+  const hasEducation = education && education.length > 0;
+  const hasCourses = courses && courses.length > 0;
+  const hasLanguages = languages && languages.length > 0;
+  const hasSkills = processedSkills && processedSkills.length > 0;
+
   const isModern = style?.template === 'template-modern';
   const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
@@ -148,146 +164,154 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       
       <main className="space-y-4" style={getMainStyle()}>
         {shouldShowSection(summary) && (
-            <section id="summary-section">
-                <h3 className="section-title">Resumo Profissional</h3>
-                <div className="relative block">
-                    {getLocalSpacer('summary-text')}
-                    <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
-                        {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
+            hasSummary ? (
+                <section id="summary-section">
+                    <h3 className="section-title">Resumo Profissional</h3>
+                    <div className="relative block">
+                        {getLocalSpacer('summary-text')}
+                        <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
+                            {summary}
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            ) : (
+                <CollapsedPlaceholder label="Resumo Profissional" />
+            )
         )}
 
         {shouldShowSection(experiences, true) && (
-        <section id="experience-section">
-            <h3 className="section-title">Experiência Profissional</h3>
-            <div id="resume-experience-list" className="space-y-4">
-                {experiences && experiences.length > 0 ? (
-                    experiences.map(exp => (
-                        <div key={exp.id} className="w-full relative block">
-                            <div className="flex justify-between items-baseline flex-wrap">
-                                <div className="pr-4">
-                                    <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
-                                    <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+            hasExperiences ? (
+                <section id="experience-section">
+                    <h3 className="section-title">Experiência Profissional</h3>
+                    <div id="resume-experience-list" className="space-y-4">
+                        {experiences.map(exp => (
+                            <div key={exp.id} className="w-full relative block">
+                                <div className="flex justify-between items-baseline flex-wrap">
+                                    <div className="pr-4">
+                                        <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
+                                        <p className="text-gray-700">{exp.company || 'Empresa'} {exp.location ? `• ${exp.location}` : ''}</p>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
                                 </div>
-                                <p className="text-xs text-gray-500 text-right whitespace-nowrap">{exp.startDate} {exp.startDate && exp.endDate ? ' - ' : ''} {exp.endDate}</p>
+                                
+                                {exp.description && (
+                                    <div className="relative block">
+                                        {getLocalSpacer(exp.id)}
+                                        <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
+                                            {exp.description}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            
-                            {exp.description && (
-                                <div className="relative block">
-                                    {getLocalSpacer(exp.id)}
-                                    <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
-                                        {exp.description}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-gray-400 italic text-sm">Suas experiências profissionais aparecerão aqui...</p>
-                )}
-            </div>
-        </section>
+                        ))}
+                    </div>
+                </section>
+            ) : (
+                <CollapsedPlaceholder label="Experiência Profissional" />
+            )
         )}
 
         {shouldShowSection(education, true) && (
-        <section id="education-section">
-            <h3 className="section-title">Formação Acadêmica</h3>
-            <div id="resume-education-list" className="space-y-2">
-            {education && education.length > 0 ? (
-                education.map(edu => (
-                    <div key={edu.id} className="w-full relative block">
-                         {getLocalSpacer(edu.id)}
-                        <div className="flex justify-between items-baseline flex-wrap">
-                            <div className="pr-4">
-                                <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
-                                <p className="text-gray-700">{edu.institution || 'Instituição'}</p>
+            hasEducation ? (
+                <section id="education-section">
+                    <h3 className="section-title">Formação Acadêmica</h3>
+                    <div id="resume-education-list" className="space-y-2">
+                        {education.map(edu => (
+                            <div key={edu.id} className="w-full relative block">
+                                {getLocalSpacer(edu.id)}
+                                <div className="flex justify-between items-baseline flex-wrap">
+                                    <div className="pr-4">
+                                        <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
+                                        <p className="text-gray-700">{edu.institution || 'Instituição'}</p>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-right whitespace-nowrap">{edu.startDate} {edu.startDate && edu.endDate ? ' - ' : ''} {edu.endDate}</p>
+                                </div>
                             </div>
-                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{edu.startDate} {edu.startDate && edu.endDate ? ' - ' : ''} {edu.endDate}</p>
-                        </div>
+                        ))}
                     </div>
-                ))
+                </section>
             ) : (
-                <p className="text-gray-400 italic text-sm">Sua formação acadêmica aparecerá aqui...</p>
-            )}
-            </div>
-        </section>
+                <CollapsedPlaceholder label="Formação Acadêmica" />
+            )
         )}
 
         {shouldShowSection(courses, true) && (
-        <section id="courses-section" className="w-full">
-            <h3 className="section-title">Cursos Complementares</h3>
-            <div id="resume-courses-list" className="space-y-2">
-            {courses && courses.length > 0 ? (
-                courses.map(course => (
-                    <div key={course.id} className="w-full relative block">
-                        {getLocalSpacer(course.id)}
-                        <div className="flex justify-between items-baseline flex-wrap">
-                            <div className="pr-4">
-                                <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
-                                <p className="text-gray-700">{course.institution || 'Instituição'}</p>
+            hasCourses ? (
+                <section id="courses-section" className="w-full">
+                    <h3 className="section-title">Cursos Complementares</h3>
+                    <div id="resume-courses-list" className="space-y-2">
+                        {courses.map(course => (
+                            <div key={course.id} className="w-full relative block">
+                                {getLocalSpacer(course.id)}
+                                <div className="flex justify-between items-baseline flex-wrap">
+                                    <div className="pr-4">
+                                        <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
+                                        <p className="text-gray-700">{course.institution || 'Instituição'}</p>
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-right whitespace-nowrap">{course.completionDate}</p>
+                                </div>
                             </div>
-                            <p className="text-xs text-gray-500 text-right whitespace-nowrap">{course.completionDate}</p>
-                        </div>
+                        ))}
                     </div>
-                ))
+                </section>
             ) : (
-                <p className="text-gray-400 italic text-sm">Seus cursos complementares aparecerão aqui...</p>
-            )}
-            </div>
-        </section>
+                <CollapsedPlaceholder label="Cursos Complementares" />
+            )
         )}
 
         {shouldShowSection(languages, true) && (
-        <section id="languages-section">
-            <h3 className="section-title">Idiomas</h3>
-            <div id="resume-languages-list" className="w-full relative block">
-                {getLocalSpacer('languages-block')}
-                {languages && languages.length > 0 ? (
-                    languages.map(lang => (
-                        <div key={lang.id} className="inline-block mr-4 mb-2">
-                            <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
-                            <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
-                )}
-            </div>
-        </section>
+            hasLanguages ? (
+                <section id="languages-section">
+                    <h3 className="section-title">Idiomas</h3>
+                    <div id="resume-languages-list" className="w-full relative block">
+                        {getLocalSpacer('languages-block')}
+                        {languages.map(lang => (
+                            <div key={lang.id} className="inline-block mr-4 mb-2">
+                                <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
+                                <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            ) : (
+                <CollapsedPlaceholder label="Idiomas" />
+            )
         )}
         
         {shouldShowSection(processedSkills, true) && (
-        <section id="skills-section">
-            <h3 className="section-title">Habilidades e Competências</h3>
-            <div id="resume-skills" className="w-full relative block">
-                {getLocalSpacer('skills-block')}
-                {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
-                    <div className="text-gray-700 text-sm leading-relaxed">
-                        {processedSkills.map((skill, index) => (
-                            <span key={index} className="inline-block">
-                                {skill}
-                                {index < processedSkills.length - 1 && (
-                                    <span className="mx-2 font-bold text-gray-400">•</span>
-                                )}
-                            </span>
-                        ))}
+            hasSkills ? (
+                <section id="skills-section">
+                    <h3 className="section-title">Habilidades e Competências</h3>
+                    <div id="resume-skills" className="w-full relative block">
+                        {getLocalSpacer('skills-block')}
+                        {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
+                            <div className="text-gray-700 text-sm leading-relaxed">
+                                {processedSkills.map((skill, index) => (
+                                    <span key={index} className="inline-block">
+                                        {skill}
+                                        {index < processedSkills.length - 1 && (
+                                            <span className="mx-2 font-bold text-gray-400">•</span>
+                                        )}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="block">
+                                {processedSkills.map((skill, index) => (
+                                    <span 
+                                        key={index} 
+                                        className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1 mr-2"
+                                    >
+                                        {skill}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="block">
-                        {processedSkills.map((skill, index) => (
-                            <span 
-                                key={index} 
-                                className="bg-gray-200 text-gray-800 text-sm font-semibold px-4 py-1 rounded-full inline-block mb-1 mr-2"
-                            >
-                                {skill}
-                            </span>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </section>
+                </section>
+            ) : (
+                <CollapsedPlaceholder label="Habilidades e Competências" />
+            )
         )}
         
       </main>
