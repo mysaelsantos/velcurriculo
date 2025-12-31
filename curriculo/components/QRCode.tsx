@@ -28,7 +28,9 @@ const QRCodeComponent: React.FC<QRCodeProps> = ({ phone, show, linkedin, showLin
       }
 
       const finalPhone = `55${cleanedPhone}`;
-      const whatsappLink = `https://wa.me/${finalPhone}`;
+      // --- ALTERAÇÃO AQUI: Mensagem pré-definida codificada para URL ---
+      const message = encodeURIComponent("Olá! Vi seu currículo e gostaria de entrar em contato.");
+      const whatsappLink = `https://wa.me/${finalPhone}?text=${message}`;
 
       try {
         const dataUrl = await QRCode.toDataURL(whatsappLink, {
