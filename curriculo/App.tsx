@@ -948,8 +948,28 @@ const App: React.FC = () => {
             exportToPdf(resumeData);
         }, 300);
     };
+
+    const handleEditResume = (savedAt: string) => {
+        const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
+        if (resumeToEdit) {
+            setResumeData(resumeToEdit);
+            setIsDemoMode(false);
+            setIsMyResumesModalOpen(false);
+            setEditingResumeId(savedAt);
+            setHasPaidInSession(false);
+        }
+    };
+
+    const handleDeleteSavedResume = (savedAt: string) => {
+        const updatedResumes = savedResumes.filter(r => r.savedAt !== savedAt);
+        setSavedResumes(updatedResumes);
+        try {
+            localStorage.setItem('savedResumes', JSON.stringify(updatedResumes));
+        } catch (error) {
+            console.error("Failed to update saved resumes in localStorage:", error);
+        }
+    };
     
-    // FUNÇÃO AUXILIAR PARA O MODO DEV (EXPORTAR JSON)
     const handleExportJson = () => {
         const json = JSON.stringify(resumeData, null, 2);
         navigator.clipboard.writeText(json)
@@ -957,18 +977,27 @@ const App: React.FC = () => {
             .catch(err => alert("Erro ao copiar JSON: " + err));
     };
 
-    // --- LÓGICA DO RODAPÉ (CLICKS DEV) ---
+    // --- NOVA FUNÇÃO: Preencher com dados de Demo ---
+    const handleFillDemoData = () => {
+        // Cria uma cópia profunda para não mutar a constante original e garantir que o React detecte a mudança
+        const deepCopy = JSON.parse(JSON.stringify(DEMO_DATA));
+        setResumeData(deepCopy);
+        setIsDemoMode(false); // Sai do modo demo visual, trata como dados do usuário
+        setHasPaidInSession(false); 
+        setEditingResumeId(null);
+        showToast("Dados de DEMO preenchidos com sucesso!", "success");
+    };
+
     const handleFooterLogoClick = () => {
-        if (isDevModeActive) return; // Se já ativo, ignora
+        if (isDevModeActive) return; 
         const newCount = devClickCount + 1;
         setDevClickCount(newCount);
         if (newCount === 5) {
             setShowDevModal(true);
-            setDevClickCount(0); // Reseta contador
+            setDevClickCount(0); 
         }
     };
 
-    // --- LÓGICA DE VERIFICAÇÃO DE SENHA DEV ---
     const handleDevLogin = () => {
         if (devPassword === '2707') {
             setIsDevModeActive(true);
@@ -981,9 +1010,33 @@ const App: React.FC = () => {
         }
     };
 
+    const handleRequestDelete = (target: { id: string; type: 'experience' | 'education' | 'course' | 'language' }) => {
+        setDeletionTarget(target);
+    };
+
+    const handleConfirmDelete = () => {
+        if (!deletionTarget) return;
+        const { type, id } = deletionTarget;
+
+        const keyMap = {
+            experience: 'experiences',
+            education: 'education',
+            course: 'courses',
+            language: 'languages',
+        } as const;
+
+        const key = keyMap[type];
+
+        setResumeData(prev => ({
+            ...prev,
+            [key]: prev[key].filter((item: any) => item.id !== id),
+        }));
+
+        setDeletionTarget(null);
+    };
+
     return (
         <>
-        {/* TELA DE LOADING (SOBREPOSIÇÃO) */}
         {isLoading && (
             <div className="fixed inset-0 w-screen h-screen z-[200] bg-white flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
@@ -1004,7 +1057,6 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* MODAL DE DESENVOLVEDOR (Senha) */}
         {showDevModal && (
             <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
@@ -1118,6 +1170,17 @@ const App: React.FC = () => {
                     aria-label="Exportar JSON"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </button>
+
+                {/* NOVO BOTÃO: PREENCHER COM DEMO */}
+                <button
+                    type="button"
+                    onClick={handleFillDemoData}
+                    className="fixed bottom-5 left-20 z-[100] bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform hover:scale-105"
+                    title="Preencher com Dados de Demo (Teste)"
+                    aria-label="Preencher Demo"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </button>
 
                 <button
