@@ -24,7 +24,7 @@ export const QR_CONFIG = {
         'template-minimalist': { 
             bottom: 30, 
             right: 25,
-            safetyPadding: 34, 
+            safetyPadding: 40, 
             overrideSpacer: { width: 230, height: 100 }
         },
     }
