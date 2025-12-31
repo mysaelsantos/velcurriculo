@@ -3,7 +3,6 @@ import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO
-// [ALTERAÇÃO] Adicionado 'export' para uso no cálculo de colisão no App.tsx
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
@@ -32,11 +31,11 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
   // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
-      // Se tiver offset calculado (ou chumbado no modo demo), usa-o
       if (qrCodeOffsets && qrCodeOffsets[itemId] !== undefined) {
           const marginTop = qrCodeOffsets[itemId];
           return (
               <div 
+                key={`spacer-${itemId}`}
                 style={{ 
                     float: 'right', 
                     clear: 'right',
@@ -44,6 +43,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                     height: `${QR_CONFIG.spacer.height}px`, 
                     marginTop: `${marginTop}px`,
                     pointerEvents: 'none',
+                    // Debug visual (remova em produção se quiser, mas ajuda a ver onde está o bloco)
+                    // background: 'rgba(255, 0, 0, 0.1)' 
                 }} 
               />
           );
@@ -138,7 +139,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                <div className="relative">
+                {/* CORREÇÃO: 'block' garante que o float funcione. 'relative' mantém o z-index. */}
+                <div className="relative block">
                     {getLocalSpacer('summary-text')}
                     <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
                         {summary || <span className="text-gray-400 italic text-sm">Seu resumo profissional aparecerá aqui...</span>}
@@ -153,7 +155,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-experience-list" className="space-y-4">
                 {experiences && experiences.length > 0 ? (
                     experiences.map(exp => (
-                        <div key={exp.id} className="w-full relative">
+                        <div key={exp.id} className="w-full relative block">
                             <div className="flex justify-between items-baseline flex-wrap">
                                 <div className="pr-4">
                                     <h4 className="font-semibold">{exp.jobTitle || 'Cargo'}</h4>
@@ -163,7 +165,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                             </div>
                             
                             {exp.description && (
-                                <div>
+                                <div className="relative block">
                                     {getLocalSpacer(exp.id)}
                                     <p className="mt-1 text-gray-600 leading-relaxed text-justify whitespace-pre-line">
                                         {exp.description}
@@ -185,7 +187,8 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    <div key={edu.id} className="w-full relative">
+                    // CORREÇÃO: relative block aqui também
+                    <div key={edu.id} className="w-full relative block">
                          {getLocalSpacer(edu.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
@@ -209,7 +212,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-courses-list" className="space-y-2">
             {courses && courses.length > 0 ? (
                 courses.map(course => (
-                    <div key={course.id} className="w-full relative">
+                    <div key={course.id} className="w-full relative block">
                         {getLocalSpacer(course.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
                             <div className="pr-4">
@@ -230,20 +233,19 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO CRÍTICA: 'block' em vez de 'flex' para permitir o float funcionar */}
+            {/* CORREÇÃO CRÍTICA: 'block' em vez de 'flex' garante que o float funcione */}
             <div id="resume-languages-list" className="w-full relative block">
-            {getLocalSpacer('languages-block')}
-            {languages && languages.length > 0 ? (
-                languages.map(lang => (
-                    // CORREÇÃO: 'inline-block' para ficar lado a lado e quebrar quando bater no float
-                    <div key={lang.id} className="inline-block mr-4 mb-2">
-                        <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
-                        <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
-                    </div>
-                ))
-            ) : (
-                <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
-            )}
+                {getLocalSpacer('languages-block')}
+                {languages && languages.length > 0 ? (
+                    languages.map(lang => (
+                        <div key={lang.id} className="inline-block mr-4 mb-2">
+                            <span className="font-semibold">{lang.language || 'Idioma'}:&nbsp;</span>
+                            <span className="text-gray-700">{lang.proficiency || 'Nível'}</span>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-gray-400 italic text-sm">Seus idiomas aparecerão aqui...</p>
+                )}
             </div>
         </section>
         )}
@@ -251,7 +253,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            
+            {/* CORREÇÃO CRÍTICA: 'block' aqui também */}
             <div id="resume-skills" className="w-full relative block">
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
