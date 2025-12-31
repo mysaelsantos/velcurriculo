@@ -2,7 +2,7 @@ import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } fr
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
-// CONFIGURAÇÃO DE POSIÇÃO
+// CONFIGURAÇÃO DE POSIÇÃO (Exportada para uso no App.tsx)
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
@@ -43,8 +43,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                     height: `${QR_CONFIG.spacer.height}px`, 
                     marginTop: `${marginTop}px`,
                     pointerEvents: 'none',
-                    // Debug visual (remova em produção se quiser, mas ajuda a ver onde está o bloco)
-                    // background: 'rgba(255, 0, 0, 0.1)' 
                 }} 
               />
           );
@@ -139,7 +137,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(summary) && (
             <section id="summary-section">
                 <h3 className="section-title">Resumo Profissional</h3>
-                {/* CORREÇÃO: 'block' garante que o float funcione. 'relative' mantém o z-index. */}
+                {/* ALTERAÇÃO: 'block' garante que o float funcione corretamente */}
                 <div className="relative block">
                     {getLocalSpacer('summary-text')}
                     <div id="resume-summary" className="text-gray-700 leading-relaxed block text-justify">
@@ -187,7 +185,6 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
             <div id="resume-education-list" className="space-y-2">
             {education && education.length > 0 ? (
                 education.map(edu => (
-                    // CORREÇÃO: relative block aqui também
                     <div key={edu.id} className="w-full relative block">
                          {getLocalSpacer(edu.id)}
                         <div className="flex justify-between items-baseline flex-wrap">
@@ -233,7 +230,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(languages, true) && (
         <section id="languages-section">
             <h3 className="section-title">Idiomas</h3>
-            {/* CORREÇÃO CRÍTICA: 'block' em vez de 'flex' garante que o float funcione */}
+            {/* ALTERAÇÃO: block em vez de flex */}
             <div id="resume-languages-list" className="w-full relative block">
                 {getLocalSpacer('languages-block')}
                 {languages && languages.length > 0 ? (
@@ -253,7 +250,7 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         {shouldShowSection(processedSkills, true) && (
         <section id="skills-section">
             <h3 className="section-title">Habilidades e Competências</h3>
-            {/* CORREÇÃO CRÍTICA: 'block' aqui também */}
+            {/* ALTERAÇÃO: block aqui também */}
             <div id="resume-skills" className="w-full relative block">
                 {getLocalSpacer('skills-block')}
                 {(style?.template === 'template-classic' || style?.template === 'template-minimalist') ? (
