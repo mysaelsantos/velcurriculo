@@ -11,8 +11,9 @@ import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData, PageData } from './types';
-// IMPORTAÇÃO DA AUTO-CONFIGURAÇÃO DO FIREBASE
+// SERVIÇOS DO FIREBASE
 import { runAutoSetup } from './services/autoSetup';
+import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
@@ -280,9 +281,12 @@ const App: React.FC = () => {
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // EXECUTA A AUTO-CONFIGURAÇÃO DO BANCO DE DADOS
+    // INICIALIZAÇÃO DE SERVIÇOS (AUTO-SETUP e RASTREAMENTO)
     useEffect(() => {
+        // Configura o banco se for a primeira vez
         runAutoSetup();
+        // Rastreia o visitante atual (apenas 1x por sessão)
+        trackVisitor();
     }, []);
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
@@ -793,6 +797,9 @@ const App: React.FC = () => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
         
+        // RASTREAMENTO: Conta mais um currículo gerado
+        trackResumeGenerated();
+
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -919,6 +926,11 @@ const App: React.FC = () => {
         setIsPixModalOpen(false);
         setPixPaymentData(null);
         setHasPaidInSession(true);
+
+        // RASTREAMENTO: Salva a venda no Firebase
+        if (pixPaymentData?.paymentId) {
+            trackSale(paymentAmount, resumeData.personalInfo.name || "Cliente", pixPaymentData.paymentId);
+        }
 
         const newSavedResume: SavedResume = {
             ...resumeData,
