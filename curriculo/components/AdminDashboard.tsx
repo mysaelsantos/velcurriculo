@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactDOM from 'react-dom/client'; // Necessário para a medição oculta
+import ReactDOM from 'react-dom/client';
 import { auth, db } from '../services/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { toPng } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
-import ResumePreview, { QR_CONFIG } from './ResumePreview'; // Importamos a configuração do QR
+import ResumePreview, { QR_CONFIG } from './ResumePreview';
 
 // --- ÍCONES ---
 const Icons = {
@@ -59,11 +59,11 @@ const AdminDashboard: React.FC = () => {
 
     // --- ESTADOS DE PAGINAÇÃO E PREVIEW ---
     const [selectedResume, setSelectedResume] = useState<any | null>(null);
-    const [paginatedPages, setPaginatedPages] = useState<any[]>([]); // Páginas calculadas
+    const [paginatedPages, setPaginatedPages] = useState<any[]>([]);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-    const [isPreviewReady, setIsPreviewReady] = useState(false); // Só mostra quando calcular páginas
+    const [isPreviewReady, setIsPreviewReady] = useState(false);
 
-    // Refs para medição oculta (MOTOR DE PAGINAÇÃO)
+    // Refs
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     const measurementRootRef = useRef<any>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -73,13 +73,14 @@ const AdminDashboard: React.FC = () => {
         return () => unsubscribe();
     }, []);
 
-    // 1. INICIALIZA O MOTOR DE MEDIÇÃO OCULTO (Igual ao App.tsx)
+    // 1. MOTOR DE MEDIÇÃO OCULTO
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
+        // Importante: Definir largura exata para simular A4
         measurementNode.style.width = '794px'; 
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
@@ -98,7 +99,7 @@ const AdminDashboard: React.FC = () => {
         };
     }, []);
 
-    // 2. FUNÇÃO QUE CALCULA PAGINAÇÃO (Copiada do App.tsx)
+    // 2. CÁLCULO DE PAGINAÇÃO
     const calculatePagination = useCallback(async (dataToPaginate: any) => {
         const container = measurementContainerRef.current;
         if (!container) return;
@@ -108,8 +109,8 @@ const AdminDashboard: React.FC = () => {
             <ResumePreview data={dataToPaginate} isDemoMode={false} isFirstPage={true} isMeasurement={true} />
         );
 
-        // Espera renderizar
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // AUMENTADO O TEMPO para garantir carregamento de imagens/fontes
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         const previewEl = container.firstChild as HTMLElement;
         if (!previewEl) {
@@ -232,19 +233,23 @@ const AdminDashboard: React.FC = () => {
 
         if (Object.keys(currentPageData).length > 0) pages.push(currentPageData);
         
-        // Remove páginas vazias
         const finalPages = pages.filter(p => p.summary || (p.experiences && p.experiences.length > 0) || (p.education && p.education.length > 0) || (p.courses && p.courses.length > 0) || (p.skills && p.skills.length > 0) || (p.personalInfo && pages.indexOf(p) === 0));
 
         setPaginatedPages(finalPages);
         setIsPreviewReady(true);
     }, []);
 
-    // 3. QUANDO SELECIONA UM RESUME, INICIA CÁLCULO
+    // 3. SELECIONA CURRÍCULO
     useEffect(() => {
         if (selectedResume && selectedResume.full_data_backup) {
             setIsPreviewReady(false);
-            const parsedData = JSON.parse(selectedResume.full_data_backup);
-            calculatePagination(parsedData);
+            try {
+                const parsedData = JSON.parse(selectedResume.full_data_backup);
+                calculatePagination(parsedData);
+            } catch (e) {
+                console.error("Erro ao fazer parse dos dados", e);
+                setIsPreviewReady(true);
+            }
         }
     }, [selectedResume, calculatePagination]);
 
@@ -305,7 +310,7 @@ const AdminDashboard: React.FC = () => {
         catch (err) { setError('Credenciais inválidas.'); }
     };
 
-    // --- FUNÇÃO DE DOWNLOAD PDF CORRIGIDA (MULTI-PÁGINA) ---
+    // --- FUNÇÃO DE DOWNLOAD PDF CORRIGIDA (CORS + VISIBILIDADE) ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
@@ -323,13 +328,25 @@ const AdminDashboard: React.FC = () => {
                 const pageEl = pages[i];
                 // Força dimensões exatas para o html-to-image não cortar
                 const originalStyle = pageEl.style.cssText;
+                
+                // Configuração temporária para captura
                 pageEl.style.width = '794px';
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
                 pageEl.style.transform = 'none';
                 pageEl.style.margin = '0';
-
-                const imgData = await toPng(pageEl, { quality: 0.95, pixelRatio: 2, backgroundColor: '#ffffff', width: 794, height: 1123 });
+                pageEl.style.marginBottom = '0'; // Garante que não tenha margem negativa na captura
+                
+                // OPÇÕES CRÍTICAS ADICIONADAS: useCORS e cacheBust
+                const imgData = await toPng(pageEl, { 
+                    quality: 0.95, 
+                    pixelRatio: 2, 
+                    backgroundColor: '#ffffff', 
+                    width: 794, 
+                    height: 1123,
+                    useCORS: true, // Permite baixar imagens do Firebase/Externas
+                    cacheBust: true // Evita cache de imagens corrompidas
+                });
 
                 // Restaura estilo visual
                 pageEl.style.cssText = originalStyle;
@@ -342,8 +359,8 @@ const AdminDashboard: React.FC = () => {
             pdf.save(fileName);
 
         } catch (err) {
-            console.error(err);
-            alert("Erro ao gerar PDF.");
+            console.error("Erro no PDF:", err);
+            alert("Erro ao gerar PDF. Verifique se as imagens do currículo estão acessíveis.");
         } finally {
             setIsGeneratingPdf(false);
         }
@@ -526,7 +543,8 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             ) : (
                                 paginatedPages.map((page, index) => (
-                                    <div key={index} className="bg-white shadow-xl resume-page" style={{ width: '794px', minHeight: '1123px', transform: 'scale(0.7)', transformOrigin: 'top center', marginBottom: '-300px' }}>
+                                    // CORREÇÃO VISUAL AQUI: Alterado de -300px para 20px
+                                    <div key={index} className="bg-white shadow-xl resume-page" style={{ width: '794px', minHeight: '1123px', transform: 'scale(0.7)', transformOrigin: 'top center', marginBottom: '20px' }}>
                                         <ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} />
                                     </div>
                                 ))
