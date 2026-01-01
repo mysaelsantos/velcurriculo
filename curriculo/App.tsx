@@ -16,15 +16,14 @@ import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
 // NOVO: IMPORTA O PAINEL ADMINISTRATIVO
 import AdminDashboard from './components/AdminDashboard';
-// NOVO: CONTEXTO E HEADER DE FEEDBACK
+// NOVO: CONTEXTO DE FEEDBACK
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
-import FeedbackHeader from './components/FeedbackHeader';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// DADOS DE DEMONSTRAÇÃO
+// DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: "Marcos Mj Santos",
@@ -243,13 +242,18 @@ const TestimonialsSection = React.memo(() => {
     );
 });
 
-// COMPONENTE RENOMEADO PARA AppContent
+// COMPONENTE PRINCIPAL (Reestruturado para incluir a lógica de Feedback)
 const AppContent: React.FC = () => {
     // --- LÓGICA DE ROTEAMENTO (ADMIN vs SITE) ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
 
-    // --- HOOK DE FEEDBACK ---
-    const { triggerFeedback } = useFeedback();
+    // --- HOOK DE FEEDBACK (Lógica do Contexto) ---
+    const { status, triggerFeedback, openFeedback, closeFeedback, submitFeedback } = useFeedback();
+    
+    // --- ESTADOS LOCAIS PARA A ANIMAÇÃO E FORMULÁRIO DO CABEÇALHO ---
+    const [rating, setRating] = useState(0);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [displayText, setDisplayText] = useState(''); // Texto animado (Typewriter)
 
     useEffect(() => {
         const handleHashChange = () => setCurrentRoute(window.location.hash);
@@ -319,6 +323,63 @@ const AppContent: React.FC = () => {
         // 2. Registra o visitante (inteligente: 1x por sessão)
         trackVisitor();
     }, []);
+
+    // --- ANIMAÇÃO TYPEWRITER (ERRO E CORREÇÃO) ---
+    useEffect(() => {
+        if (status === 'typing') {
+            const phrase1 = "Gostou do nosso...";
+            const phrase2 = "Avalie nossos serviços";
+            let i = 0;
+            let isDeleting = false;
+            
+            const typeLoop = () => {
+                // Se terminou de digitar a frase 1
+                if (!isDeleting && i === phrase1.length) {
+                    setTimeout(() => { isDeleting = true; typeLoop(); }, 800); // Pausa antes de apagar
+                    return;
+                }
+
+                // Se terminou de apagar tudo
+                if (isDeleting && i === 0) {
+                    // Começa a frase 2 (final)
+                    let j = 0;
+                    const typeFinal = setInterval(() => {
+                        setDisplayText(phrase2.substring(0, j + 1));
+                        j++;
+                        if (j === phrase2.length) {
+                            clearInterval(typeFinal);
+                        }
+                    }, 50); // Velocidade frase 2
+                    return;
+                }
+
+                // Lógica de digitar/apagar frase 1
+                const currentText = phrase1.substring(0, isDeleting ? i - 1 : i + 1);
+                setDisplayText(currentText);
+                i = isDeleting ? i - 1 : i + 1;
+
+                const speed = isDeleting ? 30 : 80; // Apagar é mais rápido
+                setTimeout(typeLoop, speed);
+            };
+
+            typeLoop();
+        } else if (status === 'prompt') {
+            setDisplayText("Avalie nossos serviços");
+        }
+    }, [status]);
+
+    // Função de envio do formulário de feedback
+    const handleFeedbackSubmit = () => {
+        const words = feedbackText.trim().split(/\s+/).length;
+        if (words >= 3 && rating > 0) {
+            submitFeedback({
+                rating,
+                text: feedbackText,
+                author: userData.name || 'Anônimo',
+                email: userData.email || 'sem-email'
+            });
+        }
+    };
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
@@ -905,7 +966,7 @@ const AppContent: React.FC = () => {
             setGeneratingStatus('');
         }
         
-    }, [triggerFeedback]); // Adicionado dependência triggerFeedback
+    }, [triggerFeedback]); // Dependência adicionada
 
     const handlePaymentRequest = async () => {
         if(hasPaidInSession) {
@@ -1056,8 +1117,21 @@ const AppContent: React.FC = () => {
         }
     };
 
+    // --- VARIÁVEIS PARA O HEADER HÍBRIDO ---
+    const isFeedbackActive = status !== 'idle' && status !== 'waiting';
+    // Se o status for 'open', aumenta a altura (expande a barra)
+    const headerHeight = status === 'open' ? '400px' : undefined; 
+    
+    const isValidFeedback = feedbackText.trim().split(/\s+/).length >= 3 && rating > 0;
+
     return (
         <>
+        {/* BACKDROP ESCURO (Só quando o feedback está aberto) */}
+        <div 
+            className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] transition-opacity duration-300 ${status === 'open' ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+            onClick={closeFeedback}
+        />
+
         {isLoading && (
             <div className="fixed inset-0 w-screen h-screen z-[200] bg-white flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
@@ -1214,7 +1288,121 @@ const AppContent: React.FC = () => {
             </>
         )}
 
-        <FeedbackHeader userData={userData} />
+        {/* --- CABEÇALHO RESTAURADO COM LÓGICA HÍBRIDA --- */}
+        <header 
+            className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 lg:rounded-full shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${status === 'open' ? 'bg-white text-gray-800' : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg')}`}
+            style={{ height: headerHeight || 'auto' }}
+        >
+            <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
+                {/* ÁREA DA ESQUERDA: LOGO OU FEEDBACK */}
+                <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
+                    {status === 'thank_you' ? (
+                        <div className="flex items-center gap-2 font-bold animate-fade-in">
+                            <Icons.Check /> Obrigado pela avaliação!
+                        </div>
+                    ) : (
+                        <div className="flex items-center relative h-6 w-full">
+                            <img 
+                                src="/logo-header.png" 
+                                alt="Logo" 
+                                className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                            />
+                            {/* TEXTO NORMAL DO APP (SAUDAÇÃO) */}
+                            {!isFeedbackActive && headerMessage && (
+                                <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                    {headerMessage}
+                                </span>
+                            )}
+                            {/* TEXTO DO FEEDBACK (TYPEWRITER) */}
+                            {isFeedbackActive && (
+                                <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
+                                    {displayText}
+                                    <span className="animate-pulse">|</span>
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ÁREA DA DIREITA: NAVEGAÇÃO OU AÇÃO */}
+                <nav className="relative flex items-center gap-3">
+                    {/* BOTÃO MODO FEEDBACK: Seta */}
+                    {isFeedbackActive && status !== 'thank_you' && (
+                        <button 
+                            onClick={status === 'open' ? closeFeedback : openFeedback}
+                            className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
+                        >
+                            <Icons.ChevronDown />
+                        </button>
+                    )}
+
+                    {/* BOTÃO MODO NORMAL: Menu Hambúrguer */}
+                    {!isFeedbackActive && (
+                        <button 
+                            onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                            className="p-1.5 rounded-full hover:bg-white/10 transition focus:outline-none"
+                        >
+                            {isMenuOpen ? <Icons.Close /> : <Icons.Menu />}
+                        </button>
+                    )}
+
+                    {/* MENU DROPDOWN ORIGINAL */}
+                    {isMenuOpen && !isFeedbackActive && (
+                        <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
+                            <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contato</p>
+                            </div>
+                            <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.WhatsApp /> WhatsApp
+                            </a>
+                            <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.Mail /> E-mail
+                            </a>
+                            <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.Instagram /> Instagram
+                            </a>
+                        </div>
+                    )}
+                </nav>
+            </div>
+
+            {/* ÁREA EXPANDIDA (MODAL HÍBRIDO) */}
+            <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-opacity duration-300 delay-100 ${status === 'open' ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Como foi a sua experiência?</h3>
+                
+                {/* Estrelas */}
+                <div className="flex gap-2 mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setRating(star)} className="transform transition hover:scale-110 focus:outline-none">
+                            {star <= rating ? <Icons.StarFilled /> : <Icons.StarOutline />}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Campo de Texto */}
+                <textarea 
+                    className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 mb-2 text-gray-800"
+                    placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                />
+                
+                {/* Validação */}
+                <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-4">
+                    <span>{feedbackText.trim() ? `${feedbackText.trim().split(/\s+/).length} palavras` : '0 palavras'}</span>
+                    {!isValidFeedback && <span>Mínimo 3 palavras e 1 estrela</span>}
+                </div>
+
+                {/* Botão Enviar */}
+                <button 
+                    onClick={handleFeedbackSubmit}
+                    disabled={!isValidFeedback || status === 'submitting'}
+                    className={`w-full max-w-md py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${isValidFeedback ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                >
+                    {status === 'submitting' ? 'Enviando...' : <><Icons.Send /> Enviar Avaliação</>}
+                </button>
+            </div>
+        </header>
 
         <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
             <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
@@ -1344,7 +1532,6 @@ const AppContent: React.FC = () => {
                             <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
                             <div className="flex space-x-4 justify-center md:justify-start">
                                 <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon">
-                                    {/* CORREÇÃO DO ÍCONE INSTAGRAM */}
                                     <svg className="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
                                 </a>
                             </div>
