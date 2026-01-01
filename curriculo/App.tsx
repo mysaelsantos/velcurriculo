@@ -815,7 +815,7 @@ const App: React.FC = () => {
         setGeneratingStatus('Preparando documento...');
         
         // RASTREAMENTO: Conta mais um currículo gerado
-        trackResumeGenerated();
+        trackResumeGenerated(dataToExport);
 
         if (document.fonts) {
             await document.fonts.ready;
