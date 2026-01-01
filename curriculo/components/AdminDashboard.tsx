@@ -65,6 +65,9 @@ const AdminDashboard: React.FC = () => {
     const [paginatedPages, setPaginatedPages] = useState<any[]>([]); 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isPreviewReady, setIsPreviewReady] = useState(false);
+    
+    // --- NOVO: Estado para escala dinâmica do preview ---
+    const [previewScale, setPreviewScale] = useState(0.7);
 
     // Refs
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
@@ -74,6 +77,22 @@ const AdminDashboard: React.FC = () => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, setUser);
         return () => unsubscribe();
+    }, []);
+
+    // 0. CALCULAR ESCALA DO PREVIEW BASEADO NO ECRÃ
+    useEffect(() => {
+        const handleResize = () => {
+            const width = window.innerWidth;
+            // 794px é a largura do A4. 40px é um padding de segurança.
+            // Se o ecrã for menor que o A4, calcula a proporção.
+            // Limita a no máximo 0.7 para Desktop.
+            const targetScale = Math.min(0.7, (width - 40) / 794);
+            setPreviewScale(targetScale);
+        };
+        
+        handleResize(); // Executa ao iniciar
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     // 1. INICIALIZA O MOTOR DE MEDIÇÃO OCULTO
@@ -492,7 +511,6 @@ const AdminDashboard: React.FC = () => {
 
                     {activeTab === 'resumes' && (
                         <div className="space-y-4 animate-fade-in-scale">
-                            {/* Cabeçalho da Seção */}
                              <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <h3 className="font-bold text-lg text-gray-800">Histórico de Gerações</h3>
                                 <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{leads.length} Registros</span>
@@ -608,11 +626,31 @@ const AdminDashboard: React.FC = () => {
                                     <p className="text-sm">Calculando páginas...</p>
                                 </div>
                             ) : (
-                                paginatedPages.map((page, index) => (
-                                    <div key={index} className="bg-white shadow-xl resume-page" style={{ width: '794px', minHeight: '1123px', transform: 'scale(0.7)', transformOrigin: 'top center', marginBottom: '-315px' }}>
-                                        <ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} />
-                                    </div>
-                                ))
+                                paginatedPages.map((page, index) => {
+                                    // CÁLCULO DA MARGEM NEGATIVA PARA COMPENSAR A ESCALA
+                                    // Se a escala diminui, a altura visual diminui, então precisamos subir a próxima página.
+                                    // Altura Original: 1123px.
+                                    // Altura Visual = 1123 * scale.
+                                    // Espaço Vazio = 1123 - (1123 * scale).
+                                    // Margem Negativa = -(Espaço Vazio) + 20px (gap).
+                                    const marginBottom = -(1123 * (1 - previewScale)) + 20;
+
+                                    return (
+                                        <div 
+                                            key={index} 
+                                            className="bg-white shadow-xl resume-page" 
+                                            style={{ 
+                                                width: '794px', 
+                                                minHeight: '1123px', 
+                                                transform: `scale(${previewScale})`, 
+                                                transformOrigin: 'top center', 
+                                                marginBottom: `${marginBottom}px` 
+                                            }}
+                                        >
+                                            <ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} />
+                                        </div>
+                                    )
+                                })
                             )}
                         </div>
                     </div>
