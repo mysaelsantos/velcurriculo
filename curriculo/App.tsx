@@ -16,13 +16,26 @@ import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
 // NOVO: IMPORTA O PAINEL ADMINISTRATIVO
 import AdminDashboard from './components/AdminDashboard';
-// NOVO: CONTEXTO DE FEEDBACK E COMPONENTE DE HEADER
+// NOVO: CONTEXTO DE FEEDBACK
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
-import FeedbackHeader from './components/FeedbackHeader';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
+
+// --- ÍCONES (Adicionado para corrigir o erro de Tela Branca) ---
+const Icons = {
+    ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+    StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    StarOutline: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+    Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+    Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+    WhatsApp: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
+    Mail: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>,
+    Instagram: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
+};
 
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
@@ -249,7 +262,12 @@ const AppContent: React.FC = () => {
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
 
     // --- HOOK DE FEEDBACK (Lógica do Contexto) ---
-    const { status, triggerFeedback } = useFeedback();
+    const { status, triggerFeedback, openFeedback, closeFeedback, submitFeedback } = useFeedback();
+    
+    // --- ESTADOS LOCAIS PARA A ANIMAÇÃO E FORMULÁRIO DO CABEÇALHO ---
+    const [rating, setRating] = useState(0);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [displayText, setDisplayText] = useState(''); // Texto animado (Typewriter)
 
     useEffect(() => {
         const handleHashChange = () => setCurrentRoute(window.location.hash);
@@ -292,6 +310,7 @@ const AppContent: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [fontsLoaded, setFontsLoaded] = useState(false); // Mantemos o controle de fontes separado
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // --- ESTADOS DE DESENVOLVEDOR ---
     const [isDevModeActive, setIsDevModeActive] = useState(false); // Ativa os botões
@@ -318,6 +337,63 @@ const AppContent: React.FC = () => {
         // 2. Registra o visitante (inteligente: 1x por sessão)
         trackVisitor();
     }, []);
+
+    // --- ANIMAÇÃO TYPEWRITER (ERRO E CORREÇÃO) ---
+    useEffect(() => {
+        if (status === 'typing') {
+            const phrase1 = "Gostou do nosso...";
+            const phrase2 = "Avalie nossos serviços";
+            let i = 0;
+            let isDeleting = false;
+            
+            const typeLoop = () => {
+                // Se terminou de digitar a frase 1
+                if (!isDeleting && i === phrase1.length) {
+                    setTimeout(() => { isDeleting = true; typeLoop(); }, 800); // Pausa antes de apagar
+                    return;
+                }
+
+                // Se terminou de apagar tudo
+                if (isDeleting && i === 0) {
+                    // Começa a frase 2 (final)
+                    let j = 0;
+                    const typeFinal = setInterval(() => {
+                        setDisplayText(phrase2.substring(0, j + 1));
+                        j++;
+                        if (j === phrase2.length) {
+                            clearInterval(typeFinal);
+                        }
+                    }, 50); // Velocidade frase 2
+                    return;
+                }
+
+                // Lógica de digitar/apagar frase 1
+                const currentText = phrase1.substring(0, isDeleting ? i - 1 : i + 1);
+                setDisplayText(currentText);
+                i = isDeleting ? i - 1 : i + 1;
+
+                const speed = isDeleting ? 30 : 80; // Apagar é mais rápido
+                setTimeout(typeLoop, speed);
+            };
+
+            typeLoop();
+        } else if (status === 'prompt') {
+            setDisplayText("Avalie nossos serviços");
+        }
+    }, [status]);
+
+    // Função de envio do formulário de feedback
+    const handleFeedbackSubmit = () => {
+        const words = feedbackText.trim().split(/\s+/).length;
+        if (words >= 3 && rating > 0) {
+            submitFeedback({
+                rating,
+                text: feedbackText,
+                author: userData.name || 'Anônimo',
+                email: userData.email || 'sem-email'
+            });
+        }
+    };
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
@@ -442,6 +518,17 @@ const AppContent: React.FC = () => {
              return () => clearTimeout(timer);
         }
     }, [currentStep, hasMotivatedEducation]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const nav = document.querySelector('header nav');
+            if (isMenuOpen && nav && !nav.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isMenuOpen]);
 
     const handleContinueProgress = () => {
         if (pendingSavedData) {
@@ -882,7 +969,7 @@ const AppContent: React.FC = () => {
             const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
             pdf.save(fileName);
             
-            // --- GATILHO DE FEEDBACK (CORRIGIDO) ---
+            // --- GATILHO DE FEEDBACK ---
             triggerFeedback();
 
         } catch (error) {
@@ -1044,10 +1131,20 @@ const AppContent: React.FC = () => {
         }
     };
 
+    // --- VARIÁVEIS PARA O HEADER HÍBRIDO ---
+    const isFeedbackActive = status !== 'idle' && status !== 'waiting';
+    // Se o status for 'open', aumenta a altura (expande a barra)
+    const headerHeight = status === 'open' ? '400px' : undefined; 
+    
+    const isValidFeedback = feedbackText.trim().split(/\s+/).length >= 3 && rating > 0;
+
     return (
         <>
         {/* BACKDROP ESCURO (Só quando o feedback está aberto) */}
-        {/* Obs: O FeedbackHeader já tem seu próprio backdrop para o formulário. */}
+        <div 
+            className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] transition-opacity duration-300 ${status === 'open' ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+            onClick={closeFeedback}
+        />
 
         {isLoading && (
             <div className="fixed inset-0 w-screen h-screen z-[200] bg-white flex items-center justify-center">
@@ -1205,13 +1302,122 @@ const AppContent: React.FC = () => {
             </>
         )}
 
-        {/* --- CABEÇALHO NOVO --- */}
-        {/* Usamos o componente importado e passamos as props necessárias */}
-        <FeedbackHeader 
-            userData={userData} 
-            headerMessage={headerMessage}
-            showLogo={showLogo}
-        />
+        {/* --- CABEÇALHO ORIGINAL MANTIDO (FLUTUANTE) --- */}
+        {/* Mantido top-6 left-6 right-6 e todas as classes originais */}
+        <header 
+            className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 lg:rounded-full shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${status === 'open' ? 'bg-white text-gray-800' : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg')}`}
+            style={{ height: headerHeight || 'auto' }}
+        >
+            <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
+                {/* ÁREA DA ESQUERDA: LOGO OU FEEDBACK */}
+                <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
+                    {status === 'thank_you' ? (
+                        <div className="flex items-center gap-2 font-bold animate-fade-in">
+                            <Icons.Check /> Obrigado pela avaliação!
+                        </div>
+                    ) : (
+                        <div className="flex items-center relative h-6 w-full">
+                            <img 
+                                src="/logo-header.png" 
+                                alt="Logo" 
+                                className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                            />
+                            {/* TEXTO NORMAL DO APP (SAUDAÇÃO) */}
+                            {!isFeedbackActive && headerMessage && (
+                                <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                    {headerMessage}
+                                </span>
+                            )}
+                            {/* TEXTO DO FEEDBACK (TYPEWRITER) */}
+                            {isFeedbackActive && (
+                                <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
+                                    {displayText}
+                                    <span className="animate-pulse">|</span>
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ÁREA DA DIREITA: NAVEGAÇÃO OU AÇÃO */}
+                <nav className="relative flex items-center gap-3">
+                    {/* BOTÃO MODO FEEDBACK: Seta */}
+                    {isFeedbackActive && status !== 'thank_you' && (
+                        <button 
+                            onClick={status === 'open' ? closeFeedback : openFeedback}
+                            className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
+                        >
+                            <Icons.ChevronDown />
+                        </button>
+                    )}
+
+                    {/* BOTÃO MODO NORMAL: Menu Hambúrguer */}
+                    {!isFeedbackActive && (
+                        <button 
+                            onClick={() => setIsMenuOpen(!isMenuOpen)} 
+                            className="p-1.5 rounded-full hover:bg-white/10 transition focus:outline-none"
+                        >
+                            {isMenuOpen ? <Icons.Close /> : <Icons.Menu />}
+                        </button>
+                    )}
+
+                    {/* MENU DROPDOWN ORIGINAL */}
+                    {isMenuOpen && !isFeedbackActive && (
+                        <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
+                            <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contato</p>
+                            </div>
+                            <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.WhatsApp /> WhatsApp
+                            </a>
+                            <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.Mail /> E-mail
+                            </a>
+                            <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
+                                <Icons.Instagram /> Instagram
+                            </a>
+                        </div>
+                    )}
+                </nav>
+            </div>
+
+            {/* ÁREA EXPANDIDA (MODAL HÍBRIDO) */}
+            <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-opacity duration-300 delay-100 ${status === 'open' ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Como foi a sua experiência?</h3>
+                
+                {/* Estrelas */}
+                <div className="flex gap-2 mb-6">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setRating(star)} className="transform transition hover:scale-110 focus:outline-none">
+                            {star <= rating ? <Icons.StarFilled /> : <Icons.StarOutline />}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Campo de Texto */}
+                <textarea 
+                    className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 mb-2 text-gray-800"
+                    placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                />
+                
+                {/* Validação */}
+                <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-4">
+                    <span>{feedbackText.trim() ? `${feedbackText.trim().split(/\s+/).length} palavras` : '0 palavras'}</span>
+                    {!isValidFeedback && <span>Mínimo 3 palavras e 1 estrela</span>}
+                </div>
+
+                {/* Botão Enviar */}
+                <button 
+                    onClick={handleFeedbackSubmit}
+                    disabled={!isValidFeedback || status === 'submitting'}
+                    className={`w-full max-w-md py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${isValidFeedback ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                >
+                    {status === 'submitting' ? 'Enviando...' : <><Icons.Send /> Enviar Avaliação</>}
+                </button>
+            </div>
+        </header>
 
         <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
             <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
