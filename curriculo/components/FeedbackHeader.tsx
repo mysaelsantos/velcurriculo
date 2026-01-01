@@ -91,9 +91,11 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     const headerHeight = status === 'open' ? '400px' : '64px';
     
-    // CORRIGIDO: Estilos Flutuantes (Floating) restaurados
-    // top-6 left-6 right-6 -> Garante que flutua e não cola nas bordas
-    // rounded-2xl -> Garante que não fica quadrado mesmo no mobile
+    // CORRIGIDO:
+    // 1. rounded-full (Pílula) quando fechado.
+    // 2. rounded-3xl quando aberto (para o modal ficar bonito).
+    const borderShape = status === 'open' ? 'rounded-3xl' : 'rounded-full';
+
     const containerClasses = status === 'open' 
         ? 'bg-white text-gray-800' 
         : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg');
@@ -106,15 +108,15 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 onClick={closeFeedback}
             />
 
-            {/* BARRA FLUTUANTE RESTAURADA */}
+            {/* BARRA FLUTUANTE */}
             <header 
-                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 lg:rounded-full rounded-2xl shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight }}
             >
                 {/* LINHA SUPERIOR */}
                 <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
                     
-                    {/* ESQUERDA: Logo/Texto */}
+                    {/* ESQUERDA: Logo e Texto (Partilham o mesmo espaço) */}
                     <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
                         {status === 'thank_you' ? (
                             <div className="flex items-center gap-2 font-bold animate-fade-in">
@@ -122,18 +124,23 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </div>
                         ) : (
                             <div className="flex items-center relative h-6 w-full">
+                                {/* LOGO: Só aparece se showLogo=true E se o Feedback NÃO estiver ativo */}
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
-                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
+
+                                {/* TEXTO DE SAUDAÇÃO (App): Só aparece se não estivermos em Feedback */}
                                 {!isFeedbackActive && headerMessage && (
                                     <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
+
+                                {/* TEXTO DO FEEDBACK: Aparece no mesmo lugar da logo (absolute left-0) */}
                                 {isFeedbackActive && (
-                                    <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
+                                    <span className="absolute left-0 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
                                         {displayText}
                                         <span className="animate-pulse">|</span>
                                     </span>
