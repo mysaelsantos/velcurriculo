@@ -32,7 +32,8 @@ const Icons = {
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
     Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
     Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
-    Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+    Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
@@ -41,7 +42,7 @@ const AdminDashboard: React.FC = () => {
     const [user, setUser] = useState<any>(null);
     const [activeTab, setActiveTab] = useState<'overview' | 'resumes' | 'analytics' | 'reviews'>('overview');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // NOVO: Controle do menu mobile
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     
     // Dados
     const [stats, setStats] = useState<any>({});
@@ -367,7 +368,7 @@ const AdminDashboard: React.FC = () => {
         if (confirm('Tem a certeza?')) { await deleteDoc(doc(db, 'reviews', id)); }
     };
 
-    // Componente Interno para o Conteúdo da Sidebar (para reuso no Mobile e Desktop)
+    // Componente Interno para o Conteúdo da Sidebar
     const SidebarContent = ({ collapsed, mobile }: any) => (
         <>
             <div className={`h-20 flex items-center justify-center border-b border-white/10 relative ${mobile ? 'px-6 justify-between' : ''}`}>
@@ -490,30 +491,62 @@ const AdminDashboard: React.FC = () => {
                     )}
 
                     {activeTab === 'resumes' && (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in-scale">
-                            <div className="p-4 lg:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div className="space-y-4 animate-fade-in-scale">
+                            {/* Cabeçalho da Seção */}
+                             <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <h3 className="font-bold text-lg text-gray-800">Histórico de Gerações</h3>
                                 <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{leads.length} Registros</span>
                             </div>
-                            {/* Tabela com Scroll Horizontal no Mobile */}
-                            <div className="overflow-x-auto w-full">
-                                <table className="w-full text-left text-sm min-w-[600px]">
-                                    <thead className="bg-gray-50/50 text-gray-500 font-semibold border-b border-gray-100">
-                                        <tr><th className="px-6 py-4">Candidato</th><th className="px-6 py-4">Cargo Alvo</th><th className="px-6 py-4">Data</th><th className="px-6 py-4 text-center">Ações</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {leads.map((lead) => (
-                                            <tr key={lead.id} className="hover:bg-blue-50/30 transition group">
-                                                <td className="px-6 py-4"><div className="font-semibold text-gray-800">{lead.name}</div><div className="text-xs text-gray-400">{lead.email}</div></td>
-                                                <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span></td>
-                                                <td className="px-6 py-4 text-gray-500">{/* @ts-ignore */}{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM HH:mm', { locale: ptBR }) : '-'}</td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button onClick={() => setSelectedResume(lead)} className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-2 mx-auto"><Icons.Eye /> <span className="hidden sm:inline">Visualizar</span></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+
+                            {/* --- 1. VISÃO DE TABELA (Apenas Desktop) --- */}
+                            <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto w-full">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-gray-50/50 text-gray-500 font-semibold border-b border-gray-100">
+                                            <tr><th className="px-6 py-4">Candidato</th><th className="px-6 py-4">Cargo Alvo</th><th className="px-6 py-4">Data</th><th className="px-6 py-4 text-center">Ações</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {leads.map((lead) => (
+                                                <tr key={lead.id} className="hover:bg-blue-50/30 transition group">
+                                                    <td className="px-6 py-4"><div className="font-semibold text-gray-800">{lead.name}</div><div className="text-xs text-gray-400">{lead.email}</div></td>
+                                                    <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span></td>
+                                                    <td className="px-6 py-4 text-gray-500">{/* @ts-ignore */}{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM HH:mm', { locale: ptBR }) : '-'}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <button onClick={() => setSelectedResume(lead)} className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-2 mx-auto"><Icons.Eye /> Visualizar</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* --- 2. VISÃO DE CARTÕES (Apenas Mobile) --- */}
+                            <div className="md:hidden space-y-4">
+                                {leads.map((lead) => (
+                                    <div key={lead.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h4 className="font-bold text-gray-800">{lead.name}</h4>
+                                                <p className="text-xs text-gray-500">{lead.email}</p>
+                                            </div>
+                                            <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                                            <Icons.Calendar />
+                                            {/* @ts-ignore */}
+                                            {lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM yyyy • HH:mm', { locale: ptBR }) : '-'}
+                                        </div>
+
+                                        <button 
+                                            onClick={() => setSelectedResume(lead)} 
+                                            className="w-full mt-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 active:bg-blue-800 transition flex items-center justify-center gap-2"
+                                        >
+                                            <Icons.Eye /> Visualizar Currículo
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
