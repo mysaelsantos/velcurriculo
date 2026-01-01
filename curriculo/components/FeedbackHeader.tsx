@@ -4,8 +4,8 @@ import { useFeedback } from '../contexts/FeedbackContext';
 // --- ÍCONES ---
 const Icons = {
     ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
-    StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-    StarOutline: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+    StarOutline: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
     Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
     Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
@@ -89,11 +89,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    const headerHeight = status === 'open' ? '400px' : '64px';
-    
-    // CORRIGIDO:
-    // 1. rounded-full (Pílula) quando fechado.
-    // 2. rounded-3xl quando aberto (para o modal ficar bonito).
+    // Aumentei um pouco a altura para o modal respirar melhor
+    const headerHeight = status === 'open' ? '440px' : '64px';
     const borderShape = status === 'open' ? 'rounded-3xl' : 'rounded-full';
 
     const containerClasses = status === 'open' 
@@ -110,39 +107,39 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
             {/* BARRA FLUTUANTE */}
             <header 
-                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight }}
             >
                 {/* LINHA SUPERIOR */}
-                <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
+                <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5 relative z-10">
                     
                     {/* ESQUERDA: Logo e Texto (Partilham o mesmo espaço) */}
                     <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
                         {status === 'thank_you' ? (
-                            <div className="flex items-center gap-2 font-bold animate-fade-in">
+                            <div className="flex items-center gap-2 font-bold animate-fade-in text-white">
                                 <Icons.Check /> Obrigado!
                             </div>
                         ) : (
                             <div className="flex items-center relative h-6 w-full">
-                                {/* LOGO: Só aparece se showLogo=true E se o Feedback NÃO estiver ativo */}
+                                {/* LOGO */}
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO DE SAUDAÇÃO (App): Só aparece se não estivermos em Feedback */}
+                                {/* TEXTO DE SAUDAÇÃO (App) */}
                                 {!isFeedbackActive && headerMessage && (
-                                    <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                    <span className={`font-poppins font-medium text-sm lg:text-lg text-white whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK: Aparece no mesmo lugar da logo (absolute left-0) */}
+                                {/* TEXTO DO FEEDBACK: Agora igualzinho ao da saudação */}
                                 {isFeedbackActive && (
-                                    <span className="absolute left-0 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
+                                    <span className="absolute left-0 font-poppins font-medium text-sm lg:text-lg text-white animate-fade-in whitespace-nowrap">
                                         {displayText}
-                                        <span className="animate-pulse">|</span>
+                                        <span className="animate-pulse ml-0.5">|</span>
                                     </span>
                                 )}
                             </div>
@@ -154,7 +151,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={status === 'open' ? closeFeedback : openFeedback}
-                                className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
+                                className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600 shadow-sm' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
                             >
                                 <Icons.ChevronDown />
                             </button>
@@ -171,7 +168,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                         {/* Menu Dropdown */}
                         {isMenuOpen && !isFeedbackActive && (
-                            <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
+                            <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700 font-sans">
                                 <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
                                     <Icons.WhatsApp /> WhatsApp
                                 </a>
@@ -186,33 +183,49 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </nav>
                 </div>
 
-                {/* AREA EXPANDIDA (Formulário) */}
-                <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-opacity duration-300 delay-100 ${status === 'open' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">Como foi a sua experiência?</h3>
-                    <div className="flex gap-2 mb-6">
+                {/* AREA EXPANDIDA (Formulário) - VISUAL REFINADO */}
+                <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-all duration-500 delay-75 ${status === 'open' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                    
+                    <h3 className="text-xl font-poppins font-bold text-gray-800 mb-6 text-center">
+                        Como foi sua experiência?
+                    </h3>
+                    
+                    {/* Estrelas Maiores e com mais espaço */}
+                    <div className="flex gap-3 mb-6">
                         {[1, 2, 3, 4, 5].map((star) => (
-                            <button key={star} onClick={() => setRating(star)} className="transform transition hover:scale-110 focus:outline-none">
+                            <button 
+                                key={star} 
+                                onClick={() => setRating(star)} 
+                                className="transform transition hover:scale-125 focus:outline-none active:scale-95"
+                            >
                                 {star <= rating ? <Icons.StarFilled /> : <Icons.StarOutline />}
                             </button>
                         ))}
                     </div>
+
+                    {/* Caixa de Texto Estilo Pílula/Arredondada */}
                     <textarea 
-                        className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 mb-2 text-gray-800"
+                        className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm md:text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 mb-3 text-gray-700 placeholder-gray-400 shadow-inner transition-all"
                         placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
-                    <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-4">
-                        <span>{text.trim() ? `${text.trim().split(/\s+/).length} palavras` : '0 palavras'}</span>
+                    
+                    <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-5 px-2">
+                        <span className={text.trim().length > 0 ? "text-blue-600 font-medium" : ""}>
+                            {text.trim() ? `${text.trim().split(/\s+/).length} palavras` : '0 palavras'}
+                        </span>
                         {!isValid && <span>Mínimo 3 palavras e 1 estrela</span>}
                     </div>
+
+                    {/* Botão Moderno e Arredondado */}
                     <button 
                         onClick={handleSubmit}
                         disabled={!isValid || status === 'submitting'}
-                        className={`w-full max-w-md py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                        className={`w-full max-w-md py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
                             isValid 
-                            ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1' 
-                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                         }`}
                     >
                         {status === 'submitting' ? 'Enviando...' : <><Icons.Send /> Enviar Avaliação</>}
