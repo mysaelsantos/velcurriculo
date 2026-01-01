@@ -14,6 +14,8 @@ import type { ResumeData, PageData } from './types';
 // SERVIÇOS DO FIREBASE E TRACKER
 import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
+// NOVO: IMPORTA O PAINEL ADMINISTRATIVO
+import AdminDashboard from './components/AdminDashboard';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
@@ -239,6 +241,21 @@ const TestimonialsSection = React.memo(() => {
 });
 
 const App: React.FC = () => {
+    // --- LÓGICA DE ROTEAMENTO (ADMIN vs SITE) ---
+    const [currentRoute, setCurrentRoute] = useState(window.location.hash);
+
+    useEffect(() => {
+        const handleHashChange = () => setCurrentRoute(window.location.hash);
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    // Se a rota for admin, mostra o Dashboard e para por aqui
+    if (currentRoute === '#/admin') {
+        return <AdminDashboard />;
+    }
+
+    // --- CÓDIGO DO SITE NORMAL ABAIXO ---
     const isPixTestMode = false;
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
