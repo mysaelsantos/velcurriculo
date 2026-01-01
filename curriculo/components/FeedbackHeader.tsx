@@ -32,11 +32,10 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [text, setText] = useState('');
     const [displayText, setDisplayText] = useState('');
 
-    // Estados do Menu Original
+    // Estados do Menu Original (Hamburguer)
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // Determina se estamos no modo "Feedback" ou "Normal"
-    // (Waiting = 3s de espera, ainda mostra o menu normal)
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
 
     // Efeito de Digitação (Typewriter)
@@ -97,7 +96,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     };
 
     const headerHeight = status === 'open' ? '400px' : '64px';
-    const bgColor = status === 'thank_you' ? 'bg-green-600' : 'bg-blue-800/80'; // Cor original restaurada
+    // Estilos dinâmicos do container
     const containerClasses = status === 'open' 
         ? 'bg-white text-gray-800' // Fundo branco quando abre o feedback
         : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg');
@@ -125,7 +124,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </div>
                         ) : (
                             <>
-                                {/* LOGO ANIMADO (Lógica Original Restaurada) */}
+                                {/* LOGO ANIMADO */}
                                 <div className="flex items-center relative h-6 w-full">
                                     <img 
                                         src="/logo-header.png" 
@@ -165,7 +164,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* MODO NORMAL: Menu Hambúrguer (Original) */}
+                        {/* MODO NORMAL: Menu Hambúrguer */}
                         {!isFeedbackActive && (
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -175,7 +174,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* DROPDOWN DO MENU (Lógica Original Restaurada) */}
+                        {/* DROPDOWN DO MENU */}
                         {isMenuOpen && !isFeedbackActive && (
                             <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
                                 <div className="px-4 py-2 border-b border-gray-100 mb-1">
