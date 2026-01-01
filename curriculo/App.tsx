@@ -11,6 +11,8 @@ import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData, PageData } from './types';
+// IMPORTAÇÃO DA AUTO-CONFIGURAÇÃO DO FIREBASE
+import { runAutoSetup } from './services/autoSetup';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
@@ -277,6 +279,11 @@ const App: React.FC = () => {
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
+
+    // EXECUTA A AUTO-CONFIGURAÇÃO DO BANCO DE DADOS
+    useEffect(() => {
+        runAutoSetup();
+    }, []);
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
