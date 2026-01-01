@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useFeedback } from '../contexts/FeedbackContext';
 
-// --- ÍCONES (Menu + Avaliação + Sociais) ---
+// --- ÍCONES ---
 const Icons = {
-    // Ícones da Avaliação
     ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
     StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
     StarOutline: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
     Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
     Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-    
-    // Ícones do Menu Antigo
     Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
     Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
     WhatsApp: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
@@ -20,25 +17,22 @@ const Icons = {
 
 interface FeedbackHeaderProps {
     userData: { name: string; email: string };
-    headerMessage?: string; // Para a saudação vinda do App
-    showLogo?: boolean;     // Para controlar a animação do logo vinda do App
+    headerMessage?: string;
+    showLogo?: boolean;
 }
 
 const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage, showLogo = true }) => {
     const { status, openFeedback, closeFeedback, submitFeedback } = useFeedback();
     
-    // Estados do Formulário de Avaliação
+    // Estados do Formulário
     const [rating, setRating] = useState(0);
     const [text, setText] = useState('');
     const [displayText, setDisplayText] = useState('');
-
-    // Estados do Menu Original (Hamburguer)
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Determina se estamos no modo "Feedback" ou "Normal"
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
 
-    // Efeito de Digitação (Typewriter)
+    // Animação Typewriter
     useEffect(() => {
         if (status === 'typing') {
             const phrase1 = "Gostou do nosso...";
@@ -71,7 +65,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         }
     }, [status]);
 
-    // Fecha o menu se clicar fora
+    // Click Outside Menu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const nav = document.querySelector('header nav');
@@ -96,65 +90,60 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     };
 
     const headerHeight = status === 'open' ? '400px' : '64px';
-    // Estilos dinâmicos do container
+    
+    // CORRIGIDO: Estilos Flutuantes (Floating) restaurados
+    // top-6 left-6 right-6 -> Garante que flutua e não cola nas bordas
+    // rounded-2xl -> Garante que não fica quadrado mesmo no mobile
     const containerClasses = status === 'open' 
-        ? 'bg-white text-gray-800' // Fundo branco quando abre o feedback
+        ? 'bg-white text-gray-800' 
         : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg');
 
     return (
         <>
-            {/* BACKDROP ESCURO (Feedback Aberto) */}
+            {/* BACKDROP */}
             <div 
                 className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${status === 'open' ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
                 onClick={closeFeedback}
             />
 
+            {/* BARRA FLUTUANTE RESTAURADA */}
             <header 
-                className={`fixed top-0 left-0 lg:top-6 lg:left-6 lg:right-6 w-full lg:w-auto lg:rounded-full shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 lg:rounded-full rounded-2xl shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight }}
             >
                 {/* LINHA SUPERIOR */}
                 <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
                     
-                    {/* ESQUERDA: Logo + Texto */}
+                    {/* ESQUERDA: Logo/Texto */}
                     <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
                         {status === 'thank_you' ? (
                             <div className="flex items-center gap-2 font-bold animate-fade-in">
-                                <Icons.Check /> Obrigado pela avaliação!
+                                <Icons.Check /> Obrigado!
                             </div>
                         ) : (
-                            <>
-                                {/* LOGO ANIMADO */}
-                                <div className="flex items-center relative h-6 w-full">
-                                    <img 
-                                        src="/logo-header.png" 
-                                        alt="Logo" 
-                                        className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
-                                    />
-                                    
-                                    {/* MODO 1: Saudação Original (App) */}
-                                    {!isFeedbackActive && headerMessage && (
-                                        <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                                            {headerMessage}
-                                        </span>
-                                    )}
-
-                                    {/* MODO 2: Texto Typewriter (Feedback) */}
-                                    {isFeedbackActive && (
-                                        <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
-                                            {displayText}
-                                            <span className="animate-pulse">|</span>
-                                        </span>
-                                    )}
-                                </div>
-                            </>
+                            <div className="flex items-center relative h-6 w-full">
+                                <img 
+                                    src="/logo-header.png" 
+                                    alt="Logo" 
+                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                                />
+                                {!isFeedbackActive && headerMessage && (
+                                    <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                        {headerMessage}
+                                    </span>
+                                )}
+                                {isFeedbackActive && (
+                                    <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
+                                        {displayText}
+                                        <span className="animate-pulse">|</span>
+                                    </span>
+                                )}
+                            </div>
                         )}
                     </div>
 
-                    {/* DIREITA: Botões */}
+                    {/* DIREITA: Navegação */}
                     <nav className="relative flex items-center gap-3">
-                        
-                        {/* MODO FEEDBACK: Seta */}
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={status === 'open' ? closeFeedback : openFeedback}
@@ -164,7 +153,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* MODO NORMAL: Menu Hambúrguer */}
                         {!isFeedbackActive && (
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -174,12 +162,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* DROPDOWN DO MENU */}
+                        {/* Menu Dropdown */}
                         {isMenuOpen && !isFeedbackActive && (
                             <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
-                                <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contato</p>
-                                </div>
                                 <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
                                     <Icons.WhatsApp /> WhatsApp
                                 </a>
@@ -197,7 +182,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 {/* AREA EXPANDIDA (Formulário) */}
                 <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-opacity duration-300 delay-100 ${status === 'open' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Como foi a sua experiência?</h3>
-                    
                     <div className="flex gap-2 mb-6">
                         {[1, 2, 3, 4, 5].map((star) => (
                             <button key={star} onClick={() => setRating(star)} className="transform transition hover:scale-110 focus:outline-none">
@@ -205,19 +189,16 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         ))}
                     </div>
-
                     <textarea 
                         className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 mb-2 text-gray-800"
                         placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
-                    
                     <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-4">
                         <span>{text.trim() ? `${text.trim().split(/\s+/).length} palavras` : '0 palavras'}</span>
                         {!isValid && <span>Mínimo 3 palavras e 1 estrela</span>}
                     </div>
-
                     <button 
                         onClick={handleSubmit}
                         disabled={!isValid || status === 'submitting'}
