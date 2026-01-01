@@ -11,7 +11,7 @@ import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
 import type { ResumeData, PageData } from './types';
-// SERVIÇOS DO FIREBASE
+// SERVIÇOS DO FIREBASE E TRACKER
 import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
 
@@ -281,11 +281,11 @@ const App: React.FC = () => {
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // INICIALIZAÇÃO DE SERVIÇOS (AUTO-SETUP e RASTREAMENTO)
+    // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
-        // Configura o banco se for a primeira vez
+        // 1. Garante que o banco está configurado
         runAutoSetup();
-        // Rastreia o visitante atual (apenas 1x por sessão)
+        // 2. Registra o visitante (inteligente: 1x por sessão)
         trackVisitor();
     }, []);
 
