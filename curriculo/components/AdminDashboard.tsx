@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom/client'; // Necessário para a medição oculta
 import { auth, db } from '../services/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -12,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { toPng } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
-import ResumePreview from './ResumePreview'; // Importamos para o Preview real
+import ResumePreview, { QR_CONFIG } from './ResumePreview'; // Importamos a configuração do QR
 
 // --- ÍCONES ---
 const Icons = {
@@ -46,7 +47,7 @@ const AdminDashboard: React.FC = () => {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [reviews, setReviews] = useState<any[]>([]);
     
-    // Estados de Gráficos processados
+    // Gráficos
     const [cityData, setCityData] = useState<any[]>([]);
     const [ageData, setAgeData] = useState<any[]>([]);
     const [revenueData, setRevenueData] = useState<any[]>([]);
@@ -56,9 +57,15 @@ const AdminDashboard: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    // Modal & Preview
+    // --- ESTADOS DE PAGINAÇÃO E PREVIEW ---
     const [selectedResume, setSelectedResume] = useState<any | null>(null);
+    const [paginatedPages, setPaginatedPages] = useState<any[]>([]); // Páginas calculadas
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isPreviewReady, setIsPreviewReady] = useState(false); // Só mostra quando calcular páginas
+
+    // Refs para medição oculta (MOTOR DE PAGINAÇÃO)
+    const measurementContainerRef = useRef<HTMLDivElement | null>(null);
+    const measurementRootRef = useRef<any>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -66,47 +73,210 @@ const AdminDashboard: React.FC = () => {
         return () => unsubscribe();
     }, []);
 
-    // Fetch Data
+    // 1. INICIALIZA O MOTOR DE MEDIÇÃO OCULTO (Igual ao App.tsx)
+    useEffect(() => {
+        const measurementNode = document.createElement('div');
+        measurementNode.style.position = 'absolute';
+        measurementNode.style.left = '-9999px';
+        measurementNode.style.top = '0px';
+        measurementNode.style.zIndex = '-1';
+        measurementNode.style.width = '794px'; 
+        measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
+        document.body.appendChild(measurementNode);
+        
+        measurementContainerRef.current = measurementNode;
+        measurementRootRef.current = ReactDOM.createRoot(measurementNode);
+    
+        return () => {
+            setTimeout(() => {
+                measurementRootRef.current?.unmount();
+                if (document.body.contains(measurementNode)) {
+                    document.body.removeChild(measurementNode);
+                }
+                measurementContainerRef.current = null;
+            }, 0);
+        };
+    }, []);
+
+    // 2. FUNÇÃO QUE CALCULA PAGINAÇÃO (Copiada do App.tsx)
+    const calculatePagination = useCallback(async (dataToPaginate: any) => {
+        const container = measurementContainerRef.current;
+        if (!container) return;
+
+        // Renderiza oculto para medir
+        measurementRootRef.current.render(
+            <ResumePreview data={dataToPaginate} isDemoMode={false} isFirstPage={true} isMeasurement={true} />
+        );
+
+        // Espera renderizar
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const previewEl = container.firstChild as HTMLElement;
+        if (!previewEl) {
+            setPaginatedPages([dataToPaginate]);
+            setIsPreviewReady(true);
+            return;
+        }
+
+        const A4_HEIGHT = 1123; 
+        const MARGIN_BOTTOM = 50; 
+        const templateKey = dataToPaginate.style.template || 'template-modern';
+        // @ts-ignore
+        const qrConfig = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
+        // @ts-ignore
+        const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
+        const qrHeight = currentSpacerDims.height;
+        const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
+        const dangerZoneStart = A4_HEIGHT - qrConfig.bottom - qrHeight - qrPadding;
+
+        const headerEl = previewEl.querySelector('header') as HTMLElement;
+        const mainEl = previewEl.querySelector('main') as HTMLElement;
+        
+        const getElementHeight = (element: HTMLElement) => {
+            if (!element) return 0;
+            const style = window.getComputedStyle(element);
+            return element.offsetHeight + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+        };
+
+        const headerHeight = getElementHeight(headerEl);
+        const mainMarginTop = parseFloat(window.getComputedStyle(mainEl).marginTop) || 0;
+
+        interface ContentBlock { id: string; type: string; data: any; height: number; }
+        const blocks: ContentBlock[] = [];
+
+        const extractBlocks = (sectionId: string, dataKey: string, listId?: string) => {
+            const sectionEl = previewEl.querySelector(`#${sectionId}`) as HTMLElement;
+            if (!sectionEl) return;
+
+            const titleEl = sectionEl.querySelector('.section-title') as HTMLElement;
+            if (titleEl) {
+                blocks.push({ id: `${dataKey}-title`, type: dataKey, data: null, height: getElementHeight(titleEl) + 10 });
+            }
+
+            if (dataKey === 'summary') {
+                const summaryEl = sectionEl.querySelector('#resume-summary') as HTMLElement;
+                if (summaryEl) blocks.push({ id: 'summary-text', type: 'summary', data: dataToPaginate.summary, height: getElementHeight(summaryEl) });
+            } else if (listId) {
+                const listContainer = sectionEl.querySelector(`#${listId}`);
+                if (!listContainer) return;
+                const items = Array.from(listContainer.children) as HTMLElement[];
+                const dataList = dataToPaginate[dataKey] as any[];
+                items.forEach((itemEl, index) => {
+                    if (dataList[index]) blocks.push({ id: dataList[index].id, type: dataKey, data: dataList[index], height: getElementHeight(itemEl) });
+                });
+            } else if (dataKey === 'skills' || dataKey === 'languages') {
+                const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                if(contentDiv) blocks.push({ id: `${dataKey}-block`, type: dataKey, data: dataToPaginate[dataKey], height: getElementHeight(contentDiv) });
+            }
+        };
+
+        if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
+        if (dataToPaginate.experiences?.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
+        if (dataToPaginate.education?.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
+        if (dataToPaginate.courses?.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
+        if (dataToPaginate.languages?.length > 0) extractBlocks('languages-section', 'languages');
+        if (dataToPaginate.skills?.length > 0) extractBlocks('skills-section', 'skills');
+
+        const pages: any[] = [];
+        let currentPageData: any = { personalInfo: dataToPaginate.personalInfo, style: dataToPaginate.style, experiences: [], education: [], courses: [], languages: [], skills: [], qrCodeOffsets: {} };
+        let currentY = 50 + headerHeight + mainMarginTop;
+        let currentPageIndex = 0;
+
+        const createNewPage = () => {
+            pages.push(currentPageData);
+            currentPageData = { style: dataToPaginate.style, experiences: [], education: [], courses: [], languages: [], skills: [], qrCodeOffsets: {} };
+            currentPageIndex++;
+            currentY = 50 + 30; 
+        };
+
+        for (let i = 0; i < blocks.length; i++) {
+            const block = blocks[i];
+            const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
+            const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
+            let effectiveHeight = block.height;
+
+            if (overlapsDangerZone) {
+                const distToDanger = dangerZoneStart - currentY;
+                const spacerMargin = distToDanger > 0 ? distToDanger : 0;
+                currentPageData.qrCodeOffsets[block.id] = spacerMargin; 
+                effectiveHeight = Math.max(block.height * 1.4, 20); 
+            }
+
+            const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
+
+            if (block.id.endsWith('-title')) {
+                const nextBlock = blocks[i+1];
+                const nextItemHeight = nextBlock ? nextBlock.height : 40; 
+                if (available < (effectiveHeight + nextItemHeight)) {
+                    createNewPage();
+                    effectiveHeight = block.height; 
+                }
+                currentY += effectiveHeight;
+                continue; 
+            }
+
+            if (effectiveHeight > available) {
+                createNewPage();
+                effectiveHeight = block.height;
+                if (block.type === 'summary') currentPageData.summary = block.data;
+                else if (['skills', 'languages'].includes(block.type)) currentPageData[block.type] = block.data;
+                else (currentPageData[block.type] as any[]).push(block.data);
+                currentY += effectiveHeight;
+            } else {
+                if (block.type === 'summary') currentPageData.summary = block.data;
+                else if (['skills', 'languages'].includes(block.type)) currentPageData[block.type] = block.data;
+                else (currentPageData[block.type] as any[]).push(block.data);
+                currentY += effectiveHeight;
+            }
+        }
+
+        if (Object.keys(currentPageData).length > 0) pages.push(currentPageData);
+        
+        // Remove páginas vazias
+        const finalPages = pages.filter(p => p.summary || (p.experiences && p.experiences.length > 0) || (p.education && p.education.length > 0) || (p.courses && p.courses.length > 0) || (p.skills && p.skills.length > 0) || (p.personalInfo && pages.indexOf(p) === 0));
+
+        setPaginatedPages(finalPages);
+        setIsPreviewReady(true);
+    }, []);
+
+    // 3. QUANDO SELECIONA UM RESUME, INICIA CÁLCULO
+    useEffect(() => {
+        if (selectedResume && selectedResume.full_data_backup) {
+            setIsPreviewReady(false);
+            const parsedData = JSON.parse(selectedResume.full_data_backup);
+            calculatePagination(parsedData);
+        }
+    }, [selectedResume, calculatePagination]);
+
+    // Busca Dados do Banco
     useEffect(() => {
         if (!user) return;
-
-        // Stats
-        onSnapshot(doc(db, 'stats', 'general'), (doc) => {
-            if (doc.exists()) setStats(doc.data());
-        });
-
-        // Leads (Currículos)
+        onSnapshot(doc(db, 'stats', 'general'), (doc) => { if (doc.exists()) setStats(doc.data()); });
         const leadsQuery = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(50));
         onSnapshot(leadsQuery, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setLeads(data);
             processAnalytics(data);
         });
-
-        // Transações
         const transQuery = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(50));
         onSnapshot(transQuery, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             processRevenue(data);
         });
-
-        // Avaliações (Nova Secção)
         const reviewsQuery = query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50));
         onSnapshot(reviewsQuery, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setReviews(data);
         });
-
     }, [user]);
 
+    // Processamento Gráfico
     const processAnalytics = (data: any[]) => {
         const cities: Record<string, number> = {};
         const ages = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
-
         data.forEach(item => {
             const city = item.city || 'Desconhecido';
             cities[city] = (cities[city] || 0) + 1;
-
             const age = parseInt(item.age);
             if (age) {
                 if (age >= 18 && age <= 24) ages['18-24']++;
@@ -115,7 +285,6 @@ const AdminDashboard: React.FC = () => {
                 else if (age >= 45) ages['45+']++;
             }
         });
-
         setCityData(Object.keys(cities).map(k => ({ name: k, value: cities[k] })).sort((a,b) => b.value - a.value).slice(0,5));
         setAgeData(Object.keys(ages).map(k => ({ name: k, value: ages[k as keyof typeof ages] })));
     };
@@ -136,50 +305,39 @@ const AdminDashboard: React.FC = () => {
         catch (err) { setError('Credenciais inválidas.'); }
     };
 
-    const getResumeDetails = (lead: any) => {
-        try {
-            if (lead.full_data_backup) {
-                return JSON.parse(lead.full_data_backup);
-            }
-            return null;
-        } catch (e) { return null; }
-    };
-
-    // --- FUNÇÃO PARA GERAR PDF PELO ADMIN ---
+    // --- FUNÇÃO DE DOWNLOAD PDF CORRIGIDA (MULTI-PÁGINA) ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
 
         try {
             await document.fonts.ready;
-            // Pega o elemento do currículo renderizado no modal
-            const resumeElement = previewContainerRef.current.querySelector('.resume-preview-container') as HTMLElement;
+            // Seleciona TODAS as páginas renderizadas
+            const pages = Array.from(previewContainerRef.current.querySelectorAll('.resume-page')) as HTMLElement[];
             
-            if (!resumeElement) throw new Error("Currículo não encontrado");
+            if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
 
-            // Força tamanho A4 para captura
-            const originalStyle = resumeElement.style.cssText;
-            resumeElement.style.width = '794px';
-            resumeElement.style.height = '1123px';
-            resumeElement.style.transform = 'scale(1)';
-            resumeElement.style.margin = '0';
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-            const imgData = await toPng(resumeElement, {
-                quality: 0.95,
-                pixelRatio: 2,
-                backgroundColor: '#ffffff'
-            });
+            for (let i = 0; i < pages.length; i++) {
+                const pageEl = pages[i];
+                // Força dimensões exatas para o html-to-image não cortar
+                const originalStyle = pageEl.style.cssText;
+                pageEl.style.width = '794px';
+                pageEl.style.height = '1123px';
+                pageEl.style.minHeight = '1123px';
+                pageEl.style.transform = 'none';
+                pageEl.style.margin = '0';
 
-            // Restaura estilo
-            resumeElement.style.cssText = originalStyle;
+                const imgData = await toPng(pageEl, { quality: 0.95, pixelRatio: 2, backgroundColor: '#ffffff', width: 794, height: 1123 });
 
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
+                // Restaura estilo visual
+                pageEl.style.cssText = originalStyle;
 
-            pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+                if (i > 0) pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
+            }
+
             const fileName = `curriculo-${selectedResume.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
             pdf.save(fileName);
 
@@ -197,12 +355,9 @@ const AdminDashboard: React.FC = () => {
     };
 
     const deleteReview = async (id: string) => {
-        if (confirm('Tem a certeza?')) {
-            await deleteDoc(doc(db, 'reviews', id));
-        }
+        if (confirm('Tem a certeza?')) { await deleteDoc(doc(db, 'reviews', id)); }
     };
 
-    // --- TELA DE LOGIN ---
     if (!user) {
         return (
             <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-poppins">
@@ -215,52 +370,30 @@ const AdminDashboard: React.FC = () => {
                     </div>
                     <form onSubmit={handleLogin} className="space-y-5">
                         {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg text-sm text-center font-medium">{error}</div>}
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Email</label>
-                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition" />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Senha</label>
-                            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition" />
-                        </div>
-                        <button className="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition-transform transform active:scale-95 shadow-lg shadow-blue-900/20">
-                            Entrar
-                        </button>
+                        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
+                        <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
+                        <button className="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition">Entrar</button>
                     </form>
                 </div>
             </div>
         );
     }
 
-    // --- DASHBOARD LAYOUT ---
     return (
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
-            
-            {/* SIDEBAR RECOLHÍVEL */}
-            <aside 
-                className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white flex flex-col transition-all duration-300 ease-in-out shadow-xl z-30 relative`}
-            >
+            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white flex flex-col transition-all duration-300 ease-in-out shadow-xl z-30 relative`}>
                 <div className="h-20 flex items-center justify-center border-b border-white/10 relative">
-                    {sidebarCollapsed ? (
-                        <span className="font-bold text-2xl">V</span>
-                    ) : (
-                        <img src="/logo-header.png" alt="Logo" className="h-7" />
-                    )}
-                    <button 
-                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                        className="absolute -right-3 top-8 bg-blue-600 text-white p-1 rounded-full shadow-md hover:bg-blue-500 transition border border-white"
-                    >
+                    {sidebarCollapsed ? <span className="font-bold text-2xl">V</span> : <img src="/logo-header.png" alt="Logo" className="h-7" />}
+                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -right-3 top-8 bg-blue-600 text-white p-1 rounded-full shadow-md hover:bg-blue-500 transition border border-white">
                         {sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}
                     </button>
                 </div>
-                
                 <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Icons.Grid />} label="Visão Geral" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')} icon={<Icons.FileText />} label="Currículos Gerados" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<Icons.TrendingUp />} label="Análises & Dados" />
                 </nav>
-
                 <div className="p-4 border-t border-white/10">
                     <button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-white transition ${sidebarCollapsed ? 'justify-center' : ''}`}>
                         <Icons.LogOut />
@@ -269,7 +402,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </aside>
 
-            {/* CONTEÚDO PRINCIPAL */}
             <main className="flex-1 overflow-y-auto relative">
                 <header className="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-20">
                     <h1 className="text-xl font-bold text-gray-800">
@@ -278,17 +410,12 @@ const AdminDashboard: React.FC = () => {
                         {activeTab === 'reviews' && 'Gestão de Avaliações'}
                         {activeTab === 'analytics' && 'Inteligência de Dados'}
                     </h1>
-                    <div className="flex items-center gap-3">
-                        <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            ONLINE
-                        </div>
+                    <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> ONLINE
                     </div>
                 </header>
 
                 <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8">
-
-                    {/* === ABA VISÃO GERAL === */}
                     {activeTab === 'overview' && (
                         <div className="space-y-8 animate-fade-in-scale">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -301,16 +428,11 @@ const AdminDashboard: React.FC = () => {
                                 <div className="h-[300px] w-full">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <AreaChart data={revenueData}>
-                                            <defs>
-                                                <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor="#002e9e" stopOpacity={0.2}/>
-                                                    <stop offset="95%" stopColor="#002e9e" stopOpacity={0}/>
-                                                </linearGradient>
-                                            </defs>
+                                            <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#002e9e" stopOpacity={0.2}/><stop offset="95%" stopColor="#002e9e" stopOpacity={0}/></linearGradient></defs>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                                             <XAxis dataKey="name" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
                                             <YAxis tick={{fontSize: 12}} axisLine={false} tickLine={false} tickFormatter={val => `R$${val}`}/>
-                                            <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+                                            <Tooltip />
                                             <Area type="monotone" dataKey="value" stroke="#002e9e" fillOpacity={1} fill="url(#colorRev)" />
                                         </AreaChart>
                                     </ResponsiveContainer>
@@ -319,51 +441,25 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* === ABA CURRÍCULOS GERADOS === */}
                     {activeTab === 'resumes' && (
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in-scale">
                             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-800">Histórico de Gerações</h3>
-                                    <p className="text-sm text-gray-500">Visualize e baixe os currículos dos usuários.</p>
-                                </div>
-                                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">
-                                    {leads.length} Registros
-                                </span>
+                                <h3 className="font-bold text-lg text-gray-800">Histórico de Gerações</h3>
+                                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{leads.length} Registros</span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-gray-50/50 text-gray-500 font-semibold border-b border-gray-100">
-                                        <tr>
-                                            <th className="px-6 py-4">Candidato</th>
-                                            <th className="px-6 py-4">Cargo Alvo</th>
-                                            <th className="px-6 py-4">Data</th>
-                                            <th className="px-6 py-4 text-center">Ações</th>
-                                        </tr>
+                                        <tr><th className="px-6 py-4">Candidato</th><th className="px-6 py-4">Cargo Alvo</th><th className="px-6 py-4">Data</th><th className="px-6 py-4 text-center">Ações</th></tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
                                         {leads.map((lead) => (
                                             <tr key={lead.id} className="hover:bg-blue-50/30 transition group">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-semibold text-gray-800">{lead.name}</div>
-                                                    <div className="text-xs text-gray-400">{lead.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium border border-gray-200">
-                                                        {lead.jobTitle || 'Geral'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-gray-500">
-                                                    {/* @ts-ignore */}
-                                                    {lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM HH:mm', { locale: ptBR }) : '-'}
-                                                </td>
+                                                <td className="px-6 py-4"><div className="font-semibold text-gray-800">{lead.name}</div><div className="text-xs text-gray-400">{lead.email}</div></td>
+                                                <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span></td>
+                                                <td className="px-6 py-4 text-gray-500">{/* @ts-ignore */}{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM HH:mm', { locale: ptBR }) : '-'}</td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <button 
-                                                        onClick={() => setSelectedResume(lead)}
-                                                        className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-2 mx-auto"
-                                                    >
-                                                        <Icons.Eye /> Visualizar
-                                                    </button>
+                                                    <button onClick={() => setSelectedResume(lead)} className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-2 mx-auto"><Icons.Eye /> Visualizar</button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -373,47 +469,24 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* === ABA AVALIAÇÕES (NOVA) === */}
                     {activeTab === 'reviews' && (
                         <div className="space-y-6 animate-fade-in-scale">
                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                 {reviews.length === 0 && (
-                                     <div className="col-span-full bg-blue-50 p-8 rounded-xl text-center text-blue-800 border border-blue-100">
-                                         <Icons.MessageSquare />
-                                         <p className="mt-2 font-medium">Ainda não existem avaliações registradas.</p>
-                                         <p className="text-sm opacity-70">Assim que os usuários avaliarem no site, aparecerão aqui.</p>
-                                     </div>
-                                 )}
+                                 {reviews.length === 0 && <div className="col-span-full bg-blue-50 p-8 rounded-xl text-center text-blue-800 border border-blue-100"><Icons.MessageSquare /><p className="mt-2 font-medium">Ainda não existem avaliações.</p></div>}
                                  {reviews.map(review => (
                                      <div key={review.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
                                          <div>
                                              <div className="flex justify-between items-start mb-3">
-                                                 <div className="flex text-yellow-400">
-                                                     {[...Array(5)].map((_, i) => (
-                                                         <Icons.Star key={i} />
-                                                     ))}
-                                                 </div>
-                                                 <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${review.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                     {review.approved ? 'Aprovado' : 'Pendente'}
-                                                 </span>
+                                                 <div className="flex text-yellow-400">{[...Array(5)].map((_, i) => <Icons.Star key={i} />)}</div>
+                                                 <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${review.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{review.approved ? 'Aprovado' : 'Pendente'}</span>
                                              </div>
                                              <p className="text-gray-600 text-sm italic mb-4">"{review.text}"</p>
                                          </div>
                                          <div className="border-t border-gray-100 pt-3">
                                              <p className="font-bold text-gray-800 text-sm">{review.author}</p>
                                              <div className="flex gap-2 mt-3">
-                                                 <button 
-                                                    onClick={() => toggleReviewStatus(review.id, review.approved)}
-                                                    className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition ${review.approved ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                                                 >
-                                                     {review.approved ? 'Ocultar' : <><Icons.Check /> Aprovar</>}
-                                                 </button>
-                                                 <button 
-                                                    onClick={() => deleteReview(review.id)}
-                                                    className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100 transition"
-                                                 >
-                                                     <Icons.Trash />
-                                                 </button>
+                                                 <button onClick={() => toggleReviewStatus(review.id, review.approved)} className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition ${review.approved ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>{review.approved ? 'Ocultar' : <><Icons.Check /> Aprovar</>}</button>
+                                                 <button onClick={() => deleteReview(review.id)} className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100 transition"><Icons.Trash /></button>
                                              </div>
                                          </div>
                                      </div>
@@ -422,39 +495,10 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* === ABA ANALYTICS === */}
                     {activeTab === 'analytics' && (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-scale">
-                             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                <h3 className="font-bold text-gray-700 mb-6">Top Cidades</h3>
-                                <div className="h-[300px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={cityData} layout="vertical">
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                            <XAxis type="number" hide />
-                                            <YAxis dataKey="name" type="category" width={120} tick={{fontSize: 11}} />
-                                            <Tooltip cursor={{fill: '#f8fafc'}} />
-                                            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                <h3 className="font-bold text-gray-700 mb-6">Faixa Etária</h3>
-                                <div className="h-[300px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={ageData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
-                                                {ageData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip />
-                                            <Legend verticalAlign="bottom" height={36} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
+                             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h3 className="font-bold text-gray-700 mb-6">Top Cidades</h3><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={cityData} layout="vertical"><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" hide /><YAxis dataKey="name" type="category" width={120} tick={{fontSize: 11}} /><Tooltip cursor={{fill: '#f8fafc'}} /><Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} /></BarChart></ResponsiveContainer></div></div>
+                             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm"><h3 className="font-bold text-gray-700 mb-6">Faixa Etária</h3><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={ageData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">{ageData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} /></PieChart></ResponsiveContainer></div></div>
                         </div>
                     )}
                 </div>
@@ -464,39 +508,29 @@ const AdminDashboard: React.FC = () => {
             {selectedResume && (
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedResume(null)}></div>
-                    
                     <div className="relative w-full max-w-3xl bg-gray-100 h-full shadow-2xl flex flex-col animate-slide-in-right">
-                        {/* Header do Modal */}
                         <div className="bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
-                            <div>
-                                <h2 className="text-lg font-bold text-gray-800">{selectedResume.name}</h2>
-                                <p className="text-xs text-gray-500">Visualização Administrativa</p>
-                            </div>
+                            <div><h2 className="text-lg font-bold text-gray-800">{selectedResume.name}</h2><p className="text-xs text-gray-500">Visualização Administrativa</p></div>
                             <div className="flex gap-3">
-                                <button 
-                                    onClick={handleDownloadPDF}
-                                    disabled={isGeneratingPdf}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition disabled:opacity-50"
-                                >
+                                <button onClick={handleDownloadPDF} disabled={isGeneratingPdf || !isPreviewReady} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition disabled:opacity-50">
                                     {isGeneratingPdf ? 'Gerando...' : <><Icons.Download /> Baixar PDF</>}
                                 </button>
-                                <button onClick={() => setSelectedResume(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                                    <Icons.X />
-                                </button>
+                                <button onClick={() => setSelectedResume(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><Icons.X /></button>
                             </div>
                         </div>
-
-                        {/* Área de Preview */}
-                        <div className="flex-1 overflow-y-auto p-4 flex justify-center">
-                            <div className="bg-white shadow-2xl origin-top transform scale-75 md:scale-90 lg:scale-100 transition-transform duration-300" style={{ width: '794px', minHeight: '1123px' }} ref={previewContainerRef}>
-                                {(() => {
-                                    const details = getResumeDetails(selectedResume);
-                                    if (details) {
-                                        return <ResumePreview data={details} isDemoMode={false} isFirstPage={true} isMeasurement={false} />;
-                                    }
-                                    return <div className="p-10 text-center text-gray-500">Dados do currículo não encontrados ou corrompidos.</div>;
-                                })()}
-                            </div>
+                        <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center gap-4" ref={previewContainerRef}>
+                            {!isPreviewReady ? (
+                                <div className="mt-10 flex flex-col items-center text-gray-400">
+                                    <svg className="animate-spin h-8 w-8 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    <p className="text-sm">Calculando páginas...</p>
+                                </div>
+                            ) : (
+                                paginatedPages.map((page, index) => (
+                                    <div key={index} className="bg-white shadow-xl resume-page" style={{ width: '794px', minHeight: '1123px', transform: 'scale(0.7)', transformOrigin: 'top center', marginBottom: '-300px' }}>
+                                        <ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} />
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -505,20 +539,9 @@ const AdminDashboard: React.FC = () => {
     );
 };
 
-// --- COMPONENTES AUXILIARES ---
 const SidebarItem = ({ collapsed, active, onClick, icon, label }: any) => (
-    <button 
-        onClick={onClick}
-        className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group relative ${
-            active 
-                ? 'bg-white text-blue-900 shadow-lg font-semibold' 
-                : 'text-blue-100 hover:bg-white/10 hover:text-white'
-        } ${collapsed ? 'justify-center' : ''}`}
-        title={collapsed ? label : ''}
-    >
-        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>
-        {!collapsed && <span>{label}</span>}
-        {collapsed && active && <div className="absolute right-2 w-1.5 h-1.5 bg-blue-500 rounded-full"></div>}
+    <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group relative ${active ? 'bg-white text-blue-900 shadow-lg font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white'} ${collapsed ? 'justify-center' : ''}`} title={collapsed ? label : ''}>
+        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{!collapsed && <span>{label}</span>}
     </button>
 );
 
@@ -526,16 +549,9 @@ const StatCard = ({ title, value, icon, color, isMoney }: any) => (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow group">
         <div>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-wide mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
-                {isMoney 
-                    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0)
-                    : (value || 0)
-                }
-            </h3>
+            <h3 className="text-2xl font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{isMoney ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0) : (value || 0)}</h3>
         </div>
-        <div className={`w-12 h-12 ${color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-30`}>
-            {icon}
-        </div>
+        <div className={`w-12 h-12 ${color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-30`}>{icon}</div>
     </div>
 );
 
