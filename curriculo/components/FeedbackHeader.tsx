@@ -89,9 +89,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    // Aumentei um pouco a altura para o modal respirar melhor
+    // Altura do cabeçalho
     const headerHeight = status === 'open' ? '440px' : '64px';
-    const borderShape = status === 'open' ? 'rounded-3xl' : 'rounded-full';
+    
+    // TRUQUE DE CSS:
+    // Em vez de mudar de 'rounded-full' para 'rounded-3xl', usamos 'rounded-[32px]' FIXO.
+    // Como a altura da barra fechada é 64px (h-16), um raio de 32px cria uma pílula perfeita.
+    // Ao expandir, o raio mantém-se, evitando o efeito de "bolinha" ou distorção.
+    const borderShape = 'rounded-[32px]';
 
     const containerClasses = status === 'open' 
         ? 'bg-white text-gray-800' 
@@ -107,13 +112,13 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
             {/* BARRA FLUTUANTE */}
             <header 
-                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
-                style={{ height: headerHeight }}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                style={{ height: headerHeight, transformOrigin: 'top' }}
             >
-                {/* LINHA SUPERIOR */}
+                {/* LINHA SUPERIOR (Fica sempre no topo) */}
                 <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5 relative z-10">
                     
-                    {/* ESQUERDA: Logo e Texto (Partilham o mesmo espaço) */}
+                    {/* ESQUERDA: Logo e Texto */}
                     <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
                         {status === 'thank_you' ? (
                             <div className="flex items-center gap-2 font-bold animate-fade-in text-white">
@@ -128,14 +133,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO DE SAUDAÇÃO (App) */}
+                                {/* TEXTO DE SAUDAÇÃO */}
                                 {!isFeedbackActive && headerMessage && (
                                     <span className={`font-poppins font-medium text-sm lg:text-lg text-white whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK: Agora igualzinho ao da saudação */}
+                                {/* TEXTO DO FEEDBACK */}
                                 {isFeedbackActive && (
                                     <span className="absolute left-0 font-poppins font-medium text-sm lg:text-lg text-white animate-fade-in whitespace-nowrap">
                                         {displayText}
@@ -183,14 +188,15 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </nav>
                 </div>
 
-                {/* AREA EXPANDIDA (Formulário) - VISUAL REFINADO */}
-                <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-all duration-500 delay-75 ${status === 'open' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                {/* AREA EXPANDIDA (Formulário) */}
+                {/* translate-y-0 quando aberto faz com que o conteúdo pareça estar lá, apenas revelado pela altura */}
+                <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-all duration-500 ${status === 'open' ? 'opacity-100 translate-y-0 delay-100' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
                     
                     <h3 className="text-xl font-poppins font-bold text-gray-800 mb-6 text-center">
                         Como foi sua experiência?
                     </h3>
                     
-                    {/* Estrelas Maiores e com mais espaço */}
+                    {/* Estrelas */}
                     <div className="flex gap-3 mb-6">
                         {[1, 2, 3, 4, 5].map((star) => (
                             <button 
@@ -203,7 +209,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         ))}
                     </div>
 
-                    {/* Caixa de Texto Estilo Pílula/Arredondada */}
+                    {/* Caixa de Texto */}
                     <textarea 
                         className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm md:text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 mb-3 text-gray-700 placeholder-gray-400 shadow-inner transition-all"
                         placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
@@ -218,7 +224,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         {!isValid && <span>Mínimo 3 palavras e 1 estrela</span>}
                     </div>
 
-                    {/* Botão Moderno e Arredondado */}
+                    {/* Botão */}
                     <button 
                         onClick={handleSubmit}
                         disabled={!isValid || status === 'submitting'}
