@@ -59,13 +59,12 @@ export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) 
 
             setStatus('thank_you');
 
-            // Mostra agradecimento e reseta
+            // Mostra agradecimento e reseta após 5 segundos
             setTimeout(() => {
                 setStatus('idle');
             }, 5000);
         } catch (error) {
             console.error("Erro ao enviar avaliação:", error);
-            // Em caso de erro, volta para o estado de input para tentar de novo
             alert("Houve um erro ao enviar. Tente novamente.");
             setStatus('open');
         }
