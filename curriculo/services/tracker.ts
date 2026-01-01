@@ -1,36 +1,42 @@
 import { db } from './firebase';
-import { doc, updateDoc, increment, addDoc, collection, setDoc, Timestamp, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, addDoc, collection, setDoc, Timestamp } from 'firebase/firestore';
 
-// Referência ao documento de estatísticas gerais
+// Referência ao documento geral de estatísticas
 const statsRef = doc(db, 'stats', 'general');
 
 /**
- * Registra um novo visitante no site.
- * Usa um identificador diário para não contar a mesma pessoa mil vezes no mesmo dia.
+ * Registra um novo visitante.
+ * Usa o sessionStorage para garantir que se a pessoa der F5, não conte duas vezes.
  */
 export const trackVisitor = async () => {
-    try {
-        const today = new Date().toISOString().split('T')[0]; // Ex: 2023-10-25
-        const visitorKey = `visitor_${today}`;
-        
-        // Verifica se já contamos hoje (usando sessionStorage para ser por aba/sessão)
-        if (sessionStorage.getItem(visitorKey)) return;
+    // Evita rodar fora do navegador
+    if (typeof window === 'undefined') return;
 
-        // Atualiza o contador geral
+    try {
+        // Cria uma "chave" única para o dia de hoje (ex: visitor_2023-10-25)
+        const today = new Date().toISOString().split('T')[0];
+        const sessionKey = `visitor_counted_${today}`;
+        
+        // Se já contamos este usuário nesta sessão hoje, não faz nada
+        if (sessionStorage.getItem(sessionKey)) return;
+
+        // Se não, incrementa +1 no banco
         await updateDoc(statsRef, {
             active_visitors: increment(1)
         });
 
-        // Marca que este usuário já foi contado hoje
-        sessionStorage.setItem(visitorKey, 'true');
+        // Marca que já foi contado
+        sessionStorage.setItem(sessionKey, 'true');
+        console.log("📈 [Tracker] Novo visitante contabilizado.");
 
     } catch (error) {
-        console.error("Erro ao rastrear visitante:", error);
+        // Silencioso: se der erro (ex: internet caiu), não atrapalha o usuário
+        console.warn("[Tracker] Erro ao contar visitante (ignorado).");
     }
 };
 
 /**
- * Registra que um currículo foi gerado (PDF baixado).
+ * Registra que um currículo foi gerado (PDF).
  */
 export const trackResumeGenerated = async () => {
     try {
@@ -38,18 +44,19 @@ export const trackResumeGenerated = async () => {
             total_resumes: increment(1),
             last_updated: Timestamp.now()
         });
+        console.log("📄 [Tracker] Currículo gerado contabilizado.");
     } catch (error) {
-        console.error("Erro ao rastrear currículo:", error);
+        console.warn("[Tracker] Erro ao contar currículo.");
     }
 };
 
 /**
  * Registra uma venda confirmada.
- * Salva a transação detalhada e atualiza o faturamento total.
+ * Salva tanto o valor total quanto o detalhe da transação.
  */
 export const trackSale = async (amount: number, customerName: string, paymentId: string) => {
     try {
-        // 1. Salva a transação detalhada no histórico
+        // 1. Salva a transação detalhada na lista de 'transactions'
         await addDoc(collection(db, 'transactions'), {
             amount: amount,
             customer_name: customerName,
@@ -59,13 +66,15 @@ export const trackSale = async (amount: number, customerName: string, paymentId:
             created_at: Timestamp.now()
         });
 
-        // 2. Soma o valor ao faturamento total do painel
+        // 2. Soma o dinheiro no total geral
         await updateDoc(statsRef, {
             total_revenue: increment(amount),
             last_updated: Timestamp.now()
         });
+        
+        console.log(`💰 [Tracker] Venda de R$${amount} registrada!`);
 
     } catch (error) {
-        console.error("Erro ao rastrear venda:", error);
+        console.error("❌ [Tracker] Erro CRÍTICO ao registrar venda:", error);
     }
 };
