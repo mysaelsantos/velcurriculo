@@ -14,28 +14,15 @@ import type { ResumeData, PageData } from './types';
 // SERVIÇOS DO FIREBASE E TRACKER
 import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
-// NOVO: IMPORTA O PAINEL ADMINISTRATIVO
+// IMPORTA O PAINEL ADMINISTRATIVO
 import AdminDashboard from './components/AdminDashboard';
-// NOVO: CONTEXTO DE FEEDBACK
+// IMPORTA O NOVO HEADER E CONTEXTO
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
+import FeedbackHeader from './components/FeedbackHeader';
 
 interface SavedResume extends ResumeData {
   savedAt: string;
 }
-
-// --- ÍCONES (Adicionado para corrigir o erro de Tela Branca) ---
-const Icons = {
-    ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
-    StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-    StarOutline: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-    Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-    Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
-    Close: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-    WhatsApp: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
-    Mail: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>,
-    Instagram: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
-};
 
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
@@ -256,18 +243,13 @@ const TestimonialsSection = React.memo(() => {
     );
 });
 
-// COMPONENTE PRINCIPAL (Reestruturado para incluir a lógica de Feedback)
+// COMPONENTE PRINCIPAL DO SITE
 const AppContent: React.FC = () => {
-    // --- LÓGICA DE ROTEAMENTO (ADMIN vs SITE) ---
+    // --- LÓGICA DE ROTEAMENTO ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
 
-    // --- HOOK DE FEEDBACK (Lógica do Contexto) ---
-    const { status, triggerFeedback, openFeedback, closeFeedback, submitFeedback } = useFeedback();
-    
-    // --- ESTADOS LOCAIS PARA A ANIMAÇÃO E FORMULÁRIO DO CABEÇALHO ---
-    const [rating, setRating] = useState(0);
-    const [feedbackText, setFeedbackText] = useState('');
-    const [displayText, setDisplayText] = useState(''); // Texto animado (Typewriter)
+    // --- HOOK DE FEEDBACK ---
+    const { status, triggerFeedback } = useFeedback();
 
     useEffect(() => {
         const handleHashChange = () => setCurrentRoute(window.location.hash);
@@ -280,12 +262,12 @@ const AppContent: React.FC = () => {
         return <AdminDashboard />;
     }
 
-    // --- CÓDIGO DO SITE NORMAL ABAIXO ---
+    // --- CÓDIGO DO SITE NORMAL ---
     const isPixTestMode = false;
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     
-    // Preparar dados do usuário para o componente de Feedback
+    // Dados para o Header
     const userData = {
         name: resumeData?.personalInfo?.name || '',
         email: resumeData?.personalInfo?.email || ''
@@ -308,15 +290,14 @@ const AppContent: React.FC = () => {
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     // Controla o Loading Overlay
     const [isLoading, setIsLoading] = useState(true);
-    const [fontsLoaded, setFontsLoaded] = useState(false); // Mantemos o controle de fontes separado
+    const [fontsLoaded, setFontsLoaded] = useState(false); 
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     
     // --- ESTADOS DE DESENVOLVEDOR ---
-    const [isDevModeActive, setIsDevModeActive] = useState(false); // Ativa os botões
-    const [devClickCount, setDevClickCount] = useState(0); // Conta cliques no rodapé
-    const [showDevModal, setShowDevModal] = useState(false); // Mostra modal de senha
-    const [devPassword, setDevPassword] = useState(''); // Senha digitada
+    const [isDevModeActive, setIsDevModeActive] = useState(false); 
+    const [devClickCount, setDevClickCount] = useState(0); 
+    const [showDevModal, setShowDevModal] = useState(false); 
+    const [devPassword, setDevPassword] = useState(''); 
 
     // --- ESTADO PARA O GREETING DO HEADER ---
     const [showLogo, setShowLogo] = useState(true); 
@@ -330,70 +311,11 @@ const AppContent: React.FC = () => {
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // INICIALIZAÇÃO E MONITORAMENTO
+    // INICIALIZAÇÃO
     useEffect(() => {
-        // 1. Garante que o banco está configurado
         runAutoSetup();
-        // 2. Registra o visitante (inteligente: 1x por sessão)
         trackVisitor();
     }, []);
-
-    // --- ANIMAÇÃO TYPEWRITER (ERRO E CORREÇÃO) ---
-    useEffect(() => {
-        if (status === 'typing') {
-            const phrase1 = "Gostou do nosso...";
-            const phrase2 = "Avalie nossos serviços";
-            let i = 0;
-            let isDeleting = false;
-            
-            const typeLoop = () => {
-                // Se terminou de digitar a frase 1
-                if (!isDeleting && i === phrase1.length) {
-                    setTimeout(() => { isDeleting = true; typeLoop(); }, 800); // Pausa antes de apagar
-                    return;
-                }
-
-                // Se terminou de apagar tudo
-                if (isDeleting && i === 0) {
-                    // Começa a frase 2 (final)
-                    let j = 0;
-                    const typeFinal = setInterval(() => {
-                        setDisplayText(phrase2.substring(0, j + 1));
-                        j++;
-                        if (j === phrase2.length) {
-                            clearInterval(typeFinal);
-                        }
-                    }, 50); // Velocidade frase 2
-                    return;
-                }
-
-                // Lógica de digitar/apagar frase 1
-                const currentText = phrase1.substring(0, isDeleting ? i - 1 : i + 1);
-                setDisplayText(currentText);
-                i = isDeleting ? i - 1 : i + 1;
-
-                const speed = isDeleting ? 30 : 80; // Apagar é mais rápido
-                setTimeout(typeLoop, speed);
-            };
-
-            typeLoop();
-        } else if (status === 'prompt') {
-            setDisplayText("Avalie nossos serviços");
-        }
-    }, [status]);
-
-    // Função de envio do formulário de feedback
-    const handleFeedbackSubmit = () => {
-        const words = feedbackText.trim().split(/\s+/).length;
-        if (words >= 3 && rating > 0) {
-            submitFeedback({
-                rating,
-                text: feedbackText,
-                author: userData.name || 'Anônimo',
-                email: userData.email || 'sem-email'
-            });
-        }
-    };
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
         setToast({ message, type });
@@ -406,21 +328,16 @@ const AppContent: React.FC = () => {
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
-    // --- LÓGICA DE CARREGAMENTO INICIAL COM SOBREPOSIÇÃO ---
     useEffect(() => {
         const loadResources = async () => {
             try {
                 await document.fonts.ready;
-                setFontsLoaded(true); // Fontes prontas, liberamos o cálculo de layout
+                setFontsLoaded(true); 
             } catch (error) {
                 console.error("Failed to load fonts:", error);
-                setFontsLoaded(true); // Libera mesmo com erro
+                setFontsLoaded(true); 
             }
-
-            // Aguarda o tempo do "branding" (2 SEGUNDOS)
             await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Remove a sobreposição
             setIsLoading(false);
         };
         loadResources();
@@ -475,7 +392,6 @@ const AppContent: React.FC = () => {
         }
     }, []);
 
-    // --- SALVAMENTO AUTOMÁTICO ---
     useEffect(() => {
         if (isDemoMode) return;
         try {
@@ -486,7 +402,6 @@ const AppContent: React.FC = () => {
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
     
-    // --- LÓGICA DO GREETING ---
     useEffect(() => {
         if (currentStep > 1 && resumeData.personalInfo.name.trim().length > 0 && !hasGreeted) {
             const timer = setTimeout(() => {
@@ -518,17 +433,6 @@ const AppContent: React.FC = () => {
              return () => clearTimeout(timer);
         }
     }, [currentStep, hasMotivatedEducation]);
-
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            const nav = document.querySelector('header nav');
-            if (isMenuOpen && nav && !nav.contains(event.target as Node)) {
-                setIsMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isMenuOpen]);
 
     const handleContinueProgress = () => {
         if (pendingSavedData) {
@@ -597,7 +501,6 @@ const AppContent: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // --- ATUALIZAÇÃO DO RENDERIZADOR OCULTO ---
     useEffect(() => {
         if (measurementRootRef.current) {
             const timer = setTimeout(() => {
@@ -614,7 +517,6 @@ const AppContent: React.FC = () => {
         }
     }, [resumeData, isDemoMode]);
 
-    // --- RESIZE OBSERVER COM DEBOUNCE ---
     useEffect(() => {
         if (!measurementContainerRef.current) return;
 
@@ -636,7 +538,6 @@ const AppContent: React.FC = () => {
         };
     }, [resumeData]);
 
-    // --- NOVA LÓGICA DE PAGINAÇÃO (OFFSET INTELIGENTE) ---
     const calculatePagination = useCallback(async (dataToPaginate: ResumeData) => {
         const container = measurementContainerRef.current;
         if (!container || !container.firstChild) {
@@ -653,17 +554,10 @@ const AppContent: React.FC = () => {
         const qrConfig = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
         const qrPosition = qrConfig;
 
-        // --- INÍCIO DA ALTERAÇÃO ---
-        // Verifica se existe overrideSpacer e usa o height dele
         // @ts-ignore
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
-        // --- FIM DA ALTERAÇÃO ---
-
-        // Padding agora vem do template, garantindo a customização
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
-
-        // Zona Proibida começa aqui
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding;
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
@@ -754,7 +648,6 @@ const AppContent: React.FC = () => {
         if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
         const pages: PageData[] = [];
-        
         let currentPageData: PageData = { 
             personalInfo: dataToPaginate.personalInfo, 
             style: dataToPaginate.style,
@@ -780,26 +673,15 @@ const AppContent: React.FC = () => {
 
         for (let i = 0; i < blocks.length; i++) {
             const block = blocks[i];
-            
             const hasQr = (dataToPaginate.style.showQRCode || dataToPaginate.style.showLinkedinQr);
-            
-            // Verifica colisão
             const overlapsDangerZone = currentPageIndex === 0 && hasQr && (currentY + block.height > dangerZoneStart);
-            
             let effectiveHeight = block.height;
 
             if (overlapsDangerZone) {
                 if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
-                
-                // === CORREÇÃO CRÍTICA ===
-                // Calculamos a distância entre o topo do bloco (currentY) e o início do QR Code (dangerZoneStart).
-                // Se o bloco começa antes do QR Code, precisamos empurrar o float para baixo por essa diferença.
                 const distToDanger = dangerZoneStart - currentY;
                 const spacerMargin = distToDanger > 0 ? distToDanger : 0;
-                
                 currentPageData.qrCodeOffsets[block.id] = spacerMargin; 
-                
-                // Mantemos o multiplicador de segurança para o crescimento da altura
                 effectiveHeight = Math.max(block.height * 1.4, 20); 
             }
 
@@ -902,8 +784,6 @@ const AppContent: React.FC = () => {
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
-        
-        // RASTREAMENTO: Conta mais um currículo gerado
         trackResumeGenerated(dataToExport);
 
         if (document.fonts) {
@@ -936,7 +816,6 @@ const AppContent: React.FC = () => {
 
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
-                
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
 
@@ -960,7 +839,6 @@ const AppContent: React.FC = () => {
                         width: 794
                     });
                 }
-
                 if (i > 0) pdf.addPage();
                 pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
             }
@@ -968,8 +846,6 @@ const AppContent: React.FC = () => {
             setGeneratingStatus('Finalizando PDF...');
             const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
             pdf.save(fileName);
-            
-            // --- GATILHO DE FEEDBACK ---
             triggerFeedback();
 
         } catch (error) {
@@ -980,7 +856,7 @@ const AppContent: React.FC = () => {
             setGeneratingStatus('');
         }
         
-    }, [triggerFeedback]); // Dependência adicionada
+    }, [triggerFeedback]);
 
     const handlePaymentRequest = async () => {
         if(hasPaidInSession) {
@@ -993,7 +869,6 @@ const AppContent: React.FC = () => {
         setPaymentAmount(currentAmount);
 
         if (isPixTestMode) {
-            console.log("Entering Pix Test Mode...");
             setTimeout(() => {
                 setPixPaymentData({
                     qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
@@ -1008,19 +883,15 @@ const AppContent: React.FC = () => {
 
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
-
             const response = await fetch(backendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isDiscounted: !!editingResumeId })
             });
-    
             const data = await response.json();
-    
             if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
-    
             setPixPaymentData(data);
             setIsPixModalOpen(true);
         } catch (error) {
@@ -1036,7 +907,6 @@ const AppContent: React.FC = () => {
         setPixPaymentData(null);
         setHasPaidInSession(true);
 
-        // RASTREAMENTO: Salva a venda no Firebase
         if (pixPaymentData?.paymentId) {
             trackSale(paymentAmount, resumeData.personalInfo.name || "Cliente", pixPaymentData.paymentId);
         }
@@ -1131,21 +1001,9 @@ const AppContent: React.FC = () => {
         }
     };
 
-    // --- VARIÁVEIS PARA O HEADER HÍBRIDO ---
-    const isFeedbackActive = status !== 'idle' && status !== 'waiting';
-    // Se o status for 'open', aumenta a altura (expande a barra)
-    const headerHeight = status === 'open' ? '400px' : undefined; 
-    
-    const isValidFeedback = feedbackText.trim().split(/\s+/).length >= 3 && rating > 0;
-
     return (
         <>
-        {/* BACKDROP ESCURO (Só quando o feedback está aberto) */}
-        <div 
-            className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] transition-opacity duration-300 ${status === 'open' ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
-            onClick={closeFeedback}
-        />
-
+        {/* LOADING OVERLAY */}
         {isLoading && (
             <div className="fixed inset-0 w-screen h-screen z-[200] bg-white flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
@@ -1158,7 +1016,6 @@ const AppContent: React.FC = () => {
                         Feito para quem precisa de <br /> resultados
                     </p>
                 </div>
-
                 <div className="absolute bottom-32 left-0 right-0 flex flex-col items-center">
                      <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                      <p className="text-gray-400 text-xs font-medium">Carregando editor...</p>
@@ -1166,6 +1023,7 @@ const AppContent: React.FC = () => {
             </div>
         )}
 
+        {/* MODAL DEV */}
         {showDevModal && (
             <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
@@ -1178,23 +1036,14 @@ const AppContent: React.FC = () => {
                         className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                     <div className="flex gap-2">
-                        <button 
-                            onClick={() => setShowDevModal(false)}
-                            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            onClick={handleDevLogin}
-                            className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition"
-                        >
-                            Entrar
-                        </button>
+                        <button onClick={() => setShowDevModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition">Cancelar</button>
+                        <button onClick={handleDevLogin} className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">Entrar</button>
                     </div>
                 </div>
             </div>
         )}
 
+        {/* PRINT CONTAINER (Hidden) */}
         <div id="print-container">
              <div id="print-area">
                 {paginatedData.map((pageData, index) => (
@@ -1212,44 +1061,18 @@ const AppContent: React.FC = () => {
              </div>
         </div>
 
+        {/* TOASTS */}
         {toast && (
-            <div
-                role="alert"
-                className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${
-                {
-                    success: 'bg-green-500',
-                    error: 'bg-red-600',
-                    warning: 'bg-yellow-500 text-gray-900',
-                }[toast.type]
-                }`}
-            >
-                {toast.message}
-            </div>
+            <div role="alert" className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${{success: 'bg-green-500', error: 'bg-red-600', warning: 'bg-yellow-500 text-gray-900'}[toast.type]}`}>{toast.message}</div>
         )}
-        <ContinueProgressModal 
-            isOpen={isContinueModalOpen}
-            onContinue={handleContinueProgress}
-            onStartNew={handleStartNew}
-        />
+        
+        {/* MODAIS DIVERSOS */}
+        <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
         {isPixModalOpen && pixPaymentData && (
-            <PixModal
-                isOpen={isPixModalOpen}
-                onClose={() => setIsPixModalOpen(false)}
-                paymentData={pixPaymentData}
-                onPaymentSuccess={handlePaymentSuccess}
-                isTestMode={isPixTestMode}
-                amount={paymentAmount}
-            />
+            <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
         )}
         {isMyResumesModalOpen && (
-            <MyResumesModal
-                isOpen={isMyResumesModalOpen}
-                onClose={() => setIsMyResumesModalOpen(false)}
-                resumes={savedResumes}
-                onEdit={handleEditResume}
-                onDownload={exportToPdf}
-                onDelete={handleDeleteSavedResume}
-            />
+            <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
         )}
         {deletionTarget && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
@@ -1257,167 +1080,29 @@ const AppContent: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-800">Confirmar Exclusão</h3>
                     <p className="text-gray-600 mt-2">Tem a certeza que deseja remover este item? Esta ação não pode ser desfeita.</p>
                     <div className="mt-6 flex justify-end gap-3">
-                        <button onClick={() => setDeletionTarget(null)} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">
-                            Cancelar
-                        </button>
-                        <button onClick={handleConfirmDelete} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-                            Remover
-                        </button>
+                        <button onClick={() => setDeletionTarget(null)} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                        <button onClick={handleConfirmDelete} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Remover</button>
                     </div>
                 </div>
             </div>
         )}
         
+        {/* BOTÕES FLUTUANTES DEV */}
         {isDevModeActive && (
             <>
-                <button
-                    type="button"
-                    onClick={handleExportJson}
-                    className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105"
-                    title="Exportar JSON do Currículo Atual"
-                    aria-label="Exportar JSON"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                </button>
-
-                <button
-                    type="button"
-                    onClick={handleFillDemoData}
-                    className="fixed bottom-5 left-20 z-[100] bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform hover:scale-105"
-                    title="Preencher com Dados de Demo (Teste)"
-                    aria-label="Preencher Demo"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => exportToPdf(resumeData)}
-                    className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105"
-                    title="Pular pagamento e baixar PDF (Apenas para Teste)"
-                    aria-label="Baixar PDF para teste"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg>
-                </button>
+                <button type="button" onClick={handleExportJson} className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105" title="Exportar JSON"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button>
+                <button type="button" onClick={handleFillDemoData} className="fixed bottom-5 left-20 z-[100] bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform hover:scale-105" title="Preencher Demo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                <button type="button" onClick={() => exportToPdf(resumeData)} className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105" title="Baixar PDF Teste"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg></button>
             </>
         )}
 
-        {/* --- CABEÇALHO ORIGINAL MANTIDO (FLUTUANTE) --- */}
-        {/* Mantido top-6 left-6 right-6 e todas as classes originais */}
-        <header 
-            className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 lg:rounded-full shadow-lg z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${status === 'open' ? 'bg-white text-gray-800' : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg')}`}
-            style={{ height: headerHeight || 'auto' }}
-        >
-            <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5">
-                {/* ÁREA DA ESQUERDA: LOGO OU FEEDBACK */}
-                <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
-                    {status === 'thank_you' ? (
-                        <div className="flex items-center gap-2 font-bold animate-fade-in">
-                            <Icons.Check /> Obrigado pela avaliação!
-                        </div>
-                    ) : (
-                        <div className="flex items-center relative h-6 w-full">
-                            <img 
-                                src="/logo-header.png" 
-                                alt="Logo" 
-                                className={`h-5 lg:h-6 mr-3 transition-opacity duration-700 absolute left-0 ${showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
-                            />
-                            {/* TEXTO NORMAL DO APP (SAUDAÇÃO) */}
-                            {!isFeedbackActive && headerMessage && (
-                                <span className={`font-poppins font-medium text-sm lg:text-lg whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                                    {headerMessage}
-                                </span>
-                            )}
-                            {/* TEXTO DO FEEDBACK (TYPEWRITER) */}
-                            {isFeedbackActive && (
-                                <span className="ml-8 lg:ml-10 text-sm lg:text-base font-medium text-blue-300 animate-fade-in whitespace-nowrap">
-                                    {displayText}
-                                    <span className="animate-pulse">|</span>
-                                </span>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* ÁREA DA DIREITA: NAVEGAÇÃO OU AÇÃO */}
-                <nav className="relative flex items-center gap-3">
-                    {/* BOTÃO MODO FEEDBACK: Seta */}
-                    {isFeedbackActive && status !== 'thank_you' && (
-                        <button 
-                            onClick={status === 'open' ? closeFeedback : openFeedback}
-                            className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
-                        >
-                            <Icons.ChevronDown />
-                        </button>
-                    )}
-
-                    {/* BOTÃO MODO NORMAL: Menu Hambúrguer */}
-                    {!isFeedbackActive && (
-                        <button 
-                            onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                            className="p-1.5 rounded-full hover:bg-white/10 transition focus:outline-none"
-                        >
-                            {isMenuOpen ? <Icons.Close /> : <Icons.Menu />}
-                        </button>
-                    )}
-
-                    {/* MENU DROPDOWN ORIGINAL */}
-                    {isMenuOpen && !isFeedbackActive && (
-                        <div className="absolute right-0 top-full mt-4 w-56 bg-white rounded-xl shadow-2xl overflow-hidden py-2 animate-fade-in-scale origin-top-right border border-gray-100 z-50 text-gray-700">
-                            <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Contato</p>
-                            </div>
-                            <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
-                                <Icons.WhatsApp /> WhatsApp
-                            </a>
-                            <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
-                                <Icons.Mail /> E-mail
-                            </a>
-                            <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 hover:text-blue-600 transition-colors">
-                                <Icons.Instagram /> Instagram
-                            </a>
-                        </div>
-                    )}
-                </nav>
-            </div>
-
-            {/* ÁREA EXPANDIDA (MODAL HÍBRIDO) */}
-            <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-opacity duration-300 delay-100 ${status === 'open' ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Como foi a sua experiência?</h3>
-                
-                {/* Estrelas */}
-                <div className="flex gap-2 mb-6">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} onClick={() => setRating(star)} className="transform transition hover:scale-110 focus:outline-none">
-                            {star <= rating ? <Icons.StarFilled /> : <Icons.StarOutline />}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Campo de Texto */}
-                <textarea 
-                    className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none h-24 mb-2 text-gray-800"
-                    placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                />
-                
-                {/* Validação */}
-                <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-4">
-                    <span>{feedbackText.trim() ? `${feedbackText.trim().split(/\s+/).length} palavras` : '0 palavras'}</span>
-                    {!isValidFeedback && <span>Mínimo 3 palavras e 1 estrela</span>}
-                </div>
-
-                {/* Botão Enviar */}
-                <button 
-                    onClick={handleFeedbackSubmit}
-                    disabled={!isValidFeedback || status === 'submitting'}
-                    className={`w-full max-w-md py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${isValidFeedback ? 'bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:shadow-xl transform hover:-translate-y-1' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                >
-                    {status === 'submitting' ? 'Enviando...' : <><Icons.Send /> Enviar Avaliação</>}
-                </button>
-            </div>
-        </header>
+        {/* --- HEADER NOVO (Componente) --- */}
+        {/* Agora tem as classes flutuantes corretas e deixa este arquivo App.tsx limpo */}
+        <FeedbackHeader 
+            userData={userData} 
+            headerMessage={headerMessage}
+            showLogo={showLogo}
+        />
 
         <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
             <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
@@ -1425,20 +1110,14 @@ const AppContent: React.FC = () => {
                     Faça seu Currículo Profissional por Apenas R$5<span className="text-4xl lg:text-5xl font-bold">,00</span>
                 </h1>
                 <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">Destaque-se em qualquer seleção com um currículo moderno, profissional e pronto para te garantir aquela vaga.</p>
-                
                 <div className="mt-4 flex items-center justify-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-4 py-2 rounded-full w-fit mx-auto">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span>+{resumesGenerated} currículos gerados!</span>
                 </div>
-
                 <div className="mt-8 flex flex-col items-center gap-4">
-                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">
-                        Criar meu Currículo
-                    </a>
+                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
                     {savedResumes.length > 0 && (
-                        <button onClick={() => setIsMyResumesModalOpen(true)} className="text-sm font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-full transition-all">
-                            Meus Currículos
-                        </button>
+                        <button onClick={() => setIsMyResumesModalOpen(true)} className="text-sm font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-full transition-all">Meus Currículos</button>
                     )}
                 </div>
             </section>
@@ -1447,7 +1126,6 @@ const AppContent: React.FC = () => {
                  <div className="my-8 flex justify-center">
                     <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
                 </div>
-
                 <div className="flex flex-col lg:flex-row gap-8">
                     <ResumeForm 
                         data={resumeData} 
@@ -1481,13 +1159,7 @@ const AppContent: React.FC = () => {
                         {paginatedData.length > 1 && (
                             <div className="pagination-controls">
                                 {paginatedData.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setCurrentPage(index + 1)}
-                                        className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}
-                                    >
-                                        {index + 1}
-                                    </button>
+                                    <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
                                 ))}
                             </div>
                         )}
@@ -1516,10 +1188,8 @@ const AppContent: React.FC = () => {
                     </div>
                 </div>
             </section>
-
             <TestimonialsSection />
-            
-             <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
+            <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
                  <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
                  <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
                  <a href="#form-wizard" onClick={handleStartEditing} className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
@@ -1562,7 +1232,6 @@ const AppContent: React.FC = () => {
     );
 };
 
-// COMPONENTE WRAPPER (Essencial para o Contexto funcionar)
 const App: React.FC = () => {
     return (
         <FeedbackProvider>
