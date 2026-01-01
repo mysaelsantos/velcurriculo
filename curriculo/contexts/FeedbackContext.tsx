@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { db } from '../services/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
+// Tipos
 type FeedbackStatus = 'idle' | 'waiting' | 'typing' | 'prompt' | 'open' | 'submitting' | 'thank_you';
 
 interface FeedbackContextData {
@@ -12,20 +13,24 @@ interface FeedbackContextData {
     submitFeedback: (data: { rating: number; text: string; author: string; email: string }) => Promise<void>;
 }
 
+interface FeedbackProviderProps {
+    children: ReactNode;
+}
+
+// Criação do Contexto
 const FeedbackContext = createContext<FeedbackContextData>({} as FeedbackContextData);
 
-export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const FeedbackProvider: React.FC<FeedbackProviderProps> = ({ children }) => {
     const [status, setStatus] = useState<FeedbackStatus>('idle');
     const timeoutRef = useRef<any>(null);
 
-    // Chamado quando o PDF termina de baixar
+    // Função que inicia o processo (chamada após o download)
     const triggerFeedback = useCallback(() => {
-        // Se já avaliou ou está ocupado, ignora (podemos melhorar essa regra depois com localStorage)
         if (status !== 'idle') return;
 
         setStatus('waiting');
         
-        // Espera 3 segundos antes de começar a digitar
+        // Espera 3 segundos antes de começar a animação
         timeoutRef.current = setTimeout(() => {
             setStatus('typing');
         }, 3000);
@@ -42,25 +47,27 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const submitFeedback = useCallback(async ({ rating, text, author, email }: any) => {
         setStatus('submitting');
         try {
-            // Simula envio ou envia pro Firebase
+            // Salva no Firebase
             await addDoc(collection(db, 'reviews'), {
-                author,
-                email,
+                author: author || 'Anônimo',
+                email: email || 'não-informado',
                 rating,
                 text,
-                approved: false,
+                approved: false, // Requer aprovação do admin
                 created_at: serverTimestamp()
             });
 
             setStatus('thank_you');
 
-            // Mostra agradecimento por 5 segundos e reseta
+            // Mostra agradecimento e reseta
             setTimeout(() => {
                 setStatus('idle');
             }, 5000);
         } catch (error) {
             console.error("Erro ao enviar avaliação:", error);
-            setStatus('prompt'); // Volta para o prompt em caso de erro
+            // Em caso de erro, volta para o estado de input para tentar de novo
+            alert("Houve um erro ao enviar. Tente novamente.");
+            setStatus('open');
         }
     }, []);
 
@@ -71,4 +78,10 @@ export const FeedbackProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
 };
 
-export const useFeedback = () => useContext(FeedbackContext);
+export const useFeedback = () => {
+    const context = useContext(FeedbackContext);
+    if (!context) {
+        throw new Error('useFeedback deve ser usado dentro de um FeedbackProvider');
+    }
+    return context;
+};
