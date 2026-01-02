@@ -24,7 +24,11 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
-// DADOS DE DEMONSTRAÇÃO COMPLETOS
+// ... MANTENHA AQUI TODAS AS CONSTANTES E DADOS DE DEMONSTRAÇÃO ORIGINAIS ...
+// ... (DEMO_DATA, INITIAL_DATA, ALL_TESTIMONIALS, Icons se ainda estiverem aqui, etc) ...
+// ... Para economizar espaço na resposta, vou direto ao componente AppContent ...
+
+// DADOS DE DEMONSTRAÇÃO COMPLETOS (Mantido para garantir que o código funciona)
 const DEMO_DATA: ResumeData = {
     personalInfo: {
         name: "Marcos Mj Santos",
@@ -144,6 +148,7 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true, showLinkedinQr: true }
 };
 
+// ... FUNÇÕES AUXILIARES E TESTEMUNHOS ...
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está a começar a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -243,12 +248,9 @@ const TestimonialsSection = React.memo(() => {
     );
 });
 
-// COMPONENTE PRINCIPAL DO SITE
+// --- COMPONENTE PRINCIPAL ---
 const AppContent: React.FC = () => {
-    // --- LÓGICA DE ROTEAMENTO ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
-
-    // --- HOOK DE FEEDBACK ---
     const { status, triggerFeedback } = useFeedback();
 
     useEffect(() => {
@@ -257,14 +259,11 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    // Se a rota for admin, mostra o Dashboard e para por aqui
     if (currentRoute === '#/admin') {
         return <AdminDashboard />;
     }
 
-    // --- CÓDIGO DO SITE NORMAL ---
     const isPixTestMode = false;
-
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     
     // Dados para o Header
@@ -288,30 +287,22 @@ const AppContent: React.FC = () => {
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
-    // Controla o Loading Overlay
     const [isLoading, setIsLoading] = useState(true);
     const [fontsLoaded, setFontsLoaded] = useState(false); 
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
-    
-    // --- ESTADOS DE DESENVOLVEDOR ---
     const [isDevModeActive, setIsDevModeActive] = useState(false); 
     const [devClickCount, setDevClickCount] = useState(0); 
     const [showDevModal, setShowDevModal] = useState(false); 
     const [devPassword, setDevPassword] = useState(''); 
-
-    // --- ESTADO PARA O GREETING DO HEADER ---
     const [showLogo, setShowLogo] = useState(true); 
     const [headerMessage, setHeaderMessage] = useState('');
     const [hasGreeted, setHasGreeted] = useState(false); 
     const [hasMotivatedEducation, setHasMotivatedEducation] = useState(false); 
-
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
-
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // INICIALIZAÇÃO
     useEffect(() => {
         runAutoSetup();
         trackVisitor();
@@ -324,6 +315,8 @@ const AppContent: React.FC = () => {
         }, 5000);
     };
     
+    // ... TODA A LÓGICA DE PDF, PAGINAÇÃO, SCALING MANTIDA IGUAL ...
+    // ... (Vou omitir o bloco de useEffects e functions repetidos para focar na mudança) ...
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1096,12 +1089,12 @@ const AppContent: React.FC = () => {
             </>
         )}
 
-        {/* --- HEADER NOVO (Componente) --- */}
-        {/* Agora tem as classes flutuantes corretas e deixa este arquivo App.tsx limpo */}
+        {/* --- HEADER NOVO (COM PROPS PARA ABRIR CURRÍCULOS) --- */}
         <FeedbackHeader 
             userData={userData} 
             headerMessage={headerMessage}
             showLogo={showLogo}
+            onOpenMyResumes={() => setIsMyResumesModalOpen(true)} // Passamos a função aqui
         />
 
         <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
@@ -1116,9 +1109,7 @@ const AppContent: React.FC = () => {
                 </div>
                 <div className="mt-8 flex flex-col items-center gap-4">
                     <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
-                    {savedResumes.length > 0 && (
-                        <button onClick={() => setIsMyResumesModalOpen(true)} className="text-sm font-semibold text-gray-700 bg-gray-200 hover:bg-gray-300 py-2 px-6 rounded-full transition-all">Meus Currículos</button>
-                    )}
+                    {/* BOTÃO "Meus Currículos" REMOVIDO DAQUI (agora está no Menu) */}
                 </div>
             </section>
             
