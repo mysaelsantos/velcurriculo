@@ -1007,17 +1007,17 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                   <h3 className="text-2xl font-bold text-gray-800">Seu currículo está pronto!</h3>
                   <p className="text-gray-600 mt-2 mb-8">Pague a taxa para fazer o download do seu PDF.</p>
 
-                  {/* --- ÁREA DE ACEITE DOS TERMOS (ATUALIZADO) --- */}
-                  <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 text-left shadow-sm">
-                    <div className="flex items-start gap-3">
+                  {/* --- ÁREA DE ACEITE DOS TERMOS (ATUALIZADO E COMPACTADO) --- */}
+                  <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 text-left shadow-sm">
+                    <div className="flex items-center gap-2.5">
                       <input 
                         type="checkbox" 
                         id="terms-checkbox"
                         checked={isTermsAccepted}
                         onChange={(e) => setIsTermsAccepted(e.target.checked)}
-                        className="mt-1 w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
+                        className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
                       />
-                      <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none flex-1 leading-relaxed">
+                      <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none flex-1 leading-snug">
                         Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
                       </label>
                     </div>
