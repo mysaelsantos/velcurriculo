@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, FileText, Clock, ChevronDown, Check, ArrowLeft } from 'lucide-react';
 import { ResumeData } from '../types';
 
-interface MyResumesModalProps {
+export interface MyResumesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoad: (resume: ResumeData) => void;
@@ -15,7 +15,8 @@ interface SavedResume {
   data: ResumeData;
 }
 
-export function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesModalProps) {
+// ALERTA: Adicionado 'export default' para corrigir o erro de importação no App.tsx
+export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesModalProps) {
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -181,6 +182,7 @@ export function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesModalProps)
             onClick={onClose}
             className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors shadow-sm"
           >
+            <ArrowLeft className="w-4 h-4" />
             Voltar
           </button>
         </div>
