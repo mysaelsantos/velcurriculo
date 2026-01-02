@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFeedback } from '../contexts/FeedbackContext';
 
 // --- ÍCONES ---
@@ -32,6 +32,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [displayText, setDisplayText] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+    // REF para o Header (Correção do bug de fechar sozinho)
+    const headerRef = useRef<HTMLElement>(null);
+
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
     const isHeaderExpanded = status === 'open' || isMenuOpen;
 
@@ -59,7 +62,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         setIsMenuOpen(false);
     };
 
-    // --- ANIMAÇÃO TYPEWRITER (Rápida e Natural) ---
+    // --- ANIMAÇÃO TYPEWRITER ---
     useEffect(() => {
         if (status === 'typing') {
             const phrase1 = "Gostou do nosso...";
@@ -95,11 +98,12 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         }
     }, [status]);
 
-    // Fecha ao clicar fora
+    // --- CORREÇÃO DO CLICK OUTSIDE ---
+    // Agora usamos headerRef.current.contains para ter certeza absoluta que o clique foi fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            const nav = document.querySelector('header');
-            if (isHeaderExpanded && nav && !nav.contains(event.target as Node)) {
+            // Se o header estiver aberto E o clique NÃO for dentro do header
+            if (isHeaderExpanded && headerRef.current && !headerRef.current.contains(event.target as Node)) {
                 closeAll();
             }
         };
@@ -143,8 +147,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 onClick={closeAll}
             />
 
-            {/* BARRA FLUTUANTE */}
+            {/* BARRA FLUTUANTE (Com Ref) */}
             <header 
+                ref={headerRef} // AQUI ESTÁ O SEGREDO PARA NÃO FECHAR SOZINHO
                 className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight, transformOrigin: 'top' }}
             >
@@ -159,32 +164,32 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </div>
                         ) : (
                             <div className="flex items-center relative h-full w-full">
-                                {/* LOGO (Correção de Sobreposição: z-index e opacity controlados) */}
+                                {/* LOGO */}
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO SAUDAÇÃO */}
+                                {/* TEXTO SAUDAÇÃO (Corrigido tamanho para caber no mobile) */}
                                 {!isFeedbackActive && !isMenuOpen && headerMessage && (
-                                    <span className={`absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                                    <span className={`absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
                                 {/* TÍTULO DO MENU */}
                                 {isMenuOpen && (
-                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
+                                    <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         Menu
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK */}
+                                {/* TEXTO DO FEEDBACK (Corrigido tamanho responsivo: text-lg no mobile) */}
                                 {isFeedbackActive && (
-                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
+                                    <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         {displayText}
-                                        <span className="inline-block w-[3px] h-7 lg:h-10 bg-white ml-1 animate-blink-hard align-middle"></span>
+                                        <span className="inline-block w-[2px] h-5 sm:h-7 lg:h-10 bg-white ml-1 animate-blink-hard align-middle"></span>
                                     </span>
                                 )}
                             </div>
@@ -193,7 +198,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     {/* DIREITA: Navegação */}
                     <nav className="relative flex items-center gap-3">
-                        {/* Botão Feedback */}
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={toggleFeedback}
@@ -203,7 +207,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* Botão Menu */}
                         {!isFeedbackActive && (
                             <button 
                                 onClick={toggleMenu} 
@@ -244,7 +247,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </button>
                 </div>
 
-                {/* 2. CONTEÚDO DO MENU (Gaveta) */}
+                {/* 2. CONTEÚDO DO MENU */}
                 <div className={`absolute top-16 left-0 right-0 bottom-0 p-6 flex flex-col items-center justify-center transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
                     
                     {/* Botão Meus Currículos */}
@@ -257,12 +260,11 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     <div className="w-full max-w-md border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais (CORREÇÃO DE CONTRASTE AQUI) */}
+                    {/* Links Sociais (COM CONTRASTE CORRIGIDO) */}
                     <div className="flex flex-col gap-4 w-full max-w-md mt-6">
                         <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
-                        {/* E-mail: Mudado de bg-gray-100 para bg-purple-100/purple-600 */}
                         <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
                         </a>
