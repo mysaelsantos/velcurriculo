@@ -91,8 +91,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     // Altura do cabeçalho
     const headerHeight = status === 'open' ? '440px' : '64px';
-    
-    // TRUQUE DE CSS: Pílula fixa
     const borderShape = 'rounded-[32px]';
 
     const containerClasses = status === 'open' 
@@ -130,18 +128,21 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO DE SAUDAÇÃO */}
+                                {/* TEXTO DE SAUDAÇÃO (App) */}
                                 {!isFeedbackActive && headerMessage && (
                                     <span className={`font-poppins font-medium text-sm lg:text-lg text-white whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK */}
+                                {/* TEXTO DO FEEDBACK (Typewriter) */}
                                 {isFeedbackActive && (
-                                    <span className="absolute left-0 font-poppins font-medium text-sm lg:text-lg text-white animate-fade-in whitespace-nowrap">
+                                    // AQUI: Aumentei para text-lg (mobile) e text-2xl (desktop)
+                                    // Também ajustei o alinhamento para ficar perfeito no centro vertical
+                                    <span className="absolute left-0 font-poppins font-semibold text-lg lg:text-2xl text-white animate-fade-in whitespace-nowrap flex items-center h-full">
                                         {displayText}
-                                        <span className="animate-pulse ml-0.5">|</span>
+                                        {/* CURSOR REAL: Substituí o '|' por um span que simula o caret */}
+                                        <span className="inline-block w-[3px] h-5 lg:h-6 bg-white ml-1 animate-pulse align-middle shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
                                     </span>
                                 )}
                             </div>
@@ -153,8 +154,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={status === 'open' ? closeFeedback : openFeedback}
-                                // AQUI ESTÁ A CORREÇÃO DA SETA:
-                                // Mudei de bg-white/10 para bg-white/25 (mais forte) e hover:bg-white/40
                                 className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600 shadow-sm' : 'bg-white/25 hover:bg-white/40 animate-bounce-slow text-white'}`}
                             >
                                 <Icons.ChevronDown />
@@ -207,22 +206,18 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         ))}
                     </div>
 
-                    {/* Caixa de Texto - Placeholder Encurtado */}
+                    {/* Caixa de Texto */}
                     <textarea 
                         className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm md:text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 mb-6 text-gray-700 placeholder-gray-400 shadow-inner transition-all"
                         placeholder="Conte-nos o que achou..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
-                    
-                    {/* NOTA: Removi a div com as contagens de palavras aqui, conforme pedido */}
 
-                    {/* Botão - Estilos Atualizados */}
+                    {/* Botão */}
                     <button 
                         onClick={handleSubmit}
                         disabled={!isValid || status === 'submitting'}
-                        // AQUI ESTÁ A CORREÇÃO DO BOTÃO DESATIVADO:
-                        // bg-gray-300 text-gray-500 (mais forte que o anterior bg-gray-100)
                         className={`w-full max-w-md py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
                             isValid 
                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0' 
