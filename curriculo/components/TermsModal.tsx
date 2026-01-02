@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ShieldCheck, ScrollText } from 'lucide-react';
+import { ShieldCheck, ScrollText } from 'lucide-react';
 
 interface TermsModalProps {
   isOpen: boolean;
@@ -22,7 +22,6 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-800">Termos de Uso e Privacidade</h2>
-            <p className="text-sm text-gray-500">Leia atentamente as condições de tratamento dos seus dados</p>
           </div>
         </div>
 
@@ -75,13 +74,18 @@ export function TermsModal({ isOpen, onClose }: TermsModalProps) {
             <h3 className="font-bold text-gray-900 mb-1">7. Direitos do Usuário</h3>
             <p>Você tem o direito de, a qualquer momento, editar, baixar ou excluir os seus currículos salvos na plataforma, revogando assim a disponibilidade dos seus dados para futuras consultas.</p>
           </section>
+
+          {/* Frase movida para o final do conteúdo */}
+          <p className="text-xs text-gray-400 text-center mt-8 mb-2">
+            Leia atentamente as condições de tratamento dos seus dados
+          </p>
         </div>
 
-        {/* Rodapé */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end rounded-b-xl">
+        {/* Rodapé com botão centralizado e em pílula */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-center rounded-b-xl">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition-colors shadow-sm"
+            className="px-8 py-3 bg-gray-800 text-white font-medium rounded-full hover:bg-gray-900 transition-colors shadow-sm text-sm"
           >
             Entendi e Fechar
           </button>
