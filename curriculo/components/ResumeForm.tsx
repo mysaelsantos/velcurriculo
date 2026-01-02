@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ResumeData, Experience, Education, Course, Language } from '../types';
 import { enhanceText, suggestSkills, analyzeWorkExperiencePDF } from '../services/geminiService';
 import CharacterCounter from './CharacterCounter';
+import { TermsModal } from './TermsModal'; // Importando o modal de termos
 
 interface ResumeFormProps {
   data: ResumeData;
@@ -39,7 +40,6 @@ const SKILL_SUGGESTIONS = [
 
 const LANGUAGE_SUGGESTIONS = ['Inglês', 'Espanhol', 'Francês', 'Alemão', 'Italiano', 'Japonês'];
 
-// --- NOVAS SUGESTÕES DE CURSOS ---
 const COURSE_SUGGESTIONS = [
     "Informática Básica", "Excel Avançado", "Administração", 
     "Recursos Humanos (RH)", "Marketing Digital", "Gestão Financeira", 
@@ -133,7 +133,6 @@ const capitalizeName = (value: string): string => {
     .join(' ');
 };
 
-
 const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onStartEditing, onRequestPayment, isPaymentProcessing, onRequestDelete, hasPaidInSession, isEditing, showToast, currentStep, setCurrentStep, isFinished, setIsFinished, onRequestImport }) => {
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [openAccordion, setOpenAccordion] = useState<{ experience: string | null; education: string | null; course: string | null; language: string | null; }>({ experience: null, education: null, course: null, language: null });
@@ -142,7 +141,10 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
-  // SOLUÇÃO: Estado para o input atual de habilidade (que ainda não foi adicionada)
+  // NOVOS ESTADOS PARA TERMOS E CONDIÇÕES
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+
   const [currentSkillInput, setCurrentSkillInput] = useState('');
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
@@ -240,7 +242,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     handleDataChange('courses', data.courses.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
   
-  // --- NOVA FUNÇÃO PARA ADICIONAR SUGESTÃO DE CURSO ---
   const handleAddCourseSuggestion = (courseName: string) => {
     const newId = Date.now().toString();
     const newCourse: Course = { id: newId, name: courseName, institution: '', completionDate: '' };
@@ -283,9 +284,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }));
   };
 
-  // --- NOVA LÓGICA DE HABILIDADES (CORRIGIDA PARA FORMATAR O TEXTO) ---
-  
-  // Função auxiliar para Title Case (Excel avançado -> Excel Avançado)
   const toTitleCase = (str: string) => {
     return str.replace(
       /\w\S*/g,
@@ -293,23 +291,19 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     );
   };
   
-  // Função para adicionar uma habilidade (manual ou via sugestão)
   const addSkill = (skillName: string) => {
     const trimmedSkill = skillName.trim();
     if (!trimmedSkill) return;
 
-    // Aplica a formatação ANTES de verificar duplicatas e salvar
     const formattedSkill = toTitleCase(trimmedSkill);
 
-    // Evita duplicatas (case insensitive)
     if (!data.skills.some(s => s.toLowerCase() === formattedSkill.toLowerCase())) {
         const newSkills = [...data.skills, formattedSkill];
         handleDataChange('skills', newSkills);
     }
-    setCurrentSkillInput(''); // Limpa o input
+    setCurrentSkillInput('');
   };
 
-  // Handler para tecla Enter no input
   const handleSkillInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -317,12 +311,10 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
-  // Handler para remover uma habilidade específica
   const removeSkill = (skillToRemove: string) => {
     const newSkills = data.skills.filter(s => s !== skillToRemove);
     handleDataChange('skills', newSkills);
   };
-  // ----------------------------------------
   
   const handleAddSummarySuggestion = (suggestion: string) => {
       const textarea = document.getElementById('summary-textarea') as HTMLTextAreaElement;
@@ -424,6 +416,23 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
+  // --- FUNÇÃO DE PAGAMENTO COM VALIDAÇÃO DOS TERMOS ---
+  const handlePaymentClick = () => {
+    if (!isTermsAccepted) {
+      showToast("Você precisa aceitar os Termos e Condições para continuar.", "warning");
+      
+      // Efeito visual para chamar atenção para o checkbox (opcional, mas bom para UX)
+      const checkbox = document.getElementById('terms-checkbox');
+      if (checkbox) {
+        checkbox.focus();
+        checkbox.classList.add('ring-2', 'ring-red-500');
+        setTimeout(() => checkbox.classList.remove('ring-2', 'ring-red-500'), 1000);
+      }
+      return;
+    }
+    onRequestPayment();
+  };
+
   const renderStepContent = () => {
     return WIZARD_STEPS.map((_, index) => {
         let content;
@@ -463,7 +472,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
               </>
             );
             break;
-          case 1:
+            // ... (Demais cases mantidos iguais, sem alteração)
+            case 1:
             content = (
               <div className="space-y-4">
                 <input type="text" placeholder="Nome Completo" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900" 
@@ -869,7 +879,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                                 Atualizar
                             </button>
                         )}
-                        {/* --- BOTÃO IA COM ALTURA REDUZIDA (py-2) --- */}
                         <button 
                             type="button" 
                             onClick={handleSuggestSkills} 
@@ -903,63 +912,59 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
   return (
     <React.Fragment>
+      
+      {/* --- MODAL DE TERMOS --- */}
+      <TermsModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
 
-      {/* --- CÓDIGO DO MODAL DE TUTORIAL MODIFICADO --- */}
+      {/* --- CÓDIGO DO MODAL DE TUTORIAL (MANTIDO) --- */}
       {isTutorialModalOpen && (
           <div 
               role="dialog" 
               aria-modal="true" 
               aria-labelledby="tutorial-title"
               className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" 
-              onClick={() => setIsTutorialModalOpen(false)} // Permite fechar clicando fora
+              onClick={() => setIsTutorialModalOpen(false)} 
           >
               <div 
                   className="bg-white rounded-lg shadow-xl w-full max-w-lg transform animate-fade-in-scale" 
-                  onClick={e => e.stopPropagation()} // Impede que o clique *dentro* do modal o feche
+                  onClick={e => e.stopPropagation()} 
               >
                   <div className="p-5 border-b border-gray-200 flex justify-between items-center">
                       <h3 id="tutorial-title" className="text-xl font-bold gradient-text">Como Baixar seu Histórico de Trabalho</h3>
-                      
                   </div>
                   
                   <div className="p-6">
                       <ol className="space-y-5 text-gray-700">
-                          {/* --- Ícone 1: Celular --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
                               </div>
                               <p className="font-medium text-gray-800 pt-1">Abra o App "Carteira de Trabalho Digital".</p>
                           </li>
-                          {/* --- Ícone 2: Enviar --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
                               </div>
                               <p className="font-medium text-gray-800 pt-1">Na tela inicial, toque em <strong className="font-bold">"Enviar Carteira de Trabalho Digital"</strong>.</p>
                           </li>
-                          {/* --- Ícone 3: Lista --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                               </div>
                               <p className="font-medium text-gray-800 pt-1">Selecione os contratos de trabalho que deseja usar.</p>
                           </li>
-                          {/* --- Ícone 4: PDF --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                               </div>
                               <p className="font-medium text-gray-800 pt-1">Toque no ícone de <strong className="font-bold">PDF</strong> no canto inferior direito.</p>
                           </li>
-                          {/* --- Ícone 5: Download --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                               </div>
                               <p className="font-medium text-gray-800 pt-1">Salve o arquivo PDF no seu celular ou computador.</p>
                           </li>
-                          {/* --- Ícone 6: Anexo --- */}
                           <li className="flex items-start gap-4">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -968,8 +973,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                           </li>
                       </ol>
                   </div>
-
-                  {/* --- BOTÃO CENTRALIZADO (text-center) --- */}
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-center rounded-b-lg">
                       <button 
                           onClick={() => setIsTutorialModalOpen(false)}
@@ -981,8 +984,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
               </div>
           </div>
       )}
-      {/* --- FIM DO MODAL DE TUTORIAL --- */}
-
 
       <div id="form-wizard" style={{scrollMarginTop: '9rem'}} className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-md form-container">
         {!isFinished && (
@@ -1002,10 +1003,28 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
 
         <div className="flex-grow flex flex-col overflow-hidden">
           {isFinished ? (
-                <div className="text-center p-8 flex flex-col justify-center items-center flex-grow">
-                  <svg className="w-24 h-24 text-green-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <h3 className="text-2xl font-bold text-gray-800 mt-6">Seu currículo está pronto!</h3>
-                  <p className="text-gray-600 mt-2">Pague a taxa para fazer o download do seu PDF.</p>
+              <div className="text-center p-8 flex flex-col justify-center items-center flex-grow">
+                  <svg className="w-24 h-24 text-green-500 mb-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <h3 className="text-2xl font-bold text-gray-800">Seu currículo está pronto!</h3>
+                  <p className="text-gray-600 mt-2 mb-8">Pague a taxa para fazer o download do seu PDF.</p>
+
+                  {/* --- ÁREA DE ACEITE DOS TERMOS (ADICIONADO) --- */}
+                  <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-left">
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="checkbox" 
+                        id="terms-checkbox"
+                        checked={isTermsAccepted}
+                        onChange={(e) => setIsTermsAccepted(e.target.checked)}
+                        className="mt-1 w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none">
+                        Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>, incluindo a autorização para que meu currículo seja visualizado por empresas parceiras.
+                      </label>
+                    </div>
+                  </div>
+                  {/* ------------------------------------------------ */}
+
               </div>
           ) : (
             <div id="wizard-steps-container" ref={stepsContainerRef}>
@@ -1018,8 +1037,10 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
           <button type="button" onClick={handlePrev} disabled={currentStep === 0 && !isFinished} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             {isFinished ? 'Voltar' : 'Anterior'}
           </button>
+          
           {isFinished ? (
-               <button type="button" onClick={onRequestPayment} disabled={isPaymentProcessing} className="btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow flex items-center justify-center gap-2">
+              // Botão modificado para chamar handlePaymentClick em vez de onRequestPayment diretamente
+               <button type="button" onClick={handlePaymentClick} disabled={isPaymentProcessing} className={`btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow flex items-center justify-center gap-2 ${!isTermsAccepted ? 'opacity-70' : ''}`}>
                   {isPaymentProcessing ? (
                       <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   ) : (
