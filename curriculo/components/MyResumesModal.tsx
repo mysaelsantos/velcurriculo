@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, FileText, Clock, ChevronDown, Check, ArrowLeft } from 'lucide-react';
+import { Trash2, FileText, Clock, ChevronDown, Check } from 'lucide-react';
 import { ResumeData } from '../types';
 
 export interface MyResumesModalProps {
@@ -15,7 +15,6 @@ interface SavedResume {
   data: ResumeData;
 }
 
-// ALERTA: Adicionado 'export default' para corrigir o erro de importação no App.tsx
 export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesModalProps) {
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -23,7 +22,7 @@ export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesMod
   useEffect(() => {
     if (isOpen) {
       loadResumes();
-      setExpandedId(null); // Reseta a expansão ao abrir
+      setExpandedId(null);
     }
   }, [isOpen]);
 
@@ -55,7 +54,7 @@ export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesMod
   };
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Previne expandir/fechar ao deletar
+    e.stopPropagation();
     if (window.confirm('Tem certeza que deseja excluir este currículo?')) {
       localStorage.removeItem(id);
       loadResumes();
@@ -69,41 +68,35 @@ export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesMod
   };
 
   const toggleExpand = (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null);
-    } else {
-      setExpandedId(id);
-    }
+    setExpandedId(expandedId === id ? null : id);
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div 
-        className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header com Identidade Visual Azul */}
-        <div className="bg-blue-600 p-6">
-          <div className="flex items-center gap-3 text-white">
-            <div className="p-2 bg-white/20 rounded-lg">
-              <FileText className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Meus Currículos</h2>
-              <p className="text-blue-100 text-sm opacity-90">Gerencie seus currículos salvos</p>
-            </div>
+        {/* Cabeçalho Limpo (Padrão) */}
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">Meus Currículos</h2>
+            <p className="text-gray-500 text-sm mt-1">Selecione um currículo para carregar</p>
           </div>
+          {/* Botão X removido conforme solicitado */}
         </div>
 
         {/* Lista de Currículos */}
-        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/50">
           {savedResumes.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p className="font-medium">Nenhum currículo salvo encontrado.</p>
-              <p className="text-sm mt-1">Seus currículos salvos aparecerão aqui.</p>
+            <div className="text-center py-10">
+              <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-gray-900 font-medium">Nenhum currículo salvo</h3>
+              <p className="text-gray-500 text-sm mt-1">Seus currículos salvos aparecerão aqui.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -113,56 +106,48 @@ export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesMod
                 return (
                   <div 
                     key={resume.id} 
-                    className={`border rounded-xl transition-all duration-300 overflow-hidden ${
-                      isExpanded 
-                        ? 'border-blue-500 shadow-md bg-blue-50/30' 
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    className={`bg-white border rounded-lg transition-all duration-200 ${
+                      isExpanded ? 'border-blue-500 shadow-md ring-1 ring-blue-100' : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    {/* Cabeçalho do Item (Clicável) */}
                     <button
                       onClick={() => toggleExpand(resume.id)}
-                      className="w-full flex items-center justify-between p-4 text-left outline-none focus:outline-none"
+                      className="w-full flex items-center justify-between p-4 text-left"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-full transition-colors ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isExpanded ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
                           <FileText className="w-5 h-5" />
                         </div>
                         <div>
-                          <h3 className={`font-semibold ${isExpanded ? 'text-blue-700' : 'text-gray-800'}`}>
-                            {resume.name}
-                          </h3>
+                          <p className="font-medium text-gray-900">{resume.name}</p>
                           <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
                             <Clock className="w-3 h-3" />
-                            <span>Salvo em {resume.date}</span>
+                            {resume.date}
                           </div>
                         </div>
                       </div>
-                      
                       <ChevronDown 
-                        className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-500' : ''}`} 
+                        className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-blue-500' : ''}`} 
                       />
                     </button>
 
-                    {/* Área Expandida (Opções) */}
+                    {/* Área Expandida */}
                     <div 
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                        isExpanded ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'
                       }`}
                     >
-                      <div className="p-4 pt-0 flex items-center gap-3 border-t border-blue-100/50 mt-2 bg-white/50">
+                      <div className="p-4 pt-0 flex gap-3 border-t border-gray-50 mt-1">
                         <button
                           onClick={() => handleLoad(resume)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm shadow-sm hover:shadow-md"
+                          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                         >
                           <Check className="w-4 h-4" />
                           Carregar
                         </button>
-                        
                         <button
                           onClick={(e) => handleDelete(e, resume.id)}
-                          className="flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-200 py-2.5 px-4 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
-                          title="Excluir currículo"
+                          className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors text-sm font-medium flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
                           Excluir
@@ -176,13 +161,12 @@ export default function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesMod
           )}
         </div>
 
-        {/* Rodapé com botão Voltar */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+        {/* Rodapé com botão Voltar Padrão */}
+        <div className="p-4 border-t border-gray-100 bg-white flex justify-end">
           <button
             onClick={onClose}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors shadow-sm"
+            className="px-6 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
-            <ArrowLeft className="w-4 h-4" />
             Voltar
           </button>
         </div>
