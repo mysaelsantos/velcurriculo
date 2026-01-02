@@ -92,10 +92,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     // Altura do cabeçalho
     const headerHeight = status === 'open' ? '440px' : '64px';
     
-    // TRUQUE DE CSS:
-    // Em vez de mudar de 'rounded-full' para 'rounded-3xl', usamos 'rounded-[32px]' FIXO.
-    // Como a altura da barra fechada é 64px (h-16), um raio de 32px cria uma pílula perfeita.
-    // Ao expandir, o raio mantém-se, evitando o efeito de "bolinha" ou distorção.
+    // TRUQUE DE CSS: Pílula fixa
     const borderShape = 'rounded-[32px]';
 
     const containerClasses = status === 'open' 
@@ -112,7 +109,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
             {/* BARRA FLUTUANTE */}
             <header 
-                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight, transformOrigin: 'top' }}
             >
                 {/* LINHA SUPERIOR (Fica sempre no topo) */}
@@ -156,7 +153,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={status === 'open' ? closeFeedback : openFeedback}
-                                className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600 shadow-sm' : 'bg-white/10 hover:bg-white/20 animate-bounce-slow text-white'}`}
+                                // AQUI ESTÁ A CORREÇÃO DA SETA:
+                                // Mudei de bg-white/10 para bg-white/25 (mais forte) e hover:bg-white/40
+                                className={`p-2 rounded-full transition-all duration-300 ${status === 'open' ? 'bg-gray-100 rotate-180 text-blue-600 shadow-sm' : 'bg-white/25 hover:bg-white/40 animate-bounce-slow text-white'}`}
                             >
                                 <Icons.ChevronDown />
                             </button>
@@ -189,7 +188,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 </div>
 
                 {/* AREA EXPANDIDA (Formulário) */}
-                {/* translate-y-0 quando aberto faz com que o conteúdo pareça estar lá, apenas revelado pela altura */}
                 <div className={`flex-1 p-6 flex flex-col items-center justify-center transition-all duration-500 ${status === 'open' ? 'opacity-100 translate-y-0 delay-100' : 'opacity-0 -translate-y-4 pointer-events-none'}`}>
                     
                     <h3 className="text-xl font-poppins font-bold text-gray-800 mb-6 text-center">
@@ -209,29 +207,26 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         ))}
                     </div>
 
-                    {/* Caixa de Texto */}
+                    {/* Caixa de Texto - Placeholder Encurtado */}
                     <textarea 
-                        className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm md:text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 mb-3 text-gray-700 placeholder-gray-400 shadow-inner transition-all"
-                        placeholder="Conte-nos o que achou (mínimo 3 palavras)..."
+                        className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm md:text-base focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none h-28 mb-6 text-gray-700 placeholder-gray-400 shadow-inner transition-all"
+                        placeholder="Conte-nos o que achou..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
                     
-                    <div className="w-full max-w-md flex justify-between items-center text-xs text-gray-400 mb-5 px-2">
-                        <span className={text.trim().length > 0 ? "text-blue-600 font-medium" : ""}>
-                            {text.trim() ? `${text.trim().split(/\s+/).length} palavras` : '0 palavras'}
-                        </span>
-                        {!isValid && <span>Mínimo 3 palavras e 1 estrela</span>}
-                    </div>
+                    {/* NOTA: Removi a div com as contagens de palavras aqui, conforme pedido */}
 
-                    {/* Botão */}
+                    {/* Botão - Estilos Atualizados */}
                     <button 
                         onClick={handleSubmit}
                         disabled={!isValid || status === 'submitting'}
+                        // AQUI ESTÁ A CORREÇÃO DO BOTÃO DESATIVADO:
+                        // bg-gray-300 text-gray-500 (mais forte que o anterior bg-gray-100)
                         className={`w-full max-w-md py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
                             isValid 
                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0' 
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                         }`}
                     >
                         {status === 'submitting' ? 'Enviando...' : <><Icons.Send /> Enviar Avaliação</>}
