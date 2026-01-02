@@ -65,10 +65,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 setDisplayText(currentText);
                 i = isDeleting ? i - 1 : i + 1;
 
-                // Velocidades ajustadas para ser mais rápido e natural
-                // Digitar: 70ms 
-                // Apagar: 30ms (rápido)
-                const speed = isDeleting ? 30 : 70; 
+                // Velocidades ajustadas: Digitar(50ms) e Apagar(25ms) - Muito rápido
+                const speed = isDeleting ? 25 : 50; 
                 setTimeout(typeLoop, speed);
             };
 
@@ -111,14 +109,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     return (
         <>
-            {/* INJECTED STYLE: Animação de Cursor "Hard Blink" */}
+            {/* ESTILO INJETADO: Animação de Cursor "Hard Blink" (Seco) */}
             <style>{`
                 @keyframes blink-hard {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0; }
+                    0%, 49% { opacity: 1; }
+                    50%, 100% { opacity: 0; }
                 }
                 .animate-blink-hard {
-                    animation: blink-hard 1s step-end infinite;
+                    animation: blink-hard 1s infinite;
                 }
             `}</style>
 
@@ -137,13 +135,15 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5 relative z-10">
                     
                     {/* ESQUERDA: Logo e Texto */}
-                    <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[70%]">
+                    {/* CORREÇÃO IMPORTANTE: Aumentei max-w-[70%] para max-w-[85%] para dar espaço ao texto grande */}
+                    <div className="flex items-center gap-2 overflow-hidden relative h-full w-full max-w-[85%]">
                         {status === 'thank_you' ? (
                             <div className="flex items-center gap-2 font-bold animate-fade-in text-white">
                                 <Icons.Check /> Obrigado!
                             </div>
                         ) : (
-                            <div className="flex items-center relative h-6 w-full">
+                            // CORREÇÃO: Removi 'h-6' para usar 'h-full'. Isso evita o corte vertical do texto grande.
+                            <div className="flex items-center relative h-full w-full">
                                 {/* LOGO */}
                                 <img 
                                     src="/logo-header.png" 
@@ -160,14 +160,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                                 {/* TEXTO DO FEEDBACK (Typewriter) */}
                                 {isFeedbackActive && (
-                                    // AQUI: Fonte Aumentada (text-xl / text-3xl) e Peso Reduzido (font-medium)
-                                    <span className="absolute left-0 font-poppins font-medium text-xl lg:text-3xl text-white animate-fade-in whitespace-nowrap flex items-center h-full">
+                                    // AQUI ESTÃO AS SUAS ALTERAÇÕES FINAIS:
+                                    // 1. font-medium (diminui o bold)
+                                    // 2. text-2xl / text-4xl (aumenta MUITO a fonte)
+                                    // 3. flex items-center h-full (garante alinhamento vertical perfeito)
+                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight">
                                         {displayText}
-                                        {/* CURSOR REALISTA:
-                                            - animate-blink-hard (pisca seco)
-                                            - Altura ajustada para acompanhar a fonte maior
-                                        */}
-                                        <span className="inline-block w-[2px] h-6 lg:h-9 bg-white ml-1 animate-blink-hard align-middle"></span>
+                                        {/* CURSOR: Altura ajustada para acompanhar a fonte maior */}
+                                        <span className="inline-block w-[3px] h-7 lg:h-10 bg-white ml-1 animate-blink-hard align-middle"></span>
                                     </span>
                                 )}
                             </div>
