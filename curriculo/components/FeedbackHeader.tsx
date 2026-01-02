@@ -20,7 +20,7 @@ interface FeedbackHeaderProps {
     userData: { name: string; email: string };
     headerMessage?: string;
     showLogo?: boolean;
-    onOpenMyResumes: () => void; // Nova prop para abrir os currículos
+    onOpenMyResumes: () => void;
 }
 
 const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage, showLogo = true, onOpenMyResumes }) => {
@@ -33,36 +33,33 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
-    // O header está aberto se: O Feedback estiver open OU o Menu estiver open
     const isHeaderExpanded = status === 'open' || isMenuOpen;
 
-    // Toggle do Menu
+    // --- CONTROLE DE MENUS ---
     const toggleMenu = () => {
         if (status === 'open') {
-            closeFeedback(); // Fecha feedback se estiver aberto
-            setTimeout(() => setIsMenuOpen(true), 300); // Abre menu depois
+            closeFeedback();
+            setTimeout(() => setIsMenuOpen(true), 300);
         } else {
             setIsMenuOpen(!isMenuOpen);
         }
     };
 
-    // Toggle do Feedback
     const toggleFeedback = () => {
         if (isMenuOpen) {
-            setIsMenuOpen(false); // Fecha menu se estiver aberto
-            setTimeout(openFeedback, 300); // Abre feedback depois
+            setIsMenuOpen(false);
+            setTimeout(openFeedback, 300);
         } else {
             status === 'open' ? closeFeedback() : openFeedback();
         }
     };
 
-    // Fecha tudo
     const closeAll = () => {
         closeFeedback();
         setIsMenuOpen(false);
     };
 
-    // Animação Typewriter
+    // --- ANIMAÇÃO TYPEWRITER (Rápida e Natural) ---
     useEffect(() => {
         if (status === 'typing') {
             const phrase1 = "Gostou do nosso...";
@@ -122,10 +119,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    // Altura dinâmica
     const headerHeight = isHeaderExpanded ? '440px' : '64px';
     const borderShape = 'rounded-[32px]';
-
     const containerClasses = isHeaderExpanded 
         ? 'bg-white text-gray-800' 
         : (status === 'thank_you' ? 'bg-green-600 text-white' : 'bg-blue-800/80 text-white backdrop-blur-lg');
@@ -164,30 +159,30 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </div>
                         ) : (
                             <div className="flex items-center relative h-full w-full">
-                                {/* LOGO (Só some se o Feedback estiver ativo. Se for Menu, logo fica) */}
+                                {/* LOGO (Correção de Sobreposição: z-index e opacity controlados) */}
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
-                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO SAUDAÇÃO (some no feedback ou menu aberto) */}
+                                {/* TEXTO SAUDAÇÃO */}
                                 {!isFeedbackActive && !isMenuOpen && headerMessage && (
                                     <span className={`absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TÍTULO DO MENU (aparece só quando menu abre) */}
+                                {/* TÍTULO DO MENU */}
                                 {isMenuOpen && (
-                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight">
+                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         Menu
                                     </span>
                                 )}
 
                                 {/* TEXTO DO FEEDBACK */}
                                 {isFeedbackActive && (
-                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight">
+                                    <span className="absolute left-0 font-poppins font-medium text-2xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         {displayText}
                                         <span className="inline-block w-[3px] h-7 lg:h-10 bg-white ml-1 animate-blink-hard align-middle"></span>
                                     </span>
@@ -198,7 +193,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     {/* DIREITA: Navegação */}
                     <nav className="relative flex items-center gap-3">
-                        {/* Botão de Feedback (Seta) */}
+                        {/* Botão Feedback */}
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={toggleFeedback}
@@ -208,8 +203,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
-                        {/* Botão de Menu (Hamburguer/X) */}
-                        {/* Só aparece se NÃO estivermos no modo Feedback (para não ter 2 botões conflitantes) */}
+                        {/* Botão Menu */}
                         {!isFeedbackActive && (
                             <button 
                                 onClick={toggleMenu} 
@@ -221,9 +215,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </nav>
                 </div>
 
-                {/* --- CONTEÚDO EXPANDIDO (GAVETA) --- */}
+                {/* --- CONTEÚDO EXPANDIDO --- */}
                 
-                {/* OPÇÃO 1: FORMULÁRIO DE AVALIAÇÃO */}
+                {/* 1. FORMULÁRIO DE AVALIAÇÃO */}
                 <div className={`absolute top-16 left-0 right-0 bottom-0 p-6 flex flex-col items-center justify-center transition-all duration-500 ${status === 'open' ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-poppins font-bold text-gray-800 mb-6 text-center">
                         Como foi sua experiência?
@@ -250,26 +244,27 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </button>
                 </div>
 
-                {/* OPÇÃO 2: CONTEÚDO DO MENU */}
+                {/* 2. CONTEÚDO DO MENU (Gaveta) */}
                 <div className={`absolute top-16 left-0 right-0 bottom-0 p-6 flex flex-col items-center justify-center transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
                     
-                    {/* Botão Meus Currículos (Destaque) */}
+                    {/* Botão Meus Currículos */}
                     <button 
                         onClick={() => { closeAll(); onOpenMyResumes(); }}
-                        className="w-full max-w-md py-4 rounded-2xl bg-blue-50 text-blue-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 mb-8 hover:bg-blue-100 transition-colors shadow-sm"
+                        className="w-full max-w-md py-4 rounded-2xl bg-blue-50 text-blue-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 mb-8 hover:bg-blue-100 transition-colors shadow-sm active:scale-95"
                     >
                         <Icons.FileText /> Meus Currículos
                     </button>
 
                     <div className="w-full max-w-md border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais */}
+                    {/* Links Sociais (CORREÇÃO DE CONTRASTE AQUI) */}
                     <div className="flex flex-col gap-4 w-full max-w-md mt-6">
                         <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
+                        {/* E-mail: Mudado de bg-gray-100 para bg-purple-100/purple-600 */}
                         <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
-                            <div className="p-2 bg-gray-100 text-gray-600 rounded-full"><Icons.Mail /></div> E-mail
+                            <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
                         </a>
                         <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
