@@ -32,7 +32,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
 
-    // Animação Typewriter "Humana"
+    // Animação Typewriter "Humana" e Rápida
     useEffect(() => {
         if (status === 'typing') {
             const phrase1 = "Gostou do nosso...";
@@ -41,36 +41,34 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
             let isDeleting = false;
             
             const typeLoop = () => {
-                // FASE 1: Pausa longa após terminar a primeira frase (Leitura)
+                // FASE 1: Pausa média após terminar a primeira frase (1s)
                 if (!isDeleting && i === phrase1.length) {
-                    // Aumentei para 2000ms (2 segundos) para dar tempo de ler "Gostou do nosso..."
-                    setTimeout(() => { isDeleting = true; typeLoop(); }, 2000); 
+                    setTimeout(() => { isDeleting = true; typeLoop(); }, 1000); 
                     return;
                 }
 
                 // FASE 2: Quando termina de apagar tudo
                 if (isDeleting && i === 0) {
-                    // Pequena pausa antes de começar a escrever a nova frase
                     setTimeout(() => {
                         let j = 0;
                         const typeFinal = setInterval(() => {
                             setDisplayText(phrase2.substring(0, j + 1));
                             j++;
                             if (j === phrase2.length) clearInterval(typeFinal);
-                        }, 120); // Velocidade da frase final (um pouco mais lenta e solene)
-                    }, 500);
+                        }, 50); // Escrita final rápida (50ms)
+                    }, 300);
                     return;
                 }
 
-                // Lógica principal de digitar/apagar
+                // Lógica principal
                 const currentText = phrase1.substring(0, isDeleting ? i - 1 : i + 1);
                 setDisplayText(currentText);
                 i = isDeleting ? i - 1 : i + 1;
 
-                // Velocidades ajustadas:
-                // Digitar: 150ms (lento, humano)
-                // Apagar: 50ms (rápido, backspace)
-                const speed = isDeleting ? 50 : 150; 
+                // Velocidades ajustadas para ser mais rápido e natural
+                // Digitar: 70ms 
+                // Apagar: 30ms (rápido)
+                const speed = isDeleting ? 30 : 70; 
                 setTimeout(typeLoop, speed);
             };
 
@@ -113,6 +111,17 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     return (
         <>
+            {/* INJECTED STYLE: Animação de Cursor "Hard Blink" */}
+            <style>{`
+                @keyframes blink-hard {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0; }
+                }
+                .animate-blink-hard {
+                    animation: blink-hard 1s step-end infinite;
+                }
+            `}</style>
+
             {/* BACKDROP */}
             <div 
                 className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300 ${status === 'open' ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
@@ -151,14 +160,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                                 {/* TEXTO DO FEEDBACK (Typewriter) */}
                                 {isFeedbackActive && (
-                                    <span className="absolute left-0 font-poppins font-semibold text-lg lg:text-2xl text-white animate-fade-in whitespace-nowrap flex items-center h-full">
+                                    // AQUI: Fonte Aumentada (text-xl / text-3xl) e Peso Reduzido (font-medium)
+                                    <span className="absolute left-0 font-poppins font-medium text-xl lg:text-3xl text-white animate-fade-in whitespace-nowrap flex items-center h-full">
                                         {displayText}
                                         {/* CURSOR REALISTA:
-                                            - Removido shadow (neon)
-                                            - Ajustada a altura para h-6 (mobile) e h-7 (desktop) para alinhar visualmente com o texto
-                                            - animate-pulse mantido para o piscar simples (on/off)
+                                            - animate-blink-hard (pisca seco)
+                                            - Altura ajustada para acompanhar a fonte maior
                                         */}
-                                        <span className="inline-block w-[2px] h-6 lg:h-7 bg-white ml-1 animate-pulse align-middle"></span>
+                                        <span className="inline-block w-[2px] h-6 lg:h-9 bg-white ml-1 animate-blink-hard align-middle"></span>
                                     </span>
                                 )}
                             </div>
