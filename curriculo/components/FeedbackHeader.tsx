@@ -32,7 +32,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
 
-    // Animação Typewriter
+    // Animação Typewriter "Humana"
     useEffect(() => {
         if (status === 'typing') {
             const phrase1 = "Gostou do nosso...";
@@ -41,24 +41,39 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
             let isDeleting = false;
             
             const typeLoop = () => {
+                // FASE 1: Pausa longa após terminar a primeira frase (Leitura)
                 if (!isDeleting && i === phrase1.length) {
-                    setTimeout(() => { isDeleting = true; typeLoop(); }, 800);
+                    // Aumentei para 2000ms (2 segundos) para dar tempo de ler "Gostou do nosso..."
+                    setTimeout(() => { isDeleting = true; typeLoop(); }, 2000); 
                     return;
                 }
+
+                // FASE 2: Quando termina de apagar tudo
                 if (isDeleting && i === 0) {
-                    let j = 0;
-                    const typeFinal = setInterval(() => {
-                        setDisplayText(phrase2.substring(0, j + 1));
-                        j++;
-                        if (j === phrase2.length) clearInterval(typeFinal);
-                    }, 50);
+                    // Pequena pausa antes de começar a escrever a nova frase
+                    setTimeout(() => {
+                        let j = 0;
+                        const typeFinal = setInterval(() => {
+                            setDisplayText(phrase2.substring(0, j + 1));
+                            j++;
+                            if (j === phrase2.length) clearInterval(typeFinal);
+                        }, 120); // Velocidade da frase final (um pouco mais lenta e solene)
+                    }, 500);
                     return;
                 }
+
+                // Lógica principal de digitar/apagar
                 const currentText = phrase1.substring(0, isDeleting ? i - 1 : i + 1);
                 setDisplayText(currentText);
                 i = isDeleting ? i - 1 : i + 1;
-                setTimeout(typeLoop, isDeleting ? 30 : 80);
+
+                // Velocidades ajustadas:
+                // Digitar: 150ms (lento, humano)
+                // Apagar: 50ms (rápido, backspace)
+                const speed = isDeleting ? 50 : 150; 
+                setTimeout(typeLoop, speed);
             };
+
             typeLoop();
         } else if (status === 'prompt') {
             setDisplayText("Avalie nossos serviços");
@@ -89,7 +104,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    // Altura do cabeçalho
     const headerHeight = status === 'open' ? '440px' : '64px';
     const borderShape = 'rounded-[32px]';
 
@@ -110,7 +124,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight, transformOrigin: 'top' }}
             >
-                {/* LINHA SUPERIOR (Fica sempre no topo) */}
+                {/* LINHA SUPERIOR */}
                 <div className="flex items-center justify-between px-6 h-16 shrink-0 border-b border-white/5 relative z-10">
                     
                     {/* ESQUERDA: Logo e Texto */}
@@ -128,7 +142,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-500 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO DE SAUDAÇÃO (App) */}
+                                {/* TEXTO DE SAUDAÇÃO */}
                                 {!isFeedbackActive && headerMessage && (
                                     <span className={`font-poppins font-medium text-sm lg:text-lg text-white whitespace-nowrap transition-opacity duration-700 absolute left-0 ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
@@ -137,12 +151,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                                 {/* TEXTO DO FEEDBACK (Typewriter) */}
                                 {isFeedbackActive && (
-                                    // AQUI: Aumentei para text-lg (mobile) e text-2xl (desktop)
-                                    // Também ajustei o alinhamento para ficar perfeito no centro vertical
                                     <span className="absolute left-0 font-poppins font-semibold text-lg lg:text-2xl text-white animate-fade-in whitespace-nowrap flex items-center h-full">
                                         {displayText}
-                                        {/* CURSOR REAL: Substituí o '|' por um span que simula o caret */}
-                                        <span className="inline-block w-[3px] h-5 lg:h-6 bg-white ml-1 animate-pulse align-middle shadow-[0_0_8px_rgba(255,255,255,0.8)]"></span>
+                                        {/* CURSOR REALISTA:
+                                            - Removido shadow (neon)
+                                            - Ajustada a altura para h-6 (mobile) e h-7 (desktop) para alinhar visualmente com o texto
+                                            - animate-pulse mantido para o piscar simples (on/off)
+                                        */}
+                                        <span className="inline-block w-[2px] h-6 lg:h-7 bg-white ml-1 animate-pulse align-middle"></span>
                                     </span>
                                 )}
                             </div>
