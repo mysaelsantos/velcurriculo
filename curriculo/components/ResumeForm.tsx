@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ResumeData, Experience, Education, Course, Language } from '../types';
 import { enhanceText, suggestSkills, analyzeWorkExperiencePDF } from '../services/geminiService';
 import CharacterCounter from './CharacterCounter';
-import { TermsModal } from './TermsModal'; // Importando o modal de termos
+import { TermsModal } from './TermsModal';
 
 interface ResumeFormProps {
   data: ResumeData;
@@ -421,7 +421,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     if (!isTermsAccepted) {
       showToast("Você precisa aceitar os Termos e Condições para continuar.", "warning");
       
-      // Efeito visual para chamar atenção para o checkbox (opcional, mas bom para UX)
       const checkbox = document.getElementById('terms-checkbox');
       if (checkbox) {
         checkbox.focus();
@@ -1008,7 +1007,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                   <h3 className="text-2xl font-bold text-gray-800">Seu currículo está pronto!</h3>
                   <p className="text-gray-600 mt-2 mb-8">Pague a taxa para fazer o download do seu PDF.</p>
 
-                  {/* --- ÁREA DE ACEITE DOS TERMOS (ADICIONADO) --- */}
+                  {/* --- ÁREA DE ACEITE DOS TERMOS (ATUALIZADO) --- */}
                   <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-left">
                     <div className="flex items-start gap-3">
                       <input 
@@ -1019,7 +1018,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                         className="mt-1 w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
                       />
                       <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none">
-                        Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>, incluindo a autorização para que meu currículo seja visualizado por empresas parceiras.
+                        Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
                       </label>
                     </div>
                   </div>
