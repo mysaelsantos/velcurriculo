@@ -187,4 +187,4 @@ export function MyResumesModal({ isOpen, onClose, onLoad }: MyResumesModalProps)
       </div>
     </div>
   );
-export default MyResumesModal;
+}
