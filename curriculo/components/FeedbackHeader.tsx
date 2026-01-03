@@ -31,6 +31,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [text, setText] = useState('');
     const [displayText, setDisplayText] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // Novo estado para controlar o delay da exibição do título "Menu"
+    const [showMenuText, setShowMenuText] = useState(false);
 
     // REF para o Header (Correção do bug de fechar sozinho)
     const headerRef = useRef<HTMLElement>(null);
@@ -97,6 +100,20 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
             setDisplayText("Avalie nossos serviços");
         }
     }, [status]);
+
+    // --- EFEITO PARA ATRASAR O TEXTO "MENU" ---
+    useEffect(() => {
+        if (isMenuOpen) {
+            // Espera 300ms para mostrar o texto "Menu" (tempo para o logo sumir)
+            const timer = setTimeout(() => {
+                setShowMenuText(true);
+            }, 300);
+            return () => clearTimeout(timer);
+        } else {
+            // Esconde imediatamente ao fechar
+            setShowMenuText(false);
+        }
+    }, [isMenuOpen]);
 
     // --- CORREÇÃO DO CLICK OUTSIDE ---
     // Agora usamos headerRef.current.contains para ter certeza absoluta que o clique foi fora
@@ -168,7 +185,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
-                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
+                                    // Adicionado !isMenuOpen na condição para garantir que o logo suma quando o menu abrir
+                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive && !isMenuOpen ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
                                 {/* TEXTO SAUDAÇÃO (Corrigido tamanho para caber no mobile) */}
@@ -179,7 +197,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                 )}
 
                                 {/* TÍTULO DO MENU */}
-                                {isMenuOpen && (
+                                {/* Usando showMenuText ao invés de isMenuOpen para aplicar o delay */}
+                                {showMenuText && (
                                     <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         Menu
                                     </span>
