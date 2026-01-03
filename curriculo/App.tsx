@@ -1118,7 +1118,8 @@ const AppContent: React.FC = () => {
                     <span>+{resumesGenerated} currículos gerados!</span>
                 </div>
                 <div className="mt-8 flex flex-col items-center gap-4">
-                    <a href="#form-wizard" onClick={handleStartEditing} className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
+                    {/* BOTÃO ALTERADO: Apenas link âncora */}
+                    <a href="#form-wizard" className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
                     {/* Botão removido daqui e colocado dentro do Menu do FeedbackHeader */}
                 </div>
             </section>
@@ -1193,7 +1194,8 @@ const AppContent: React.FC = () => {
             <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
                  <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
                  <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                 <a href="#form-wizard" onClick={handleStartEditing} className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
+                 {/* BOTÃO ALTERADO: Apenas link âncora */}
+                 <a href="#form-wizard" className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
             </section>
         </main>
         
