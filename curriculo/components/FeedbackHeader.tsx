@@ -138,7 +138,6 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    // ALTERAÇÃO: headerHeight reduzido para 56px quando fechado (era 64px)
     const headerHeight = isHeaderExpanded ? '440px' : '56px';
     const borderShape = 'rounded-[32px]';
     const containerClasses = isHeaderExpanded 
@@ -169,7 +168,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight, transformOrigin: 'top' }}
             >
-                {/* LINHA SUPERIOR - ALTERAÇÃO: h-14 (56px) em vez de h-16 (64px) */}
+                {/* LINHA SUPERIOR */}
                 <div className="flex items-center justify-between px-6 h-14 shrink-0 border-b border-white/5 relative z-10">
                     
                     {/* ESQUERDA: Logo e Texto */}
@@ -212,8 +211,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         )}
                     </div>
 
-                    {/* DIREITA: Navegação */}
-                    <nav className="relative flex items-center gap-3">
+                    {/* DIREITA: Navegação (Adicionado -mr-2 para ajustar a posição) */}
+                    <nav className="relative flex items-center gap-3 -mr-2">
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
                                 onClick={toggleFeedback}
@@ -236,7 +235,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                 {/* --- CONTEÚDO EXPANDIDO --- */}
                 
-                {/* 1. FORMULÁRIO DE AVALIAÇÃO - ALTERAÇÃO: top-14 (para acompanhar h-14) */}
+                {/* 1. FORMULÁRIO DE AVALIAÇÃO */}
                 <div className={`absolute top-14 left-0 right-0 bottom-0 p-6 flex flex-col items-center justify-center transition-all duration-500 ${status === 'open' ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
                     <h3 className="text-xl font-poppins font-bold text-gray-800 mb-6 text-center">
                         Como foi sua experiência?
@@ -263,7 +262,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                     </button>
                 </div>
 
-                {/* 2. CONTEÚDO DO MENU - ALTERAÇÃO: top-14 (para acompanhar h-14) */}
+                {/* 2. CONTEÚDO DO MENU */}
                 <div className={`absolute top-14 left-0 right-0 bottom-0 p-6 flex flex-col items-center justify-center transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
                     
                     {/* Botão Meus Currículos */}
