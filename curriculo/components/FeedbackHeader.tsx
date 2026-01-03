@@ -32,10 +32,10 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [displayText, setDisplayText] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
-    // Novo estado para controlar o delay da exibição do título "Menu"
+    // NOVO: Estado para controlar o texto "Menu" com atraso
     const [showMenuText, setShowMenuText] = useState(false);
 
-    // REF para o Header (Correção do bug de fechar sozinho)
+    // REF para o Header
     const headerRef = useRef<HTMLElement>(null);
 
     const isFeedbackActive = status !== 'idle' && status !== 'waiting';
@@ -101,13 +101,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         }
     }, [status]);
 
-    // --- EFEITO PARA ATRASAR O TEXTO "MENU" ---
+    // --- EFEITO DE DELAY NO TEXTO "MENU" ---
+    // Isso garante que o texto só apareça DEPOIS que o logo sumir
     useEffect(() => {
         if (isMenuOpen) {
-            // Espera 300ms para mostrar o texto "Menu" (tempo para o logo sumir)
+            // Aguarda 400ms para exibir o texto "Menu"
             const timer = setTimeout(() => {
                 setShowMenuText(true);
-            }, 300);
+            }, 400); 
             return () => clearTimeout(timer);
         } else {
             // Esconde imediatamente ao fechar
@@ -116,10 +117,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     }, [isMenuOpen]);
 
     // --- CORREÇÃO DO CLICK OUTSIDE ---
-    // Agora usamos headerRef.current.contains para ter certeza absoluta que o clique foi fora
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            // Se o header estiver aberto E o clique NÃO for dentro do header
             if (isHeaderExpanded && headerRef.current && !headerRef.current.contains(event.target as Node)) {
                 closeAll();
             }
@@ -164,9 +163,9 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 onClick={closeAll}
             />
 
-            {/* BARRA FLUTUANTE (Com Ref) */}
+            {/* BARRA FLUTUANTE */}
             <header 
-                ref={headerRef} // AQUI ESTÁ O SEGREDO PARA NÃO FECHAR SOZINHO
+                ref={headerRef}
                 className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
                 style={{ height: headerHeight, transformOrigin: 'top' }}
             >
@@ -181,30 +180,28 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </div>
                         ) : (
                             <div className="flex items-center relative h-full w-full">
-                                {/* LOGO */}
+                                {/* LOGO: Adicionado !isMenuOpen para garantir que suma quando menu abre */}
                                 <img 
                                     src="/logo-header.png" 
                                     alt="Logo" 
-                                    // Adicionado !isMenuOpen na condição para garantir que o logo suma quando o menu abrir
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive && !isMenuOpen ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO SAUDAÇÃO (Corrigido tamanho para caber no mobile) */}
+                                {/* TEXTO SAUDAÇÃO */}
                                 {!isFeedbackActive && !isMenuOpen && headerMessage && (
                                     <span className={`absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TÍTULO DO MENU */}
-                                {/* Usando showMenuText ao invés de isMenuOpen para aplicar o delay */}
+                                {/* TÍTULO DO MENU: Agora usa showMenuText (com delay) ao invés de isMenuOpen */}
                                 {showMenuText && (
                                     <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         Menu
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK (Corrigido tamanho responsivo: text-lg no mobile) */}
+                                {/* TEXTO DO FEEDBACK */}
                                 {isFeedbackActive && (
                                     <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         {displayText}
@@ -279,7 +276,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     <div className="w-full max-w-md border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais (COM CONTRASTE CORRIGIDO) */}
+                    {/* Links Sociais */}
                     <div className="flex flex-col gap-4 w-full max-w-md mt-6">
                         <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
