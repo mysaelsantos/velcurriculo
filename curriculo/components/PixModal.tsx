@@ -101,7 +101,14 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                        </svg>
                     </div>
                     <h3 className="text-2xl font-bold text-gray-800 mt-6">Pagamento Confirmado!</h3>
-                    <p className="text-gray-600 mt-2">Seu currículo está pronto para download.</p>
+                    <p className="text-gray-600 mt-2">Seu download iniciará automaticamente em breve.</p>
+                    
+                    <button 
+                        onClick={onClose} 
+                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
+                    >
+                        Voltar
+                    </button>
                 </div>
             );
         case 'expired':
