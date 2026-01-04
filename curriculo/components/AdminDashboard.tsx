@@ -452,6 +452,50 @@ const AdminDashboard: React.FC = () => {
         setIsPreviewReady(true);
     }, []);
 
+    // --- CORREÇÃO: EFEITO PARA GERAR PAGINAÇÃO QUANDO UM CURRÍCULO É SELECIONADO ---
+    useEffect(() => {
+        if (selectedResume) {
+            setIsPreviewReady(false);
+            
+            let dataToProcess = { ...selectedResume };
+            
+            // Tenta recuperar os dados completos do backup se existir (JSON string)
+            if (selectedResume.full_data_backup) {
+                try {
+                    const parsed = JSON.parse(selectedResume.full_data_backup);
+                    // Mescla para garantir que temos tudo, priorizando o backup estruturado
+                    dataToProcess = { ...selectedResume, ...parsed }; 
+                    // Se o parsed tiver a estrutura correta de 'personalInfo', usamos ele como base principal
+                    if (parsed.personalInfo) {
+                        dataToProcess = parsed;
+                        // Reinjetamos metadados do lead se necessário
+                        dataToProcess.id = selectedResume.id;
+                    }
+                } catch (e) {
+                    console.error("Erro ao processar backup do currículo:", e);
+                }
+            }
+            
+            // Fallback para garantir estrutura mínima se for dados antigos/planos e não tiver backup
+            if (!dataToProcess.style) dataToProcess.style = { template: 'template-modern', color: '#000000', showQRCode: false };
+            if (!dataToProcess.personalInfo) {
+                dataToProcess.personalInfo = {
+                    name: selectedResume.name || '',
+                    jobTitle: selectedResume.jobTitle || '',
+                    email: selectedResume.email || '',
+                    phone: selectedResume.phone || '',
+                    address: selectedResume.city || '',
+                    // Preenche outros campos obrigatórios com vazio para não quebrar
+                    age: '', maritalStatus: '', cnh: '', profilePicture: ''
+                };
+            }
+
+            // Inicia o calculo das páginas
+            calculatePagination(dataToProcess);
+        }
+    }, [selectedResume, calculatePagination]);
+
+
     const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError('Credenciais inválidas.'); } };
     
     // --- GERAR PDF COMPLETO ---
