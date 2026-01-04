@@ -1,11 +1,11 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-import fetch from 'node-fetch';
 
-const MODEL_NAME = "gemini-2.0-flash";
+// CONFIGURAÇÃO IGUAL AO ARQUIVO FUNCIONAL (enhance-text.ts)
 const API_KEY = process.env.GEMINI_API_KEY;
+const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
-// --- NOVA LÓGICA DE TENTATIVAS ---
+// --- LÓGICA DE TENTATIVAS (IDÊNTICA AO FUNCIONAL) ---
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
@@ -13,52 +13,75 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
   for (let i = 0; i < maxTries; i++) {
     try {
+      // Usando fetch nativo do Node 18+ (sem node-fetch)
       const response = await fetch(url, options);
+      
       if (response.ok) return response;
 
       if (response.status === 429) {
-        console.warn(`Tentativa ${i + 1}/${maxTries} falhou: Erro 429 (Resource Exhausted).`);
+        console.warn(`[suggest-skills] Tentativa ${i + 1}/${maxTries} falhou: 429 Resource Exhausted.`);
         lastError = new Error("RESOURCE_EXHAUSTED");
         if (i < maxTries - 1) {
-          const delay = Math.pow(2, i) * 1000 + Math.random() * 500;
+          const delay = Math.pow(2, i + 1) * 1000;
           await sleep(delay);
           continue; 
         }
       } else {
-        console.error(`Tentativa ${i + 1} falhou com status ${response.status}.`);
+        console.error(`[suggest-skills] Tentativa ${i + 1} falhou: Status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
-        lastError = new Error(errorBody.message || `Erro da API: ${response.statusText}`);
+        // @ts-ignore
+        const msg = errorBody.message || errorBody.error?.message || response.statusText;
+        lastError = new Error(msg);
         break; 
       }
     } catch (fetchError) {
-      console.error(`Tentativa ${i + 1} falhou com erro de rede:`, fetchError);
+      console.error(`[suggest-skills] Erro de rede na tentativa ${i + 1}:`, fetchError);
       lastError = fetchError as Error;
       if (i < maxTries - 1) await sleep(1000);
     }
   }
   throw lastError;
 };
-// --- FIM DA LÓGICA DE TENTATIVAS ---
 
 const handler: Handler = async (event: HandlerEvent) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+  // Headers de CORS para garantir acesso
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
+
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
+  }
+  
   if (!API_KEY) {
-    return { statusCode: 500, body: JSON.stringify({ message: "Chave da API do Gemini não configurada." }) };
+    console.error("[suggest-skills] ERRO: Chave API não configurada.");
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
   try {
     const { jobTitle, experience } = JSON.parse(event.body || '{}');
     if (!jobTitle) {
-      return { statusCode: 400, body: JSON.stringify({ message: "jobTitle é obrigatório." }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "jobTitle é obrigatório." }) };
     }
 
-    const prompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
+    const systemPrompt = `Você é um especialista em Recrutamento e Seleção.`;
+    const userPrompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
+
+    // ESTRUTURA IGUAL AO ENHANCE-TEXT (Chat Pattern)
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [
+        { role: "user", parts: [{ text: systemPrompt }] },
+        { role: "model", parts: [{ text: "Entendido." }] },
+        { role: "user", parts: [{ text: userPrompt }] }
+      ],
       generationConfig: {
-        temperature: 0.9, topK: 1, topP: 1, maxOutputTokens: 2048,
+        temperature: 0.7, topK: 40, topP: 0.95, maxOutputTokens: 2048,
       },
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -68,7 +91,6 @@ const handler: Handler = async (event: HandlerEvent) => {
       ],
     };
     
-    // USA O NOVO FETCH COM TENTATIVAS
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -77,41 +99,35 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     const result: any = await apiResponse.json();
 
-    if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-      console.error("Resposta inesperada da API:", result);
+    if (!result.candidates || !result.candidates[0]?.content?.parts?.[0]?.text) {
+      console.error("[suggest-skills] Resposta inválida da IA:", JSON.stringify(result));
       throw new Error("A API da IA retornou uma resposta inválida.");
     }
 
     const skillsText = result.candidates[0].content.parts[0].text;
     
-    if (!skillsText) {
-      return {
-        statusCode: 200,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills: [] }),
-      };
-    }
-    
-    const skills = skillsText.split(',').map(skill => skill.trim()).filter(Boolean);
+    // Tratamento da resposta para array
+    const skills = skillsText.split(',').map((skill: string) => skill.trim()).filter(Boolean);
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ skills }),
     };
 
   } catch (error) {
     const err = error as Error;
-    // --- MUDANÇA PRINCIPAL AQUI ---
     if (err.message === "RESOURCE_EXHAUSTED") {
       return {
         statusCode: 429,
-        body: JSON.stringify({ message: "Ops! Prometemos que não é drama, é só um bugzinho do nosso lado. Por favor, tente novamente em 1 minuto ou atualize a página." })
+        headers,
+        body: JSON.stringify({ message: "Ops! O sistema está sobrecarregado. Tente novamente em alguns instantes." })
       };
     }
-    console.error("Error calling Gemini API for skill suggestion:", err);
+    console.error("[suggest-skills] Erro final:", err);
     return { 
       statusCode: 500, 
+      headers,
       body: JSON.stringify({ message: err.message || "Falha ao sugerir habilidades com a IA." }) 
     };
   }
