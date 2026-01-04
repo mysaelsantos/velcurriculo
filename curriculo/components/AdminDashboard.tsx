@@ -631,14 +631,30 @@ const AdminDashboard: React.FC = () => {
                     {activeTab === 'analytics' && (
                         <div className="space-y-6 animate-fade-in">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {/* Top Cargos (Word Cloud Style List) */}
+                                {/* Top Cargos - REDESIGNED */}
                                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                    <h3 className="font-bold text-gray-700 mb-4">Cargos Mais Procurados</h3>
-                                    <div className="flex flex-wrap gap-2">
+                                    <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                                        <Icons.Target /> Cargos em Alta
+                                    </h3>
+                                    <div className="space-y-4">
                                         {jobData.map((job, idx) => (
-                                            <span key={idx} className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100" style={{ fontSize: `${Math.max(0.7, Math.min(1.2, 1 + (job.value / 10)))}rem`, opacity: 1 - (idx * 0.05) }}>
-                                                {job.name} <span className="text-blue-400 ml-1">{job.value}</span>
-                                            </span>
+                                            <div key={idx} className="group">
+                                                <div className="flex justify-between text-sm mb-1">
+                                                    <span className="font-medium text-gray-700 flex items-center gap-2">
+                                                        <span className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${idx < 3 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                            #{idx + 1}
+                                                        </span>
+                                                        {job.name}
+                                                    </span>
+                                                    <span className="font-bold text-gray-900">{job.value}</span>
+                                                </div>
+                                                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000" 
+                                                        style={{ width: `${(job.value / (jobData[0]?.value || 1)) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -709,7 +725,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* TAB REVIEWS (AVALIAÇÕES) - ADICIONADO AGORA */}
+                    {/* TAB REVIEWS (AVALIAÇÕES) */}
                     {activeTab === 'reviews' && (
                         <div className="animate-fade-in space-y-6">
                             <div className="flex items-center justify-between">
