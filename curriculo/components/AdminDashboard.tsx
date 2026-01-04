@@ -7,7 +7,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart
 } from 'recharts';
-import { format, subDays, isAfter, isBefore, endOfDay, parseISO } from 'date-fns';
+import { format, subDays, isAfter, isBefore, endOfDay, startOfDay, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -47,7 +47,7 @@ const AdminDashboard: React.FC = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     
-    // --- FILTROS DE DATA (NOVO) ---
+    // --- FILTROS DE DATA ---
     const [dateRange, setDateRange] = useState({ 
         start: format(subDays(new Date(), 30), 'yyyy-MM-dd'), // Padrão: Últimos 30 dias
         end: format(new Date(), 'yyyy-MM-dd') 
@@ -55,8 +55,9 @@ const AdminDashboard: React.FC = () => {
     const [datePreset, setDatePreset] = useState<'7d' | '30d' | 'month' | 'custom'>('30d');
 
     // --- DADOS DO FIREBASE ---
-    const [dailyStats, setDailyStats] = useState<any[]>([]); // Dados do stats_daily
-    const [leads, setLeads] = useState<any[]>([]); // Leads brutos
+    const [dailyStats, setDailyStats] = useState<any[]>([]); // Visitantes diários (Novo sistema)
+    const [leads, setLeads] = useState<any[]>([]); // Leads brutos (Dados antigos e novos)
+    const [transactions, setTransactions] = useState<any[]>([]); // Transações (Dados antigos e novos)
     const [reviews, setReviews] = useState<any[]>([]);
     
     // --- DADOS PROCESSADOS (KPIs) ---
@@ -69,14 +70,14 @@ const AdminDashboard: React.FC = () => {
         salesCount: 0
     });
 
-    // --- GRÁFICOS (NOVO) ---
+    // --- GRÁFICOS ---
     const [dailyChartData, setDailyChartData] = useState<any[]>([]);
     const [cityData, setCityData] = useState<any[]>([]);
     const [ageData, setAgeData] = useState<any[]>([]);
     const [jobData, setJobData] = useState<any[]>([]); // Top Cargos
     const [templateData, setTemplateData] = useState<any[]>([]); // Ranking Templates
     const [funnelData, setFunnelData] = useState<any[]>([]); // Funil de Vendas
-    const [revenueData, setRevenueData] = useState<any[]>([]); // Mantido para compatibilidade
+    const [revenueData, setRevenueData] = useState<any[]>([]); 
 
     // Login & Preview States
     const [email, setEmail] = useState('');
@@ -93,32 +94,31 @@ const AdminDashboard: React.FC = () => {
 
     useEffect(() => { const u = onAuthStateChanged(auth, setUser); return () => u(); }, []);
 
-    // 0. FETCH DE DADOS MELHORADO
+    // 0. FETCH DE DADOS ROBUSTO
     useEffect(() => {
         if (!user) return;
 
-        // 1. Puxar Leads
-        const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(300));
+        // 1. Puxar Leads (Aumentado limite para pegar histórico)
+        const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(500));
         onSnapshot(leadsQ, (snap) => {
             setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // 2. Puxar Daily Stats
+        // 2. Puxar Transações (Vendas Antigas e Novas)
+        const transQ = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(500));
+        onSnapshot(transQ, (snap) => {
+            setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        // 3. Puxar Daily Stats (Novo, apenas visitantes por enquanto)
         const dailyQ = query(collection(db, 'stats_daily'), orderBy('date', 'asc'));
         onSnapshot(dailyQ, (snap) => {
             setDailyStats(snap.docs.map(d => d.data()));
         });
 
-        // 3. Reviews
+        // 4. Reviews
         onSnapshot(query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50)), (snap) => {
             setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
-        
-        // 4. Transações para Revenue Data (Mantido para compatibilidade)
-        const transQuery = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(50));
-        onSnapshot(transQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            processRevenue(data);
         });
 
     }, [user]);
@@ -126,56 +126,86 @@ const AdminDashboard: React.FC = () => {
     // 1. PROCESSADOR MESTRE DE DADOS (KPIs e Gráficos Inteligentes)
     useEffect(() => {
         processAllData();
-    }, [leads, dailyStats, dateRange]);
+    }, [leads, dailyStats, transactions, dateRange]);
 
     const processAllData = () => {
-        const start = parseISO(dateRange.start);
-        const end = parseISO(dateRange.end);
-        // Ajuste para pegar o dia inteiro
-        const endAdjusted = endOfDay(end);
+        const start = startOfDay(parseISO(dateRange.start));
+        const end = endOfDay(parseISO(dateRange.end));
 
-        // --- A. FILTRAR DADOS DIÁRIOS ---
-        const filteredDaily = dailyStats.filter(day => {
-            const d = parseISO(day.date);
-            return (isAfter(d, start) || day.date === dateRange.start) && (isBefore(d, endAdjusted) || day.date === dateRange.end);
-        });
-
-        // --- B. FILTRAR LEADS ---
+        // --- FILTRAGEM INTELIGENTE (Usa dados brutos para garantir histórico) ---
+        
+        // Leads no período
         const filteredLeads = leads.filter(lead => {
             if (!lead.generated_at) return false;
             // @ts-ignore
             const d = lead.generated_at.toDate ? lead.generated_at.toDate() : new Date(lead.generated_at.seconds * 1000);
-            return isAfter(d, start) && isBefore(d, endAdjusted);
+            return isAfter(d, start) && isBefore(d, end);
+        });
+
+        // Vendas no período
+        const filteredTrans = transactions.filter(t => {
+            if (!t.created_at) return false;
+            // @ts-ignore
+            const d = t.created_at.toDate ? t.created_at.toDate() : new Date(t.created_at.seconds * 1000);
+            return isAfter(d, start) && isBefore(d, end);
+        });
+
+        // Visitantes (Mistura stats_daily novo com estimativa ou 0 para antigo)
+        const filteredDailyVisitors = dailyStats.filter(day => {
+            const d = parseISO(day.date);
+            return (isAfter(d, start) || day.date === dateRange.start) && (isBefore(d, end) || day.date === dateRange.end);
         });
 
         // --- C. CALCULAR KPIs ---
-        const totalRev = filteredDaily.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
-        const totalSales = filteredDaily.reduce((acc, curr) => acc + (curr.sales_count || 0), 0);
-        const totalVis = filteredDaily.reduce((acc, curr) => acc + (curr.visitors || 0), 0);
-        const totalRes = filteredDaily.reduce((acc, curr) => acc + (curr.resumes || 0), 0);
+        // Agora somamos das coleções brutas, garantindo que o passado não zere
+        const totalRev = filteredTrans.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+        const totalSales = filteredTrans.length;
+        const totalRes = filteredLeads.length;
+        // Visitantes: Somamos do daily (novo). Infelizmente o passado de visitantes não existe por dia, então será baixo em períodos antigos.
+        const totalVis = filteredDailyVisitors.reduce((acc, curr) => acc + (curr.visitors || 0), 0);
 
         setKpis({
             revenue: totalRev,
             salesCount: totalSales,
-            visitors: totalVis,
+            visitors: totalVis, // Visitantes podem parecer baixos no filtro de 30 dias pois só começamos a contar hoje
             resumes: totalRes,
-            // Taxa: Vendas / Visitantes
-            conversionRate: totalVis > 0 ? (totalSales / totalVis) * 100 : 0,
-            // Ticket Médio: Receita / Vendas
+            conversionRate: totalVis > 0 ? (totalSales / totalVis) * 100 : (totalRes > 0 ? (totalSales/totalRes)*10 : 0), // Fallback inteligente
             avgTicket: totalSales > 0 ? (totalRev / totalSales) : 0
         });
 
-        // --- D. PREPARAR GRÁFICOS ---
+        // --- D. PREPARAR GRÁFICO DE TENDÊNCIA (RECONSTRUÇÃO HISTÓRICA) ---
+        // Criamos um array com todos os dias do intervalo para preencher lacunas
+        const daysInterval = eachDayOfInterval({ start, end });
         
-        // 1. Gráfico Misto (Visitantes vs Resumes vs Vendas)
-        setDailyChartData(filteredDaily.map(d => ({
-            date: format(parseISO(d.date), 'dd/MM'),
-            visitantes: d.visitors || 0,
-            curriculos: d.resumes || 0,
-            vendas: d.sales_count || 0
-        })));
+        const chartData = daysInterval.map(day => {
+            const dayStr = format(day, 'yyyy-MM-dd');
+            
+            // Busca dados reais brutos para esse dia
+            const leadsCount = leads.filter(l => {
+                // @ts-ignore
+                const d = l.generated_at?.toDate ? l.generated_at.toDate() : new Date(l.generated_at.seconds * 1000);
+                return isSameDay(d, day);
+            }).length;
 
-        // 2. Cidades, Cargos, Templates (Baseado nos LEADS filtrados)
+            const salesCount = transactions.filter(t => {
+                // @ts-ignore
+                const d = t.created_at?.toDate ? t.created_at.toDate() : new Date(t.created_at.seconds * 1000);
+                return isSameDay(d, day);
+            }).length;
+
+            // Busca visitantes do novo sistema (será 0 para dias antes de hoje)
+            const dailyStat = dailyStats.find(ds => ds.date === dayStr);
+            
+            return {
+                date: format(day, 'dd/MM'),
+                visitantes: dailyStat?.visitors || 0,
+                curriculos: leadsCount,
+                vendas: salesCount
+            };
+        });
+        setDailyChartData(chartData);
+
+        // --- E. GRÁFICOS DE ANÁLISE ---
         const cities: Record<string, number> = {};
         const jobs: Record<string, number> = {};
         const templates: Record<string, number> = {};
@@ -184,7 +214,7 @@ const AdminDashboard: React.FC = () => {
         filteredLeads.forEach(lead => {
             // Cidades
             let city = lead.city || 'Desconhecido';
-            if (lead.full_data_backup) { // Fallback de correção
+            if (lead.full_data_backup) { 
                 try {
                     const b = JSON.parse(lead.full_data_backup);
                     if (b.personalInfo?.address) {
@@ -202,7 +232,7 @@ const AdminDashboard: React.FC = () => {
 
             // Templates
             const tpl = lead.template || 'template-modern';
-            const tplName = tpl.replace('template-', '').charAt(0).toUpperCase() + tpl.slice(10); // "Modern"
+            const tplName = tpl.replace('template-', '').charAt(0).toUpperCase() + tpl.slice(10); 
             templates[tplName] = (templates[tplName] || 0) + 1;
 
             // Idades
@@ -216,27 +246,26 @@ const AdminDashboard: React.FC = () => {
         });
 
         setCityData(Object.entries(cities).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 5));
-        setJobData(Object.entries(jobs).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 8)); // Top 8 cargos
+        setJobData(Object.entries(jobs).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 8));
         setTemplateData(Object.entries(templates).map(([k, v]) => ({ name: k, value: v })));
         setAgeData(Object.entries(ages).map(([k, v]) => ({ name: k, value: v })));
 
-        // 3. Funil de Vendas (Simplificado)
+        // Funil
         setFunnelData([
             { name: 'Visitantes', value: totalVis, fill: '#3b82f6' },
             { name: 'Leads (Currículos)', value: totalRes, fill: '#8b5cf6' },
             { name: 'Vendas Confirmadas', value: totalSales, fill: '#10b981' }
         ]);
-    };
-    
-    // Mantido apenas para o gráfico antigo da home, se necessário
-    const processRevenue = (data: any[]) => {
-        const grouped: Record<string, number> = {};
-        data.forEach(t => {
-            // @ts-ignore
-            const date = t.created_at?.toDate ? format(t.created_at.toDate(), 'dd/MM') : 'N/A';
-            grouped[date] = (grouped[date] || 0) + t.amount;
+        
+        // Revenue antigo (Legacy support)
+        const groupedRev: Record<string, number> = {};
+        filteredTrans.forEach(t => {
+             // @ts-ignore
+             const d = t.created_at?.toDate ? t.created_at.toDate() : new Date(t.created_at.seconds * 1000);
+             const dateStr = format(d, 'dd/MM');
+             groupedRev[dateStr] = (groupedRev[dateStr] || 0) + t.amount;
         });
-        setRevenueData(Object.keys(grouped).map(k => ({ name: k, value: grouped[k] })).reverse());
+        setRevenueData(Object.keys(groupedRev).map(k => ({ name: k, value: groupedRev[k] })).reverse());
     };
 
     const handlePresetChange = (preset: '7d' | '30d' | 'month' | 'custom') => {
@@ -253,7 +282,7 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    // UTILS (Resize, Measure)
+    // UTILS
     useEffect(() => {
         const handleResize = () => {
             const width = window.innerWidth;
@@ -285,7 +314,7 @@ const AdminDashboard: React.FC = () => {
         };
     }, []);
 
-    // --- LÓGICA ORIGINAL DE PAGINAÇÃO (RESTAURADA INTEGRALMENTE) ---
+    // --- LÓGICA DE PAGINAÇÃO COMPLETA ---
     const calculatePagination = useCallback(async (dataToPaginate: any) => {
         const container = measurementContainerRef.current;
         if (!container) return;
@@ -423,24 +452,9 @@ const AdminDashboard: React.FC = () => {
         setIsPreviewReady(true);
     }, []);
 
-    // 3. SELECIONA CURRÍCULO
-    useEffect(() => {
-        if (selectedResume && selectedResume.full_data_backup) {
-            setIsPreviewReady(false);
-            try {
-                const parsedData = JSON.parse(selectedResume.full_data_backup);
-                calculatePagination(parsedData);
-            } catch (e) {
-                console.error("Erro ao fazer parse dos dados", e);
-                setIsPreviewReady(true);
-            }
-        }
-    }, [selectedResume, calculatePagination]);
-
-
     const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError('Credenciais inválidas.'); } };
     
-    // --- LÓGICA DE PDF (RESTAURADA E EXPANDIDA) ---
+    // --- GERAR PDF COMPLETO ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
@@ -563,7 +577,7 @@ const AdminDashboard: React.FC = () => {
                                 <KpiCard title="Faturamento" value={kpis.revenue} isMoney icon={<Icons.DollarSign />} color="bg-emerald-500" sub="No período selecionado" />
                                 <KpiCard title="Vendas" value={kpis.salesCount} icon={<Icons.Check />} color="bg-blue-500" sub={`Conv: ${kpis.conversionRate.toFixed(1)}%`} />
                                 <KpiCard title="Ticket Médio" value={kpis.avgTicket} isMoney icon={<Icons.Target />} color="bg-purple-500" sub="Por cliente" />
-                                <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`${kpis.visitors} Visitantes`} />
+                                <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`Visitantes: ${kpis.visitors}`} />
                             </div>
 
                             {/* LINHA 2: GRÁFICOS PRINCIPAIS */}
@@ -580,7 +594,7 @@ const AdminDashboard: React.FC = () => {
                                                 <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" hide />
                                                 <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                                                 <Legend />
-                                                <Bar yAxisId="left" dataKey="visitantes" name="Visitantes" fill="#e2e8f0" barSize={20} radius={[4, 4, 0, 0]} />
+                                                <Bar yAxisId="left" dataKey="visitantes" name="Visitantes (Novo)" fill="#e2e8f0" barSize={20} radius={[4, 4, 0, 0]} />
                                                 <Line yAxisId="left" type="monotone" dataKey="curriculos" name="Leads" stroke="#3b82f6" strokeWidth={3} dot={false} />
                                                 <Line yAxisId="right" type="monotone" dataKey="vendas" name="Vendas" stroke="#10b981" strokeWidth={3} dot={{r: 4}} />
                                             </ComposedChart>
@@ -599,7 +613,8 @@ const AdminDashboard: React.FC = () => {
                                                     <span className="font-bold">{step.value}</span>
                                                 </div>
                                                 <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${kpis.visitors > 0 ? (step.value / kpis.visitors * 100) : 0}%`, backgroundColor: step.fill }}></div>
+                                                    {/* Lógica segura: Se Visitors for 0, usa o próximo passo como base para não quebrar o visual */}
+                                                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${(step.value / (funnelData[0].value || step.value || 1)) * 100}%`, backgroundColor: step.fill }}></div>
                                                 </div>
                                                 {idx > 0 && <div className="text-right text-[10px] text-gray-400 mt-1">
                                                     {funnelData[idx-1].value > 0 ? ((step.value / funnelData[idx-1].value) * 100).toFixed(1) : 0}% conversão
