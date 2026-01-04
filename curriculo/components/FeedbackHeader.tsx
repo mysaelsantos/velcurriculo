@@ -275,9 +275,10 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     <div className="w-full max-w-md border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais */}
+                    {/* Links Sociais (ATUALIZADO) */}
                     <div className="flex flex-col gap-4 w-full max-w-md mt-6">
-                        <a href="https://wa.me/5537984169386" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                        {/* LINK WHATSAPP ATUALIZADO */}
+                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
                         <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
