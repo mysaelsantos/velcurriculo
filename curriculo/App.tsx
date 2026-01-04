@@ -30,7 +30,7 @@ const DEMO_DATA: ResumeData = {
         name: "Marcos Mj Santos",
         jobTitle: "Desenvolvedor Full Stack & Criador de Soluções",
         email: "marcos@velsites.com.br",
-        phone: "(37) 9 2707-2025",
+        phone: "(37) 9 8411-6034", // Telefone Atualizado
         address: "Nova Serrana, Romeu Duarte",
         age: "22",
         maritalStatus: "Casado(a)",
@@ -144,17 +144,18 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true, showLinkedinQr: true }
 };
 
+// ATUALIZADO: Traduções PT-PT para PT-BR nos depoimentos
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
-    { text: '"Para quem está a começar a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
-    { text: '"Finalmente um gerador de currículos que não tenta vender-me um plano premium a cada clique. Gratuito e de alta qualidade. Recomendo!"', author: '- Carlos F. - Desenvolvedor Jr.' },
+    { text: '"Para quem está começando a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
+    { text: '"Finalmente um gerador de currículos que não tenta me vender um plano premium a cada clique. Gratuito e de alta qualidade. Recomendo!"', author: '- Carlos F. - Desenvolvedor Jr.' },
     { text: '"O design minimalista era exatamente o que eu procurava. Consegui a minha primeira entrevista com o currículo que fiz aqui."', author: '- Ana L. - Designer Gráfica' },
-    { text: '"A funcionalidade de IA para melhorar as descrições é fantástica. Poupa imenso tempo e o resultado fica muito mais profissional."', author: '- Ricardo G. - Gerente de Projetos' },
+    { text: '"A funcionalidade de IA para melhorar as descrições é fantástica. Economiza muito tempo e o resultado fica muito mais profissional."', author: '- Ricardo G. - Gerente de Projetos' },
     { text: '"Usei a ferramenta para atualizar o meu currículo antigo e a diferença é notória. A interface é super intuitiva e o resultado final é excelente."', author: '- Sofia B. - Advogada' },
     { text: '"Como assistente administrativo, precisava de algo rápido e profissional. Este site entregou tudo! A IA ajudou a organizar minhas tarefas de forma clara."', author: '- Lucas M. - Assistente Administrativo' },
     { text: '"Trabalho como caixa e não sabia como montar um currículo. Foi tudo muito fácil e o resultado ficou ótimo, bem mais do que eu esperava."', author: '- Camila R. - Operadora de Caixa' },
     { text: '"Simplesmente o melhor que já usei. Em poucos passos, meu currículo de \'ajudante geral\' ficou com cara de especialista. Muito obrigado!"', author: '- Fernando T. - Ajudante Geral' },
-    { text: '"Estava a procurar o meu primeiro emprego e não tinha experiência para listar. As sugestões de habilidades e o editor de resumo foram essenciais!"', author: '- Beatriz C. - Jovem Aprendiz' },
+    { text: '"Estava procurando o meu primeiro emprego e não tinha experiência para listar. As sugestões de habilidades e o editor de resumo foram essenciais!"', author: '- Beatriz C. - Jovem Aprendiz' },
     { text: '"O QR Code para o WhatsApp é um diferencial genial. Moderno e prático, recebi elogios na entrevista por causa disso."', author: '- Tiago A. - Vendedor' },
     { text: '"A variedade de templates é ótima. Encontrei um que se encaixava perfeitamente com a minha área de atuação. Recomendo a todos os colegas."', author: '- Letícia N. - Recepcionista' }
 ];
@@ -1210,9 +1211,11 @@ const AppContent: React.FC = () => {
                     </div>
                     <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
                         <div>
-                            <h4 className="font-bold text-lg mb-4">Contacto</h4>
+                            {/* ATUALIZADO: "Contacto" -> "Contato" */}
+                            <h4 className="font-bold text-lg mb-4">Contato</h4>
                             <ul className="space-y-2">
-                                <li className="text-gray-400">(37) 98416-9386</li>
+                                {/* ATUALIZADO: Telefone atualizado */}
+                                <li className="text-gray-400">(37) 98411-6034</li>
                                 <li className="text-gray-400">contato@velsites.com.br</li>
                             </ul>
                         </div>
