@@ -708,6 +708,78 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* TAB REVIEWS (AVALIAÇÕES) - ADICIONADO AGORA */}
+                    {activeTab === 'reviews' && (
+                        <div className="animate-fade-in space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-bold text-gray-700 text-xl">Gerenciamento de Avaliações</h3>
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">
+                                    {reviews.length} Avaliações
+                                </span>
+                            </div>
+
+                            {reviews.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-xl border border-gray-200 text-gray-400">
+                                    <Icons.MessageSquare />
+                                    <p className="mt-2">Nenhuma avaliação encontrada.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {reviews.map((review) => (
+                                        <div key={review.id} className={`bg-white p-6 rounded-xl border transition-all ${review.approved ? 'border-green-200 shadow-sm' : 'border-yellow-200 shadow-md ring-1 ring-yellow-100'}`}>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${review.approved ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                                                        {review.author ? review.author.charAt(0).toUpperCase() : '?'}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-800 leading-tight">{review.author || 'Anônimo'}</h4>
+                                                        <div className="flex items-center mt-1">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <div key={star} className={star <= review.rating ? "text-yellow-400" : "text-gray-200"}>
+                                                                    <Icons.Star />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {review.approved ? (
+                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Publicado</span>
+                                                ) : (
+                                                    <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Pendente</span>
+                                                )}
+                                            </div>
+
+                                            <p className="text-gray-600 text-sm mb-6 italic min-h-[60px]">"{review.text}"</p>
+
+                                            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                                <span className="text-xs text-gray-400 font-medium">
+                                                    {review.created_at?.toDate ? format(review.created_at.toDate(), "dd/MM/yyyy") : 'Data desconhecida'}
+                                                </span>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => toggleReviewStatus(review.id, review.approved)}
+                                                        className={`p-2 rounded-lg transition-colors ${review.approved ? 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'}`}
+                                                        title={review.approved ? "Ocultar Depoimento" : "Aprovar Depoimento"}
+                                                    >
+                                                        {review.approved ? <Icons.X /> : <Icons.Check />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteReview(review.id)}
+                                                        className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                                        title="Excluir Permanentemente"
+                                                    >
+                                                        <Icons.Trash />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </main>
 
