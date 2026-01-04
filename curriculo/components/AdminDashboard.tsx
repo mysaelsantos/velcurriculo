@@ -299,7 +299,28 @@ const AdminDashboard: React.FC = () => {
         const cities: Record<string, number> = {};
         const ages = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
         data.forEach(item => {
-            const city = item.city || 'Desconhecido';
+            // Tenta obter a cidade do campo salvo ou reprocessar do backup
+            let city = item.city || 'Desconhecido';
+            
+            // CORREÇÃO: Tenta re-extrair a cidade do backup se disponível para corrigir registros antigos
+            if (item.full_data_backup) {
+                try {
+                    const backup = JSON.parse(item.full_data_backup);
+                    if (backup.personalInfo && backup.personalInfo.address) {
+                        const parts = backup.personalInfo.address.split(',');
+                        // Pega a primeira parte (Cidade vem primeiro)
+                        let extracted = parts[0].trim();
+                        // Remove estado se houver traço (Ex: Cidade - Estado)
+                        if (extracted.includes('-')) {
+                            extracted = extracted.split('-')[0].trim();
+                        }
+                        if (extracted) city = extracted;
+                    }
+                } catch (e) {
+                    // Ignora erro de parse, usa o city padrão
+                }
+            }
+
             cities[city] = (cities[city] || 0) + 1;
             const age = parseInt(item.age);
             if (age) {
