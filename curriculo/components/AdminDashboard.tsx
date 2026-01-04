@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { auth, db } from '../services/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc, where } from 'firebase/firestore';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area
+    BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart
 } from 'recharts';
-import { format } from 'date-fns';
+import { format, subDays, isAfter, isBefore, endOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 // @ts-ignore
 import { toPng } from 'html-to-image';
@@ -33,10 +33,13 @@ const Icons = {
     Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
     Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
     Menu: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
-    Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+    Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
+    Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
+    DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
 };
 
-const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const AdminDashboard: React.FC = () => {
     const [user, setUser] = useState<any>(null);
@@ -44,58 +47,224 @@ const AdminDashboard: React.FC = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     
-    // Dados
-    const [stats, setStats] = useState<any>({});
-    const [leads, setLeads] = useState<any[]>([]);
-    const [transactions, setTransactions] = useState<any[]>([]);
+    // --- FILTROS DE DATA (NOVO) ---
+    const [dateRange, setDateRange] = useState({ 
+        start: format(subDays(new Date(), 30), 'yyyy-MM-dd'), // Padrão: Últimos 30 dias
+        end: format(new Date(), 'yyyy-MM-dd') 
+    });
+    const [datePreset, setDatePreset] = useState<'7d' | '30d' | 'month' | 'custom'>('30d');
+
+    // --- DADOS DO FIREBASE ---
+    const [dailyStats, setDailyStats] = useState<any[]>([]); // Dados do stats_daily
+    const [leads, setLeads] = useState<any[]>([]); // Leads brutos
     const [reviews, setReviews] = useState<any[]>([]);
     
-    // Gráficos
+    // --- DADOS PROCESSADOS (KPIs) ---
+    const [kpis, setKpis] = useState({
+        revenue: 0,
+        resumes: 0,
+        visitors: 0,
+        conversionRate: 0,
+        avgTicket: 0,
+        salesCount: 0
+    });
+
+    // --- GRÁFICOS (NOVO) ---
+    const [dailyChartData, setDailyChartData] = useState<any[]>([]);
     const [cityData, setCityData] = useState<any[]>([]);
     const [ageData, setAgeData] = useState<any[]>([]);
-    const [revenueData, setRevenueData] = useState<any[]>([]);
+    const [jobData, setJobData] = useState<any[]>([]); // Top Cargos
+    const [templateData, setTemplateData] = useState<any[]>([]); // Ranking Templates
+    const [funnelData, setFunnelData] = useState<any[]>([]); // Funil de Vendas
+    const [revenueData, setRevenueData] = useState<any[]>([]); // Mantido para compatibilidade
 
-    // Login
+    // Login & Preview States
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
-    // --- ESTADOS DE PAGINAÇÃO E PREVIEW ---
     const [selectedResume, setSelectedResume] = useState<any | null>(null);
     const [paginatedPages, setPaginatedPages] = useState<any[]>([]); 
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isPreviewReady, setIsPreviewReady] = useState(false);
-    
-    // --- NOVO: Estado para escala dinâmica do preview ---
     const [previewScale, setPreviewScale] = useState(0.7);
-
-    // Refs
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     const measurementRootRef = useRef<any>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, setUser);
-        return () => unsubscribe();
-    }, []);
+    useEffect(() => { const u = onAuthStateChanged(auth, setUser); return () => u(); }, []);
 
-    // 0. CALCULAR ESCALA DO PREVIEW BASEADO NO ECRÃ
+    // 0. FETCH DE DADOS MELHORADO
+    useEffect(() => {
+        if (!user) return;
+
+        // 1. Puxar Leads
+        const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(300));
+        onSnapshot(leadsQ, (snap) => {
+            setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        // 2. Puxar Daily Stats
+        const dailyQ = query(collection(db, 'stats_daily'), orderBy('date', 'asc'));
+        onSnapshot(dailyQ, (snap) => {
+            setDailyStats(snap.docs.map(d => d.data()));
+        });
+
+        // 3. Reviews
+        onSnapshot(query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50)), (snap) => {
+            setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+        
+        // 4. Transações para Revenue Data (Mantido para compatibilidade)
+        const transQuery = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(50));
+        onSnapshot(transQuery, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            processRevenue(data);
+        });
+
+    }, [user]);
+
+    // 1. PROCESSADOR MESTRE DE DADOS (KPIs e Gráficos Inteligentes)
+    useEffect(() => {
+        processAllData();
+    }, [leads, dailyStats, dateRange]);
+
+    const processAllData = () => {
+        const start = parseISO(dateRange.start);
+        const end = parseISO(dateRange.end);
+        // Ajuste para pegar o dia inteiro
+        const endAdjusted = endOfDay(end);
+
+        // --- A. FILTRAR DADOS DIÁRIOS ---
+        const filteredDaily = dailyStats.filter(day => {
+            const d = parseISO(day.date);
+            return (isAfter(d, start) || day.date === dateRange.start) && (isBefore(d, endAdjusted) || day.date === dateRange.end);
+        });
+
+        // --- B. FILTRAR LEADS ---
+        const filteredLeads = leads.filter(lead => {
+            if (!lead.generated_at) return false;
+            // @ts-ignore
+            const d = lead.generated_at.toDate ? lead.generated_at.toDate() : new Date(lead.generated_at.seconds * 1000);
+            return isAfter(d, start) && isBefore(d, endAdjusted);
+        });
+
+        // --- C. CALCULAR KPIs ---
+        const totalRev = filteredDaily.reduce((acc, curr) => acc + (curr.revenue || 0), 0);
+        const totalSales = filteredDaily.reduce((acc, curr) => acc + (curr.sales_count || 0), 0);
+        const totalVis = filteredDaily.reduce((acc, curr) => acc + (curr.visitors || 0), 0);
+        const totalRes = filteredDaily.reduce((acc, curr) => acc + (curr.resumes || 0), 0);
+
+        setKpis({
+            revenue: totalRev,
+            salesCount: totalSales,
+            visitors: totalVis,
+            resumes: totalRes,
+            // Taxa: Vendas / Visitantes
+            conversionRate: totalVis > 0 ? (totalSales / totalVis) * 100 : 0,
+            // Ticket Médio: Receita / Vendas
+            avgTicket: totalSales > 0 ? (totalRev / totalSales) : 0
+        });
+
+        // --- D. PREPARAR GRÁFICOS ---
+        
+        // 1. Gráfico Misto (Visitantes vs Resumes vs Vendas)
+        setDailyChartData(filteredDaily.map(d => ({
+            date: format(parseISO(d.date), 'dd/MM'),
+            visitantes: d.visitors || 0,
+            curriculos: d.resumes || 0,
+            vendas: d.sales_count || 0
+        })));
+
+        // 2. Cidades, Cargos, Templates (Baseado nos LEADS filtrados)
+        const cities: Record<string, number> = {};
+        const jobs: Record<string, number> = {};
+        const templates: Record<string, number> = {};
+        const ages: any = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
+
+        filteredLeads.forEach(lead => {
+            // Cidades
+            let city = lead.city || 'Desconhecido';
+            if (lead.full_data_backup) { // Fallback de correção
+                try {
+                    const b = JSON.parse(lead.full_data_backup);
+                    if (b.personalInfo?.address) {
+                        let c = b.personalInfo.address.split(',')[0].trim();
+                        if (c.includes('-')) c = c.split('-')[0].trim();
+                        if (c) city = c;
+                    }
+                } catch(e){}
+            }
+            cities[city] = (cities[city] || 0) + 1;
+
+            // Cargos
+            const job = lead.jobTitle ? lead.jobTitle.trim() : 'Geral';
+            jobs[job] = (jobs[job] || 0) + 1;
+
+            // Templates
+            const tpl = lead.template || 'template-modern';
+            const tplName = tpl.replace('template-', '').charAt(0).toUpperCase() + tpl.slice(10); // "Modern"
+            templates[tplName] = (templates[tplName] || 0) + 1;
+
+            // Idades
+            const age = parseInt(lead.age);
+            if (age) {
+                if (age >= 18 && age <= 24) ages['18-24']++;
+                else if (age >= 25 && age <= 34) ages['25-34']++;
+                else if (age >= 35 && age <= 44) ages['35-44']++;
+                else if (age >= 45) ages['45+']++;
+            }
+        });
+
+        setCityData(Object.entries(cities).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 5));
+        setJobData(Object.entries(jobs).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 8)); // Top 8 cargos
+        setTemplateData(Object.entries(templates).map(([k, v]) => ({ name: k, value: v })));
+        setAgeData(Object.entries(ages).map(([k, v]) => ({ name: k, value: v })));
+
+        // 3. Funil de Vendas (Simplificado)
+        setFunnelData([
+            { name: 'Visitantes', value: totalVis, fill: '#3b82f6' },
+            { name: 'Leads (Currículos)', value: totalRes, fill: '#8b5cf6' },
+            { name: 'Vendas Confirmadas', value: totalSales, fill: '#10b981' }
+        ]);
+    };
+    
+    // Mantido apenas para o gráfico antigo da home, se necessário
+    const processRevenue = (data: any[]) => {
+        const grouped: Record<string, number> = {};
+        data.forEach(t => {
+            // @ts-ignore
+            const date = t.created_at?.toDate ? format(t.created_at.toDate(), 'dd/MM') : 'N/A';
+            grouped[date] = (grouped[date] || 0) + t.amount;
+        });
+        setRevenueData(Object.keys(grouped).map(k => ({ name: k, value: grouped[k] })).reverse());
+    };
+
+    const handlePresetChange = (preset: '7d' | '30d' | 'month' | 'custom') => {
+        setDatePreset(preset);
+        const today = new Date();
+        let start = new Date();
+        
+        if (preset === '7d') start = subDays(today, 7);
+        if (preset === '30d') start = subDays(today, 30);
+        if (preset === 'month') start = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        if (preset !== 'custom') {
+            setDateRange({ start: format(start, 'yyyy-MM-dd'), end: format(today, 'yyyy-MM-dd') });
+        }
+    };
+
+    // UTILS (Resize, Measure)
     useEffect(() => {
         const handleResize = () => {
             const width = window.innerWidth;
-            // 794px é a largura do A4. 40px é um padding de segurança.
-            // Se o ecrã for menor que o A4, calcula a proporção.
-            // Limita a no máximo 0.7 para Desktop.
             const targetScale = Math.min(0.7, (width - 40) / 794);
             setPreviewScale(targetScale);
         };
-        
-        handleResize(); // Executa ao iniciar
+        handleResize();
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // 1. INICIALIZA O MOTOR DE MEDIÇÃO OCULTO
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
@@ -105,22 +274,18 @@ const AdminDashboard: React.FC = () => {
         measurementNode.style.width = '794px'; 
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
-        
         measurementContainerRef.current = measurementNode;
         measurementRootRef.current = ReactDOM.createRoot(measurementNode);
-    
         return () => {
             setTimeout(() => {
                 measurementRootRef.current?.unmount();
-                if (document.body.contains(measurementNode)) {
-                    document.body.removeChild(measurementNode);
-                }
+                if (document.body.contains(measurementNode)) document.body.removeChild(measurementNode);
                 measurementContainerRef.current = null;
             }, 0);
         };
     }, []);
 
-    // 2. CÁLCULO DE PAGINAÇÃO
+    // --- LÓGICA ORIGINAL DE PAGINAÇÃO (RESTAURADA INTEGRALMENTE) ---
     const calculatePagination = useCallback(async (dataToPaginate: any) => {
         const container = measurementContainerRef.current;
         if (!container) return;
@@ -272,75 +437,10 @@ const AdminDashboard: React.FC = () => {
         }
     }, [selectedResume, calculatePagination]);
 
-    // Busca Dados do Banco
-    useEffect(() => {
-        if (!user) return;
-        onSnapshot(doc(db, 'stats', 'general'), (doc) => { if (doc.exists()) setStats(doc.data()); });
-        const leadsQuery = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(50));
-        onSnapshot(leadsQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setLeads(data);
-            processAnalytics(data);
-        });
-        const transQuery = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(50));
-        onSnapshot(transQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            processRevenue(data);
-        });
-        const reviewsQuery = query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50));
-        onSnapshot(reviewsQuery, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setReviews(data);
-        });
-    }, [user]);
 
-    // Processamento Gráfico
-    const processAnalytics = (data: any[]) => {
-        const cities: Record<string, number> = {};
-        const ages = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
-        data.forEach(item => {
-            let city = item.city || 'Desconhecido';
-             // Tenta recuperar do backup se o campo principal estiver errado
-             if (item.full_data_backup) {
-                try {
-                    const backup = JSON.parse(item.full_data_backup);
-                    if (backup.personalInfo && backup.personalInfo.address) {
-                        const parts = backup.personalInfo.address.split(',');
-                        let extracted = parts[0].trim();
-                        if (extracted.includes('-')) extracted = extracted.split('-')[0].trim();
-                        if (extracted) city = extracted;
-                    }
-                } catch (e) {}
-            }
-            cities[city] = (cities[city] || 0) + 1;
-            const age = parseInt(item.age);
-            if (age) {
-                if (age >= 18 && age <= 24) ages['18-24']++;
-                else if (age >= 25 && age <= 34) ages['25-34']++;
-                else if (age >= 35 && age <= 44) ages['35-44']++;
-                else if (age >= 45) ages['45+']++;
-            }
-        });
-        setCityData(Object.keys(cities).map(k => ({ name: k, value: cities[k] })).sort((a,b) => b.value - a.value).slice(0,5));
-        setAgeData(Object.keys(ages).map(k => ({ name: k, value: ages[k as keyof typeof ages] })));
-    };
-
-    const processRevenue = (data: any[]) => {
-        const grouped: Record<string, number> = {};
-        data.forEach(t => {
-            // @ts-ignore
-            const date = t.created_at?.toDate ? format(t.created_at.toDate(), 'dd/MM') : 'N/A';
-            grouped[date] = (grouped[date] || 0) + t.amount;
-        });
-        setRevenueData(Object.keys(grouped).map(k => ({ name: k, value: grouped[k] })).reverse());
-    };
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try { await signInWithEmailAndPassword(auth, email, password); } 
-        catch (err) { setError('Credenciais inválidas.'); }
-    };
-
+    const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError('Credenciais inválidas.'); } };
+    
+    // --- LÓGICA DE PDF (RESTAURADA E EXPANDIDA) ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
@@ -390,297 +490,223 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    const toggleReviewStatus = async (id: string, currentStatus: boolean) => {
-        const ref = doc(db, 'reviews', id);
-        await updateDoc(ref, { approved: !currentStatus });
-    };
+    const toggleReviewStatus = async (id: string, currentStatus: boolean) => { await updateDoc(doc(db, 'reviews', id), { approved: !currentStatus }); };
+    const deleteReview = async (id: string) => { if (confirm('Tem a certeza?')) await deleteDoc(doc(db, 'reviews', id)); };
+    
+    // LOGIN SCREEN
+    if (!user) { return ( <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-poppins"> <div className="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-sm relative overflow-hidden"> <div className="absolute top-0 left-0 w-full h-2 bg-blue-700"></div> <div className="text-center mb-8"> <img src="/logo-azul.png" alt="Vel" className="h-10 mx-auto mb-4" /> <h2 className="text-2xl font-bold text-gray-800">Painel Inteligente</h2> <p className="text-gray-400 text-sm">Vel Currículo Business Intelligence</p> </div> <form onSubmit={handleLogin} className="space-y-5"> {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg text-sm text-center font-medium">{error}</div>} <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" /> <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" /> <button className="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition">Acessar Dashboard</button> </form> </div> </div> ); }
 
-    const deleteReview = async (id: string) => {
-        if (confirm('Tem a certeza?')) { await deleteDoc(doc(db, 'reviews', id)); }
-    };
-
-    // Componente Interno para o Conteúdo da Sidebar
-    const SidebarContent = ({ collapsed, mobile }: any) => (
-        <>
-            <div className={`h-20 flex items-center justify-center border-b border-white/10 relative ${mobile ? 'px-6 justify-between' : ''}`}>
-                 <div className="flex items-center gap-3">
-                    {collapsed ? <span className="font-bold text-2xl">V</span> : <img src="/logo-header.png" alt="Logo" className="h-7" />}
-                 </div>
-                 {/* Botão de fechar no mobile */}
-                 {mobile && (
-                     <button onClick={() => setMobileMenuOpen(false)} className="text-white">
-                         <Icons.X />
-                     </button>
-                 )}
-                 {/* Botão de colapsar no desktop */}
-                 {!mobile && (
-                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -right-3 top-8 bg-blue-600 text-white p-1 rounded-full shadow-md hover:bg-blue-500 transition border border-white">
-                        {sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}
-                    </button>
-                 )}
-            </div>
-            <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
-                <SidebarItem collapsed={collapsed} active={activeTab === 'overview'} onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }} icon={<Icons.Grid />} label="Visão Geral" />
-                <SidebarItem collapsed={collapsed} active={activeTab === 'resumes'} onClick={() => { setActiveTab('resumes'); setMobileMenuOpen(false); }} icon={<Icons.FileText />} label="Currículos Gerados" />
-                <SidebarItem collapsed={collapsed} active={activeTab === 'reviews'} onClick={() => { setActiveTab('reviews'); setMobileMenuOpen(false); }} icon={<Icons.MessageSquare />} label="Avaliações" />
-                <SidebarItem collapsed={collapsed} active={activeTab === 'analytics'} onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false); }} icon={<Icons.TrendingUp />} label="Análises & Dados" />
-            </nav>
-            <div className="p-4 border-t border-white/10">
-                <button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-white transition ${collapsed ? 'justify-center' : ''}`}>
-                    <Icons.LogOut />
-                    {!collapsed && <span>Sair</span>}
-                </button>
-            </div>
-        </>
-    );
-
-    if (!user) {
-        return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-poppins">
-                <div className="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-sm relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-blue-700"></div>
-                    <div className="text-center mb-8">
-                        <img src="/logo-azul.png" alt="Vel" className="h-10 mx-auto mb-4" />
-                        <h2 className="text-2xl font-bold text-gray-800">Acesso Restrito</h2>
-                        <p className="text-gray-400 text-sm">Painel de Controle Vel Currículo</p>
-                    </div>
-                    <form onSubmit={handleLogin} className="space-y-5">
-                        {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg text-sm text-center font-medium">{error}</div>}
-                        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                        <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                        <button className="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition">Entrar</button>
-                    </form>
-                </div>
-            </div>
-        );
-    }
-
+    // --- RENDERIZAÇÃO DO PAINEL PRINCIPAL ---
     return (
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
-             {/* Adicionamos estilos inline para animações garantidas */}
-             <style>{`
-                @keyframes slideInLeft {
-                    from { transform: translateX(-100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
-                .animate-slide-in-left {
-                    animation: slideInLeft 0.3s ease-out forwards;
-                }
-                 @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                .animate-fade-in {
-                    animation: fadeIn 0.4s ease-out forwards;
-                }
-            `}</style>
-            
-            {/* === SIDEBAR DESKTOP === */}
-            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white hidden lg:flex flex-col transition-all duration-300 ease-in-out shadow-xl z-30 relative`}>
-                <SidebarContent collapsed={sidebarCollapsed} mobile={false} />
+            <style>{` .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; } @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } `}</style>
+
+            {/* SIDEBAR */}
+            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white hidden lg:flex flex-col transition-all duration-300 shadow-xl z-30 relative`}>
+                <div className="h-20 flex items-center justify-center border-b border-white/10 relative">
+                    {sidebarCollapsed ? <span className="font-bold text-2xl">V</span> : <img src="/logo-header.png" alt="Logo" className="h-7" />}
+                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -right-3 top-8 bg-blue-600 text-white p-1 rounded-full border border-white shadow-sm hover:scale-110 transition">{sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}</button>
+                </div>
+                <nav className="flex-1 py-6 px-3 space-y-2">
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Icons.Grid />} label="Visão Geral" />
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')} icon={<Icons.FileText />} label="Leads & Currículos" />
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<Icons.TrendingUp />} label="Business Intelligence" />
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" />
+                </nav>
+                <div className="p-4 border-t border-white/10"><button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 transition ${sidebarCollapsed ? 'justify-center' : ''}`}><Icons.LogOut /> {!sidebarCollapsed && <span>Sair</span>}</button></div>
             </aside>
 
-            {/* === SIDEBAR MOBILE (DRAWER) === */}
+            {/* MOBILE MENU */}
             {mobileMenuOpen && (
                 <div className="fixed inset-0 z-50 lg:hidden">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setMobileMenuOpen(false)}></div>
-                    <div className="absolute left-0 top-0 bottom-0 w-[80%] max-w-[300px] bg-[#002e9e] text-white shadow-2xl flex flex-col animate-slide-in-left">
-                         <SidebarContent collapsed={false} mobile={true} />
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+                    <div className="absolute left-0 top-0 bottom-0 w-64 bg-[#002e9e] text-white shadow-2xl flex flex-col animate-slide-in-left">
+                        <div className="h-20 flex items-center justify-between px-6 border-b border-white/10"><img src="/logo-header.png" className="h-6" /><button onClick={() => setMobileMenuOpen(false)}><Icons.X /></button></div>
+                        <nav className="p-4 space-y-2">
+                            <SidebarItem collapsed={false} active={activeTab === 'overview'} onClick={() => {setActiveTab('overview'); setMobileMenuOpen(false)}} icon={<Icons.Grid />} label="Visão Geral" />
+                            <SidebarItem collapsed={false} active={activeTab === 'resumes'} onClick={() => {setActiveTab('resumes'); setMobileMenuOpen(false)}} icon={<Icons.FileText />} label="Leads" />
+                            <SidebarItem collapsed={false} active={activeTab === 'analytics'} onClick={() => {setActiveTab('analytics'); setMobileMenuOpen(false)}} icon={<Icons.TrendingUp />} label="BI & Dados" />
+                        </nav>
                     </div>
                 </div>
             )}
 
-            <main className="flex-1 overflow-y-auto relative w-full">
-                {/* === HEADER RESPONSIVO === */}
-                <header className="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20">
-                    <div className="flex items-center gap-3">
-                        {/* Botão Menu Mobile */}
-                        <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600 p-1">
-                            <Icons.Menu />
-                        </button>
-                        <h1 className="text-lg lg:text-xl font-bold text-gray-800 truncate max-w-[200px] lg:max-w-none">
-                            {activeTab === 'overview' && 'Painel de Controle'}
-                            {activeTab === 'resumes' && 'Currículos Gerados'}
-                            {activeTab === 'reviews' && 'Avaliações'}
-                            {activeTab === 'analytics' && 'Dados'}
-                        </h1>
+            <main className="flex-1 overflow-y-auto w-full">
+                {/* TOP HEADER COM FILTRO DE DATAS */}
+                <header className="bg-white h-auto lg:h-20 border-b border-gray-200 flex flex-col lg:flex-row items-center justify-between px-4 lg:px-8 sticky top-0 z-20 shadow-sm py-3 lg:py-0 gap-3">
+                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                        <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600"><Icons.Menu /></button>
+                        <h1 className="text-xl font-bold text-gray-800">Dashboard Gerencial</h1>
                     </div>
-                    <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold flex items-center gap-2 whitespace-nowrap">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> 
-                        <span className="hidden sm:inline">ONLINE</span>
+
+                    {/* BARRA DE FILTROS INTELIGENTE */}
+                    <div className="flex flex-wrap items-center gap-2 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
+                        <button onClick={() => handlePresetChange('7d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '7d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>7 Dias</button>
+                        <button onClick={() => handlePresetChange('30d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '30d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>30 Dias</button>
+                        <button onClick={() => handlePresetChange('month')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === 'month' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>Este Mês</button>
+                        <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                        <div className="flex items-center gap-2">
+                            <input type="date" value={dateRange.start} onChange={e => {setDateRange({...dateRange, start: e.target.value}); setDatePreset('custom')}} className="text-xs border-none bg-transparent p-0 w-24 focus:ring-0 text-gray-600 font-medium" />
+                            <span className="text-gray-400 text-xs">até</span>
+                            <input type="date" value={dateRange.end} onChange={e => {setDateRange({...dateRange, end: e.target.value}); setDatePreset('custom')}} className="text-xs border-none bg-transparent p-0 w-24 focus:ring-0 text-gray-600 font-medium" />
+                        </div>
                     </div>
                 </header>
 
-                <div className="p-4 lg:p-10 max-w-[1600px] mx-auto space-y-6 lg:space-y-8 pb-20">
+                <div className="p-4 lg:p-8 max-w-[1600px] mx-auto space-y-8 pb-20">
+                    
+                    {/* VISÃO GERAL (OVERVIEW) */}
                     {activeTab === 'overview' && (
-                        <div className="space-y-6 lg:space-y-8 animate-fade-in-scale">
-                            {/* Stats Grid Responsivo */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-                                <StatCard title="Faturamento Total" value={stats.total_revenue} isMoney icon={<Icons.TrendingUp />} color="bg-emerald-500" />
-                                <StatCard title="Currículos Criados" value={stats.total_resumes} icon={<Icons.FileText />} color="bg-blue-500" />
-                                <StatCard title="Visitantes Únicos" value={stats.active_visitors} icon={<Icons.Users />} color="bg-purple-500" />
+                        <div className="space-y-6 animate-fade-in">
+                            {/* LINHA 1: KPIS ESTRATÉGICOS */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <KpiCard title="Faturamento" value={kpis.revenue} isMoney icon={<Icons.DollarSign />} color="bg-emerald-500" sub="No período selecionado" />
+                                <KpiCard title="Vendas" value={kpis.salesCount} icon={<Icons.Check />} color="bg-blue-500" sub={`Conv: ${kpis.conversionRate.toFixed(1)}%`} />
+                                <KpiCard title="Ticket Médio" value={kpis.avgTicket} isMoney icon={<Icons.Target />} color="bg-purple-500" sub="Por cliente" />
+                                <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`${kpis.visitors} Visitantes`} />
                             </div>
-                            <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm">
-                                <h3 className="font-bold text-gray-700 mb-6">Receita em Tempo Real</h3>
-                                <div className="h-[250px] lg:h-[300px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <AreaChart data={revenueData}>
-                                            <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#002e9e" stopOpacity={0.2}/><stop offset="95%" stopColor="#002e9e" stopOpacity={0}/></linearGradient></defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                                            <XAxis dataKey="name" tick={{fontSize: 10}} axisLine={false} tickLine={false} />
-                                            <YAxis tick={{fontSize: 10}} axisLine={false} tickLine={false} tickFormatter={val => `R$${val}`}/>
-                                            <Tooltip />
-                                            <Area type="monotone" dataKey="value" stroke="#002e9e" fillOpacity={1} fill="url(#colorRev)" />
-                                        </AreaChart>
-                                    </ResponsiveContainer>
+
+                            {/* LINHA 2: GRÁFICOS PRINCIPAIS */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Gráfico de Tendência (Misto) */}
+                                <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                    <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.TrendingUp /> Tendência de Tráfego e Vendas</h3>
+                                    <div className="h-[300px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <ComposedChart data={dailyChartData}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                                <XAxis dataKey="date" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
+                                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" hide />
+                                                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" hide />
+                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                <Legend />
+                                                <Bar yAxisId="left" dataKey="visitantes" name="Visitantes" fill="#e2e8f0" barSize={20} radius={[4, 4, 0, 0]} />
+                                                <Line yAxisId="left" type="monotone" dataKey="curriculos" name="Leads" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                                                <Line yAxisId="right" type="monotone" dataKey="vendas" name="Vendas" stroke="#10b981" strokeWidth={3} dot={{r: 4}} />
+                                            </ComposedChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Funil de Conversão */}
+                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                    <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.Filter /> Funil de Conversão</h3>
+                                    <div className="h-[300px] flex flex-col justify-center gap-4">
+                                        {funnelData.map((step, idx) => (
+                                            <div key={step.name} className="relative group">
+                                                <div className="flex justify-between text-sm font-medium mb-1 text-gray-600">
+                                                    <span>{step.name}</span>
+                                                    <span className="font-bold">{step.value}</span>
+                                                </div>
+                                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${kpis.visitors > 0 ? (step.value / kpis.visitors * 100) : 0}%`, backgroundColor: step.fill }}></div>
+                                                </div>
+                                                {idx > 0 && <div className="text-right text-[10px] text-gray-400 mt-1">
+                                                    {funnelData[idx-1].value > 0 ? ((step.value / funnelData[idx-1].value) * 100).toFixed(1) : 0}% conversão
+                                                </div>}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'resumes' && (
-                        <div className="space-y-4 animate-fade-in-scale">
-                             <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <h3 className="font-bold text-lg text-gray-800">Histórico de Gerações</h3>
-                                <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-bold">{leads.length} Registros</span>
-                            </div>
+                    {/* TAB BI & ANALYTICS AVANÇADO */}
+                    {activeTab === 'analytics' && (
+                        <div className="space-y-6 animate-fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {/* Top Cargos (Word Cloud Style List) */}
+                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                    <h3 className="font-bold text-gray-700 mb-4">Cargos Mais Procurados</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {jobData.map((job, idx) => (
+                                            <span key={idx} className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100" style={{ fontSize: `${Math.max(0.7, Math.min(1.2, 1 + (job.value / 10)))}rem`, opacity: 1 - (idx * 0.05) }}>
+                                                {job.name} <span className="text-blue-400 ml-1">{job.value}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
 
-                            {/* --- 1. VISÃO DE TABELA (Apenas Desktop) --- */}
-                            <div className="hidden md:block bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto w-full">
+                                {/* Preferência de Templates */}
+                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                    <h3 className="font-bold text-gray-700 mb-4">Modelos Favoritos</h3>
+                                    <div className="h-[200px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie data={templateData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                                                    {templateData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                                </Pie>
+                                                <Tooltip />
+                                                <Legend verticalAlign="bottom" height={36} iconSize={10}/>
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Top Cidades */}
+                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                    <h3 className="font-bold text-gray-700 mb-4">Top Cidades</h3>
+                                    <div className="space-y-3">
+                                        {cityData.map((city, idx) => (
+                                            <div key={idx} className="flex items-center justify-between">
+                                                <span className="text-sm text-gray-600 flex items-center gap-2"><span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">{idx + 1}</span> {city.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{width: `${(city.value / cityData[0].value) * 100}%`}}></div></div>
+                                                    <span className="text-xs font-bold text-gray-700">{city.value}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TAB RESUMES / LEADS */}
+                    {activeTab === 'resumes' && (
+                        <div className="animate-fade-in space-y-4">
+                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                                <h3 className="font-bold text-gray-800">Base de Leads Filtrada</h3>
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">{leads.length} Registros Totais</span>
+                            </div>
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-gray-50/50 text-gray-500 font-semibold border-b border-gray-100">
-                                            <tr><th className="px-6 py-4">Candidato</th><th className="px-6 py-4">Cargo Alvo</th><th className="px-6 py-4">Data</th><th className="px-6 py-4 text-center">Ações</th></tr>
+                                            <tr><th className="px-6 py-4">Nome</th><th className="px-6 py-4">Cargo</th><th className="px-6 py-4">Modelo</th><th className="px-6 py-4">Data</th><th className="px-6 py-4">Ação</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
-                                            {leads.map((lead) => (
-                                                <tr key={lead.id} className="hover:bg-blue-50/30 transition group">
-                                                    <td className="px-6 py-4"><div className="font-semibold text-gray-800">{lead.name}</div><div className="text-xs text-gray-400">{lead.email}</div></td>
-                                                    <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span></td>
-                                                    <td className="px-6 py-4 text-gray-500">{/* @ts-ignore */}{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM HH:mm', { locale: ptBR }) : '-'}</td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <button onClick={() => setSelectedResume(lead)} className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition flex items-center gap-2 mx-auto"><Icons.Eye /> Visualizar</button>
-                                                    </td>
+                                            {leads.slice(0, 50).map((lead) => (
+                                                <tr key={lead.id} className="hover:bg-blue-50/30 transition">
+                                                    <td className="px-6 py-4 font-medium text-gray-800">{lead.name}<div className="text-xs text-gray-400 font-normal">{lead.email}</div></td>
+                                                    <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{lead.jobTitle || 'Geral'}</span></td>
+                                                    <td className="px-6 py-4 text-xs text-gray-500">{lead.template?.replace('template-', '') || '-'}</td>
+                                                    {/* @ts-ignore */}
+                                                    <td className="px-6 py-4 text-gray-500">{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd/MM/yy HH:mm') : '-'}</td>
+                                                    <td className="px-6 py-4"><button onClick={() => setSelectedResume(lead)} className="text-blue-600 hover:text-blue-800 font-bold text-xs">Ver Currículo</button></td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-
-                            {/* --- 2. VISÃO DE CARTÕES (Apenas Mobile) --- */}
-                            <div className="md:hidden space-y-4">
-                                {leads.map((lead) => (
-                                    <div key={lead.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h4 className="font-bold text-gray-800">{lead.name}</h4>
-                                                <p className="text-xs text-gray-500">{lead.email}</p>
-                                            </div>
-                                            <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-medium border border-gray-200">{lead.jobTitle || 'Geral'}</span>
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                                            <Icons.Calendar />
-                                            {/* @ts-ignore */}
-                                            {lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd MMM yyyy • HH:mm', { locale: ptBR }) : '-'}
-                                        </div>
-
-                                        <button 
-                                            onClick={() => setSelectedResume(lead)} 
-                                            className="w-full mt-2 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 active:bg-blue-800 transition flex items-center justify-center gap-2"
-                                        >
-                                            <Icons.Eye /> Visualizar Currículo
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'reviews' && (
-                        <div className="space-y-6 animate-fade-in-scale">
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                 {reviews.length === 0 && <div className="col-span-full bg-blue-50 p-8 rounded-xl text-center text-blue-800 border border-blue-100"><Icons.MessageSquare /><p className="mt-2 font-medium">Ainda não existem avaliações.</p></div>}
-                                 {reviews.map(review => (
-                                     <div key={review.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
-                                         <div>
-                                             <div className="flex justify-between items-start mb-3">
-                                                 <div className="flex text-yellow-400">{[...Array(5)].map((_, i) => <Icons.Star key={i} />)}</div>
-                                                 <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded ${review.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{review.approved ? 'Aprovado' : 'Pendente'}</span>
-                                             </div>
-                                             <p className="text-gray-600 text-sm italic mb-4">"{review.text}"</p>
-                                         </div>
-                                         <div className="border-t border-gray-100 pt-3">
-                                             <p className="font-bold text-gray-800 text-sm">{review.author}</p>
-                                             <div className="flex gap-2 mt-3">
-                                                 <button onClick={() => toggleReviewStatus(review.id, review.approved)} className={`flex-1 py-1.5 rounded text-xs font-bold flex items-center justify-center gap-1 transition ${review.approved ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>{review.approved ? 'Ocultar' : <><Icons.Check /> Aprovar</>}</button>
-                                                 <button onClick={() => deleteReview(review.id)} className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100 transition"><Icons.Trash /></button>
-                                             </div>
-                                         </div>
-                                     </div>
-                                 ))}
-                             </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'analytics' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-scale">
-                             <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm"><h3 className="font-bold text-gray-700 mb-6">Top Cidades</h3><div className="h-[250px] lg:h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={cityData} layout="vertical"><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" hide /><YAxis dataKey="name" type="category" width={100} tick={{fontSize: 10}} /><Tooltip cursor={{fill: '#f8fafc'}} /><Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} /></BarChart></ResponsiveContainer></div></div>
-                             <div className="bg-white p-4 lg:p-6 rounded-xl border border-gray-200 shadow-sm"><h3 className="font-bold text-gray-700 mb-6">Faixa Etária</h3><div className="h-[250px] lg:h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={ageData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">{ageData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} iconSize={10} /></PieChart></ResponsiveContainer></div></div>
                         </div>
                     )}
                 </div>
             </main>
 
-            {/* === MODAL DE PREVIEW E DOWNLOAD === */}
+            {/* MODAL DE PREVIEW (Mantido Igual) */}
             {selectedResume && (
                 <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedResume(null)}></div>
-                    {/* Modal agora é full-width no mobile */}
-                    <div className="relative w-full lg:max-w-3xl bg-gray-100 h-full shadow-2xl flex flex-col animate-slide-in-right">
-                        <div className="bg-white p-3 lg:p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center z-10 gap-3">
-                            <div className="text-center sm:text-left"><h2 className="text-base lg:text-lg font-bold text-gray-800">{selectedResume.name}</h2><p className="text-xs text-gray-500">Visualização Administrativa</p></div>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <button onClick={handleDownloadPDF} disabled={isGeneratingPdf || !isPreviewReady} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm transition disabled:opacity-50">
-                                    {isGeneratingPdf ? 'Gerando...' : <><Icons.Download /> <span className="sm:hidden">PDF</span><span className="hidden sm:inline">Baixar PDF</span></>}
-                                </button>
-                                <button onClick={() => setSelectedResume(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><Icons.X /></button>
-                            </div>
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedResume(null)}></div>
+                    <div className="relative w-full lg:max-w-3xl bg-gray-100 h-full shadow-2xl flex flex-col animate-slide-in-left">
+                        <div className="bg-white p-3 border-b flex justify-between items-center z-10">
+                            <div><h2 className="font-bold">{selectedResume.name}</h2></div>
+                            <div className="flex gap-2"><button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">{isGeneratingPdf ? 'Gerando...' : <><Icons.Download /> Baixar PDF</>}</button><button onClick={() => setSelectedResume(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded"><Icons.X /></button></div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-2 lg:p-4 flex flex-col items-center gap-4 bg-gray-200/50" ref={previewContainerRef}>
-                            {!isPreviewReady ? (
-                                <div className="mt-10 flex flex-col items-center text-gray-400">
-                                    <svg className="animate-spin h-8 w-8 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                    <p className="text-sm">Calculando páginas...</p>
-                                </div>
-                            ) : (
-                                paginatedPages.map((page, index) => {
-                                    // CÁLCULO DA MARGEM NEGATIVA PARA COMPENSAR A ESCALA
-                                    // Se a escala diminui, a altura visual diminui, então precisamos subir a próxima página.
-                                    // Altura Original: 1123px.
-                                    // Altura Visual = 1123 * scale.
-                                    // Espaço Vazio = 1123 - (1123 * scale).
-                                    // Margem Negativa = -(Espaço Vazio) + 20px (gap).
-                                    const marginBottom = -(1123 * (1 - previewScale)) + 20;
-
-                                    return (
-                                        <div 
-                                            key={index} 
-                                            className="bg-white shadow-xl resume-page" 
-                                            style={{ 
-                                                width: '794px', 
-                                                minHeight: '1123px', 
-                                                transform: `scale(${previewScale})`, 
-                                                transformOrigin: 'top center', 
-                                                marginBottom: `${marginBottom}px` 
-                                            }}
-                                        >
-                                            <ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} />
-                                        </div>
-                                    )
-                                })
-                            )}
+                        <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center gap-4 bg-gray-200/50" ref={previewContainerRef}>
+                            {!isPreviewReady ? <div className="mt-10">Carregando...</div> : paginatedPages.map((page, index) => <div key={index} className="bg-white shadow-xl resume-page" style={{ width: '794px', minHeight: '1123px', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${-(1123 * (1 - previewScale)) + 20}px` }}><ResumePreview data={page} isDemoMode={false} isFirstPage={index === 0} isMeasurement={false} hideEmptySections={paginatedPages.length > 1} /></div>)}
                         </div>
                     </div>
                 </div>
@@ -691,17 +717,20 @@ const AdminDashboard: React.FC = () => {
 
 const SidebarItem = ({ collapsed, active, onClick, icon, label }: any) => (
     <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group relative ${active ? 'bg-white text-blue-900 shadow-lg font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white'} ${collapsed ? 'justify-center' : ''}`} title={collapsed ? label : ''}>
-        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{!collapsed && <span className="whitespace-nowrap animate-fade-in">{label}</span>}
+        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{!collapsed && <span className="animate-fade-in">{label}</span>}
     </button>
 );
 
-const StatCard = ({ title, value, icon, color, isMoney }: any) => (
-    <div className="bg-white p-4 lg:p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow group">
-        <div>
-            <p className="text-gray-500 text-[10px] lg:text-xs font-bold uppercase tracking-wide mb-1">{title}</p>
-            <h3 className="text-xl lg:text-2xl font-bold text-gray-800 group-hover:text-blue-700 transition-colors">{isMoney ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0) : (value || 0)}</h3>
+const KpiCard = ({ title, value, icon, color, isMoney, sub }: any) => (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-start mb-2">
+            <div className={`w-10 h-10 ${color} text-white rounded-lg flex items-center justify-center shadow-md`}>{icon}</div>
+            {sub && <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100">{sub}</span>}
         </div>
-        <div className={`w-10 h-10 lg:w-12 lg:h-12 ${color} text-white rounded-xl flex items-center justify-center shadow-lg shadow-opacity-30`}>{icon}</div>
+        <div>
+            <p className="text-gray-500 text-xs font-bold uppercase">{title}</p>
+            <h3 className="text-2xl font-bold text-gray-800 mt-1">{isMoney ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0) : (value || 0)}</h3>
+        </div>
     </div>
 );
 
