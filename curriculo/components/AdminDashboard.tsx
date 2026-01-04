@@ -299,28 +299,19 @@ const AdminDashboard: React.FC = () => {
         const cities: Record<string, number> = {};
         const ages = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
         data.forEach(item => {
-            // Tenta obter a cidade do campo salvo ou reprocessar do backup
             let city = item.city || 'Desconhecido';
-            
-            // CORREÇÃO: Tenta re-extrair a cidade do backup se disponível para corrigir registros antigos
-            if (item.full_data_backup) {
+             // Tenta recuperar do backup se o campo principal estiver errado
+             if (item.full_data_backup) {
                 try {
                     const backup = JSON.parse(item.full_data_backup);
                     if (backup.personalInfo && backup.personalInfo.address) {
                         const parts = backup.personalInfo.address.split(',');
-                        // Pega a primeira parte (Cidade vem primeiro)
                         let extracted = parts[0].trim();
-                        // Remove estado se houver traço (Ex: Cidade - Estado)
-                        if (extracted.includes('-')) {
-                            extracted = extracted.split('-')[0].trim();
-                        }
+                        if (extracted.includes('-')) extracted = extracted.split('-')[0].trim();
                         if (extracted) city = extracted;
                     }
-                } catch (e) {
-                    // Ignora erro de parse, usa o city padrão
-                }
+                } catch (e) {}
             }
-
             cities[city] = (cities[city] || 0) + 1;
             const age = parseInt(item.age);
             if (age) {
@@ -466,6 +457,23 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
+             {/* Adicionamos estilos inline para animações garantidas */}
+             <style>{`
+                @keyframes slideInLeft {
+                    from { transform: translateX(-100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .animate-slide-in-left {
+                    animation: slideInLeft 0.3s ease-out forwards;
+                }
+                 @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.4s ease-out forwards;
+                }
+            `}</style>
             
             {/* === SIDEBAR DESKTOP === */}
             <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white hidden lg:flex flex-col transition-all duration-300 ease-in-out shadow-xl z-30 relative`}>
@@ -475,7 +483,7 @@ const AdminDashboard: React.FC = () => {
             {/* === SIDEBAR MOBILE (DRAWER) === */}
             {mobileMenuOpen && (
                 <div className="fixed inset-0 z-50 lg:hidden">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}></div>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setMobileMenuOpen(false)}></div>
                     <div className="absolute left-0 top-0 bottom-0 w-[80%] max-w-[300px] bg-[#002e9e] text-white shadow-2xl flex flex-col animate-slide-in-left">
                          <SidebarContent collapsed={false} mobile={true} />
                     </div>
@@ -683,7 +691,7 @@ const AdminDashboard: React.FC = () => {
 
 const SidebarItem = ({ collapsed, active, onClick, icon, label }: any) => (
     <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group relative ${active ? 'bg-white text-blue-900 shadow-lg font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white'} ${collapsed ? 'justify-center' : ''}`} title={collapsed ? label : ''}>
-        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{(!collapsed || onClick) && <span>{label}</span>}
+        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{!collapsed && <span className="whitespace-nowrap animate-fade-in">{label}</span>}
     </button>
 );
 
