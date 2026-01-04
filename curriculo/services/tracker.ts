@@ -31,8 +31,13 @@ export const trackResumeGenerated = async (data?: ResumeData) => {
             let city = "Não informada";
             if (data.personalInfo.address) {
                 const parts = data.personalInfo.address.split(',');
-                // Pega a última parte ou penúltima, tentando achar a cidade
-                city = parts[parts.length - 1].trim(); 
+                // CORREÇÃO: Pega a primeira parte pois a Cidade vem primeiro no formulário
+                city = parts[0].trim(); 
+                
+                // Se tiver traço (ex: Cidade - Estado), pega só a cidade
+                if (city.includes('-')) {
+                    city = city.split('-')[0].trim();
+                }
             }
 
             await addDoc(collection(db, 'leads'), {
