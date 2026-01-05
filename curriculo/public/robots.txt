@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Bloquear áreas administrativas ou sensíveis
+Disallow: /admin
+Disallow: /#/admin
+Disallow: /private
+
+Sitemap: https://velcurriculo.com.br/sitemap.xml
