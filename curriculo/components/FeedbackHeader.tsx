@@ -284,7 +284,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
                         </a>
-                        <a href="https://www.instagram.com/velsites.com.br/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                        <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
                         </a>
                     </div>
