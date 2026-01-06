@@ -246,20 +246,26 @@ const TestimonialsSection = React.memo(() => {
 
 // COMPONENTE PRINCIPAL
 const AppContent: React.FC = () => {
-    // --- LÓGICA DE ROTEAMENTO ---
+    // --- LÓGICA DE ROTEAMENTO (ATUALIZADA) ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
 
     // --- HOOK DE FEEDBACK ---
     const { status, triggerFeedback } = useFeedback();
 
     useEffect(() => {
-        const handleHashChange = () => setCurrentRoute(window.location.hash);
+        const handleHashChange = () => {
+            console.log("Navegação detectada para:", window.location.hash);
+            setCurrentRoute(window.location.hash);
+        }
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    // Se a rota for admin, mostra o Dashboard e para por aqui
-    if (currentRoute === '#/admin') {
+    // DEBUG: Mostra no console qual rota está ativa
+    console.log("Rota Atual do App:", currentRoute);
+
+    // Se a rota for admin (aceita #/admin, #admin ou #/admin/), mostra o Dashboard
+    if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
         return <AdminDashboard />;
     }
 
