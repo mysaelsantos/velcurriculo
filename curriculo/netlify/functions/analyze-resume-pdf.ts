@@ -63,7 +63,14 @@ const handler: Handler = async (event: HandlerEvent) => {
     
     if (!jsonContent) throw new Error("IA retornou vazio");
 
-    jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    // BLINDAGEM: Extração robusta de JSON (ignora conversas da IA)
+    const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        jsonContent = jsonMatch[0];
+    } else {
+        // Fallback original
+        jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    }
 
     return {
       statusCode: 200,
