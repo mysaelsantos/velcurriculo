@@ -64,7 +64,15 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     if (!jsonString) throw new Error("IA retornou vazio.");
 
-    jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+    // CORREÇÃO: Extração robusta de JSON usando Regex
+    // Busca pelo primeiro '{' e o último '}' para ignorar textos extras da IA
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        jsonString = jsonMatch[0];
+    } else {
+        // Fallback: limpeza simples caso o Regex falhe
+        jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+    }
     
     return {
       statusCode: 200,
