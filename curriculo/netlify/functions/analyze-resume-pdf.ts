@@ -6,9 +6,8 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Função auxiliar de retry (mantida igual)
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
-  let lastError: Error | null = new Error("Falha API.");
+  let lastError: Error | null = new Error("Falha API");
   for (let i = 0; i < maxTries; i++) {
     try {
       const response = await fetch(url, options);
@@ -18,8 +17,8 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
          continue;
       }
       throw new Error(`Status ${response.status}`);
-    } catch (error) {
-      lastError = error as Error;
+    } catch (e) {
+      lastError = e as Error;
       if (i < maxTries - 1) await sleep(1000);
     }
   }
@@ -28,28 +27,28 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
 const handler: Handler = async (event: HandlerEvent) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
-
+  
   if (!API_KEY) return { statusCode: 500, body: JSON.stringify({ message: "Chave ausente." }) };
 
   try {
     const { fullText } = JSON.parse(event.body || '{}');
     if (!fullText) return { statusCode: 400, body: JSON.stringify({ message: "Texto vazio." }) };
 
-    // Limpeza de caracteres de controle
+    // Limpeza de caracteres
     const safeText = fullText.substring(0, 30000).replace(/[\x00-\x1F\x7F-\x9F]/g, "");
 
-    // 🔒 SEGURANÇA: Envelopamento do texto para evitar Prompt Injection
+    // 🔒 SEGURANÇA: Envelopamento com aspas triplas
     const prompt = `
-    Analise o texto delimitado por três aspas abaixo e extraia as experiências profissionais.
-    Texto da Carteira de Trabalho:
+    Analise o currículo delimitado por três aspas abaixo.
+    Texto do Currículo:
     """
     ${safeText}
     """
-    Retorne APENAS um JSON válido neste formato: {"experiences": [{"company": "Nome", "jobTitle": "Cargo", "location": "Cidade - UF", "startDate": "MM/AAAA", "endDate": "MM/AAAA"}]}. Se a data fim não existir, use "Atual".
+    Extraia os dados em JSON estrito seguindo esta estrutura: { "personalInfo": {...}, "summary": "...", "experiences": [...], "education": [...], "courses": [...], "languages": [...], "skills": [...] }.
     `;
-    
+
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }], // Enviamos tudo junto envelopado
+      contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
     };
 
@@ -60,23 +59,23 @@ const handler: Handler = async (event: HandlerEvent) => {
     });
 
     const result: any = await apiResponse.json();
-    let jsonString = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!jsonString) throw new Error("IA retornou vazio.");
-
-    jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
+    let jsonContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
+    if (!jsonContent) throw new Error("IA retornou vazio");
+
+    jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: jsonString,
+      body: jsonContent,
     };
 
   } catch (error) {
     const err = error as Error;
-    // 🔒 PRIVACIDADE: Logamos apenas a mensagem, nunca o objeto completo
-    console.error("[analyze-pdf] Erro:", err.message);
-    return { statusCode: 500, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
+    // 🔒 PRIVACIDADE: Logamos apenas a mensagem
+    console.error("[analyze-resume] Erro:", err.message);
+    return { statusCode: 500, body: JSON.stringify({ message: "Erro ao processar currículo." }) };
   }
 };
 
