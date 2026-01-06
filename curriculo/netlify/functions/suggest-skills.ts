@@ -104,10 +104,16 @@ const handler: Handler = async (event: HandlerEvent) => {
       throw new Error("A API da IA retornou uma resposta inválida.");
     }
 
-    const skillsText = result.candidates[0].content.parts[0].text;
+    let skillsText = result.candidates[0].content.parts[0].text;
     
-    // Tratamento da resposta para array
-    const skills = skillsText.split(',').map((skill: string) => skill.trim()).filter(Boolean);
+    // BLINDAGEM: Limpeza de formatação Markdown e prefixos comuns
+    skillsText = skillsText.replace(/\*\*/g, '').replace(/\*/g, '').replace(/\./g, '');
+    
+    // Tratamento robusto: aceita vírgula OU quebra de linha como separador
+    const skills = skillsText
+      .split(/,|\n/)
+      .map((skill: string) => skill.trim())
+      .filter((s: string) => s.length > 0 && !s.includes(':')); // Filtra vazios e cabeçalhos como "Lista:"
 
     return {
       statusCode: 200,
