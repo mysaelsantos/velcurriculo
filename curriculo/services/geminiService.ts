@@ -74,7 +74,11 @@ const extractTextFromPDF = async (file: File): Promise<string> => {
   const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
   let fullText = '';
 
-  for (let i = 1; i <= pdf.numPages; i++) {
+  // SEGURANÇA: Limite de páginas para evitar travamento em arquivos grandes
+  const MAX_PAGES = 6; 
+  const pagesToProcess = Math.min(pdf.numPages, MAX_PAGES);
+
+  for (let i = 1; i <= pagesToProcess; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const pageText = textContent.items.map((item: any) => item.str).join(' ');
