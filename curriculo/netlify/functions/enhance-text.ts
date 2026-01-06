@@ -1,36 +1,38 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// Configuração para o modelo mais estável e com maior limite de uso
+// Configuração para o modelo
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
+// 🔒 SEGURANÇA: Limite de caracteres para evitar abuso e custos altos
+const MAX_INPUT_LENGTH = 2500; 
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
+const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) => {
   let lastError: Error | null = new Error("Falha ao contactar a API.");
 
   for (let i = 0; i < maxTries; i++) {
     try {
-      // Usando fetch nativo do Node 18+
       const response = await fetch(url, options);
       
       if (response.ok) return response;
 
+      // Tratamento específico para Rate Limit (Erro 429)
       if (response.status === 429) {
         console.warn(`[enhance-text] Tentativa ${i + 1}/${maxTries} falhou: 429 Resource Exhausted.`);
         lastError = new Error("RESOURCE_EXHAUSTED");
         if (i < maxTries - 1) {
-          // Backoff exponencial: espera 2s, 4s, 8s...
           const delay = Math.pow(2, i + 1) * 1000;
           await sleep(delay);
           continue; 
         }
       } else {
-        console.error(`[enhance-text] Tentativa ${i + 1} falhou: Status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
         // @ts-ignore
         const msg = errorBody.message || errorBody.error?.message || response.statusText;
+        console.error(`[enhance-text] Erro API: ${msg}`);
         lastError = new Error(msg);
         break; 
       }
@@ -48,27 +50,52 @@ const handler: Handler = async (event: HandlerEvent) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  console.log(`[enhance-text] Iniciando. Modelo: ${MODEL_NAME}`);
-  
   if (!API_KEY) {
     console.error("[enhance-text] ERRO: Chave API não configurada.");
     return { statusCode: 500, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
   try {
-    const { prompt } = JSON.parse(event.body || '{}');
-    if (!prompt) {
-      return { statusCode: 400, body: JSON.stringify({ message: "Prompt obrigatório." }) };
+    const body = JSON.parse(event.body || '{}');
+    let { prompt } = body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return { statusCode: 400, body: JSON.stringify({ message: "Texto para aprimoramento é obrigatório." }) };
     }
+
+    // 🔒 SEGURANÇA: Validação de Tamanho
+    if (prompt.length > MAX_INPUT_LENGTH) {
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ message: `O texto é muito longo (${prompt.length} caracteres). O limite é ${MAX_INPUT_LENGTH}.` }) 
+      };
+    }
+
+    // 🔒 SEGURANÇA: Sanitização Básica e Envelopamento
+    // Removemos caracteres de controle estranhos e delimitamos o input do usuário
+    const sanitizedPrompt = prompt.replace(/[\x00-\x1F\x7F-\x9F]/g, ""); 
+    
+    // Instrução defensiva para a IA
+    const userMessage = `
+    Analise e melhore o texto delimitado por três aspas abaixo.
+    Texto do Usuário:
+    """
+    ${sanitizedPrompt}
+    """
+    Lembre-se das regras: Verdade, Tamanho (máx +20%), Formatação e Tom Profissional.
+    `;
 
     const payload = {
       contents: [
-        { role: "user", parts: [{ text: "Atue como um Consultor de Carreira Sênior especializado em polir currículos, tornando-os profissionais e claros sem alterar a veracidade, e siga rigorosamente estas regras: (1) Lei da Verdade: PROIBIDO adicionar dados novos não presentes no original; (2) Lei do Tamanho: o texto final deve ter no máximo 20% a mais de caracteres que o original; (3) Lei da Formatação: respeite a estrutura original (parágrafos permanecem parágrafos, listas permanecem listas); (4) Lei do Tom: use voz ativa e um tom profissional equilibrado, evitando gírias e corporatês vazio; (5) Instruções Contextuais: se for type: 'summary', melhore a narrativa destacando tempo de experiência e objetivo (pode usar 1ª pessoa), mas se for type: 'experience', substitua verbos passivos por verbos de ação e melhore a clareza das responsabilidades:" }] },
-        { role: "model", parts: [{ text: "Entendido." }] },
-        { role: "user", parts: [{ text: prompt }] }
+        { role: "user", parts: [{ text: "Atue como um Consultor de Carreira Sênior especializado em polir currículos. REGRAS RÍGIDAS: (1) NÃO invente fatos; (2) Mantenha o tamanho próximo do original; (3) Use voz ativa e profissional; (4) Se o texto for ofensivo ou sem sentido, retorne o original intacto." }] },
+        { role: "model", parts: [{ text: "Entendido. Aguardo o texto para processar seguindo as regras de segurança e estilo." }] },
+        { role: "user", parts: [{ text: userMessage }] }
       ],
       generationConfig: {
-        temperature: 0.7, topK: 40, topP: 0.95, maxOutputTokens: 2048,
+        temperature: 0.4, // Baixamos a temperatura para ser menos "criativo" e mais fiel
+        topK: 40, 
+        topP: 0.95, 
+        maxOutputTokens: 2048,
       },
     };
 
@@ -81,12 +108,10 @@ const handler: Handler = async (event: HandlerEvent) => {
     const result: any = await apiResponse.json();
     
     if (!result.candidates || !result.candidates[0]?.content?.parts?.[0]?.text) {
-      console.error("[enhance-text] Resposta inválida da IA:", JSON.stringify(result));
       throw new Error("A IA não retornou um texto válido.");
     }
 
     const text = result.candidates[0].content.parts[0].text;
-    console.log("[enhance-text] Sucesso.");
 
     return {
       statusCode: 200,
@@ -96,14 +121,19 @@ const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     const err = error as Error;
+    console.error("[enhance-text] Falha:", err.message);
+
     if (err.message === "RESOURCE_EXHAUSTED") {
       return {
         statusCode: 429,
-        body: JSON.stringify({ message: "O sistema está sobrecarregado. Tente novamente em alguns segundos." })
+        body: JSON.stringify({ message: "Muitas solicitações no momento. Tente novamente em 1 minuto." })
       };
     }
-    console.error("[enhance-text] Erro final:", err);
-    return { statusCode: 500, body: JSON.stringify({ message: "Não foi possível melhorar o texto agora." }) };
+
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ message: "Não foi possível processar o texto no momento." }) 
+    };
   }
 };
 
