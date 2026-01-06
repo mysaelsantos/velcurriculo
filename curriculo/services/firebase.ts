@@ -2,15 +2,15 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// ⚠️ COLE AQUI AS SUAS CHAVES DO FIREBASE
+// ⚠️ Configuração segura usando variáveis de ambiente (Vite)
 const firebaseConfig = {
-  apiKey: "AIzaSyCv63N0tpMtTLs2tZi_AXtfOewB-WOlvGg",
-  authDomain: "velcurriculo.firebaseapp.com",
-  projectId: "velcurriculo",
-  storageBucket: "velcurriculo.firebasestorage.app",
-  messagingSenderId: "635056463896",
-  appId: "1:635056463896:web:8e378add74f518c833e36d",
-  measurementId: "G-4GGLZBZXMZ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
