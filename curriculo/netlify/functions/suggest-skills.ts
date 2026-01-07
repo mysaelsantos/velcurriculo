@@ -47,19 +47,21 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
 export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS)
-  const origin = event.headers.origin || event.headers.Origin;
-  const isLocalhost = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
 
-  // Headers de CORS dinâmicos (Permite a origem correta ou * se não definida)
+  // Headers de CORS dinâmicos (Permite apenas a origem correta)
   const headers = {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
-  // Verificação de segurança em Produção
-  if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
-     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
+  // Verificação de segurança em Produção ATIVADA
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     console.warn(`[Bloqueio Skills] Origem não permitida: ${origin}`);
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
   }
 
   if (event.httpMethod === 'OPTIONS') {
