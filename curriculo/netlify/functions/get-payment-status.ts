@@ -1,9 +1,11 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// CORREÇÃO: Sintaxe de importação da V1 do MercadoPago
 import mercadopago from "mercadopago";
 
-export const handler: Handler = async (event: HandlerEvent) => {
-  // Configuração de CORS para permitir requisições do frontend
+// 🔒 SEGURANÇA: Configurações do Servidor
+// (Mantemos a estrutura original)
+
+const handler: Handler = async (event: HandlerEvent) => {
+  // 1. ROBUSTEZ: Headers CORS em todas as respostas
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -14,17 +16,15 @@ export const handler: Handler = async (event: HandlerEvent) => {
     return { statusCode: 200, headers, body: '' };
   }
 
+  // Verificação de método
   if (event.httpMethod !== 'GET') {
-    return {
-        statusCode: 405,
-        headers: headers,
-        body: 'Method Not Allowed',
-    };
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
   }
 
   // CORREÇÃO: Configuração da V1
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-      return { statusCode: 500, headers, body: JSON.stringify({ message: "Configuração do servidor incompleta." }) };
+      console.error("ERRO CRÍTICO: Token MP ausente.");
+      return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro de configuração." }) };
   }
 
   mercadopago.configure({
@@ -33,12 +33,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   const paymentId = event.queryStringParameters?.paymentId;
 
-  // PROTEÇÃO: Verificar se o paymentId existe E se é um número válido
+  // 2. ROBUSTEZ: Validação forte do ID (evita crash da lib com NaN)
   if (!paymentId || typeof paymentId !== 'string' || isNaN(Number(paymentId))) {
     return {
       statusCode: 400,
       headers: headers,
-      body: JSON.stringify({ message: 'Payment ID is required and must be a number.' }),
+      body: JSON.stringify({ message: 'Payment ID is required and must be a valid number.' }),
     };
   }
 
@@ -65,7 +65,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (err) {
     const error = err as Error;
-    console.error(`Mercado Pago Error retrieving payment status: ${error.message}`);
+    console.error(`[Pagamento Status] Erro: ${error.message}`);
     
     // Tratamento para erro 404 (ID não encontrado) vs erro 500 (Erro no servidor)
     const statusCode = (error as any).status === 404 ? 404 : 500;
@@ -73,7 +73,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
     return {
         statusCode: statusCode,
         headers: headers,
-        body: JSON.stringify({ message: error.message }),
+        body: JSON.stringify({ message: "Erro ao verificar status do pagamento." }),
     };
   }
 };
+
+export { handler };
