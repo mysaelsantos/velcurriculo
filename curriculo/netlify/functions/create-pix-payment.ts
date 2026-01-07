@@ -11,24 +11,30 @@ const PRICING_TABLE = {
 const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
 
 // Site permitido (troque pela sua URL de produção quando tiver, ou use localhost para testes)
-const ALLOWED_ORIGIN = process.env.URL || "http://localhost:8888"; // Netlify define process.env.URL automaticamente
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
 
 const handler: Handler = async (event: HandlerEvent) => {
-  // 1. ROBUSTEZ: Headers CORS padronizados para todas as respostas
+  // 1. Verificação de Origem (CORS - Etapa 2)
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
+
+  // 1. ROBUSTEZ: Headers CORS padronizados
   const headers = {
-    "Access-Control-Allow-Origin": "*", // Em produção, ajuste para event.headers.origin || "*"
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
+  // Bloqueio de segurança efetivo
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     console.warn(`[Bloqueio Pagamento] Origem não autorizada: ${origin}`);
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+  }
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
-  
-  // 1. Verificação de Origem (CORS - Etapa 2 já inclusa aqui)
-  const origin = event.headers.origin || event.headers.Origin;
-  // Nota: Em desenvolvimento local, origin pode ser undefined ou diferente. 
-  // Em produção, isso impede requisições de sites piratas.
   
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: 'Method Not Allowed' };
