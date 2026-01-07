@@ -9,10 +9,11 @@ import {
 } from 'recharts';
 import { format, subDays, isAfter, isBefore, endOfDay, startOfDay, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-// @ts-ignore
+
+// Correção de Tipagem: Importações limpas
 import { toPng } from 'html-to-image';
-// @ts-ignore
 import { jsPDF } from 'jspdf';
+
 import ResumePreview, { QR_CONFIG } from './ResumePreview';
 
 // --- ÍCONES ---
@@ -584,6 +585,8 @@ const AdminDashboard: React.FC = () => {
                             <SidebarItem collapsed={false} active={activeTab === 'overview'} onClick={() => {setActiveTab('overview'); setMobileMenuOpen(false)}} icon={<Icons.Grid />} label="Visão Geral" />
                             <SidebarItem collapsed={false} active={activeTab === 'resumes'} onClick={() => {setActiveTab('resumes'); setMobileMenuOpen(false)}} icon={<Icons.FileText />} label="Leads" />
                             <SidebarItem collapsed={false} active={activeTab === 'analytics'} onClick={() => {setActiveTab('analytics'); setMobileMenuOpen(false)}} icon={<Icons.TrendingUp />} label="BI & Dados" />
+                            {/* 🔥 CORREÇÃO: Adicionada a aba Avaliações no Mobile */}
+                            <SidebarItem collapsed={false} active={activeTab === 'reviews'} onClick={() => {setActiveTab('reviews'); setMobileMenuOpen(false)}} icon={<Icons.MessageSquare />} label="Avaliações" />
                         </nav>
                     </div>
                 </div>
