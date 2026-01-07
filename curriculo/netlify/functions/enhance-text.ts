@@ -47,40 +47,60 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
 
 const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
-  // Adicionado no início para verificar a origem antes de processar qualquer coisa
+  // Headers padrão para permitir CORS em todas as respostas
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  };
+
   const origin = event.headers.origin || event.headers.Origin;
   // Se quiser ser muito estrito (cuidado em localhost):
   // const ALLOWED = "https://velcurriculo.com.br";
-  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, body: "Forbidden" };
+  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, headers, body: "Forbidden" };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
   }
 
   if (!API_KEY) {
     console.error("[enhance-text] ERRO: Chave API não configurada.");
-    return { statusCode: 500, body: JSON.stringify({ message: "Erro interno de configuração." }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
   try {
-    const body = JSON.parse(event.body || '{}');
+    // 1. ROBUSTEZ: Parse Seguro
+    let body;
+    try {
+        body = JSON.parse(event.body || '{}');
+    } catch (e) {
+        return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
+    }
+
     let { prompt } = body;
 
     if (!prompt || typeof prompt !== 'string') {
-      return { statusCode: 400, body: JSON.stringify({ message: "Texto para aprimoramento é obrigatório." }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto para aprimoramento é obrigatório." }) };
     }
 
     // 🔒 SEGURANÇA: Validação de Tamanho
     if (prompt.length > MAX_INPUT_LENGTH) {
       return { 
         statusCode: 400, 
+        headers,
         body: JSON.stringify({ message: `O texto é muito longo (${prompt.length} caracteres). O limite é ${MAX_INPUT_LENGTH}.` }) 
       };
     }
 
-    // 🔒 SEGURANÇA: Sanitização Básica e Envelopamento
-    // Removemos caracteres de controle estranhos e delimitamos o input do usuário
-    const sanitizedPrompt = prompt.replace(/[\x00-\x1F\x7F-\x9F]/g, ""); 
+    // 🔒 SEGURANÇA: Sanitização e Proteção contra Prompt Injection
+    // Removemos caracteres de controle E substituímos aspas triplas
+    const sanitizedPrompt = prompt
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
+        .replace(/"""/g, "'''"); 
     
     // Instrução defensiva para a IA
     const userMessage = `
@@ -122,7 +142,7 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers, // Headers padronizados
       body: JSON.stringify({ text }),
     };
 
@@ -133,12 +153,14 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (err.message === "RESOURCE_EXHAUSTED") {
       return {
         statusCode: 429,
+        headers,
         body: JSON.stringify({ message: "Muitas solicitações no momento. Tente novamente em 1 minuto." })
       };
     }
 
     return { 
       statusCode: 500, 
+      headers,
       body: JSON.stringify({ message: "Não foi possível processar o texto no momento." }) 
     };
   }
