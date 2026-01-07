@@ -9,8 +9,9 @@ const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br"
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Função auxiliar de retry (mantida original)
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
-  let lastError: Error | null = new Error("Falha API");
+  let lastError: Error | null = new Error("Falha API.");
   for (let i = 0; i < maxTries; i++) {
     try {
       const response = await fetch(url, options);
@@ -20,8 +21,8 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
          continue;
       }
       throw new Error(`Status ${response.status}`);
-    } catch (e) {
-      lastError = e as Error;
+    } catch (error) {
+      lastError = error as Error;
       if (i < maxTries - 1) await sleep(1000);
     }
   }
@@ -40,19 +41,20 @@ export const handler: Handler = async (event: HandlerEvent) => {
     "Content-Type": "application/json"
   };
 
-  // Se quiser ser muito estrito (cuidado em localhost):
+  // Verificação de origem para produção
   if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
-      // return { statusCode: 403, headers, body: "Forbidden" }; // Opcional: descomentar para bloquear
+     // Em produção, bloqueia se a origem não for a esperada
+     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden Access" }) };
   }
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' };
-  
+
   if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave ausente." }) };
 
   try {
-    // PROTEÇÃO: Parse seguro do corpo da requisição
+    // 1. ROBUSTEZ: Parse seguro do corpo da requisição
     let body;
     try {
         body = JSON.parse(event.body || '{}');
@@ -63,14 +65,14 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const { fullText } = body;
     if (!fullText) return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto vazio." }) };
 
-    // Limpeza de caracteres e PROTEÇÃO CONTRA PROMPT INJECTION
-    // Substituímos aspas triplas (""") por aspas simples (''') para não quebrar o prompt
+    // Limpeza de caracteres de controle
+    // 2. SEGURANÇA: Sanitização contra Prompt Injection (substitui aspas triplas)
     const safeText = fullText
-        .substring(0, 30000)
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
-        .replace(/"""/g, "'''");
+      .substring(0, 30000)
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
+      .replace(/"""/g, "'''");
 
-    // 🔒 SEGURANÇA: Envelopamento com aspas triplas
+    // 🔒 SEGURANÇA: Envelopamento do texto
     const prompt = `
     Analise o currículo delimitado por três aspas abaixo.
     Texto do Currículo:
@@ -79,9 +81,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
     """
     Extraia os dados em JSON estrito seguindo esta estrutura: { "personalInfo": {...}, "summary": "...", "experiences": [...], "education": [...], "courses": [...], "languages": [...], "skills": [...] }.
     `;
-
+    
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
+      contents: [{ parts: [{ text: prompt }] }], // Enviamos tudo junto envelopado
       generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
     };
 
@@ -92,37 +94,37 @@ export const handler: Handler = async (event: HandlerEvent) => {
     });
 
     const result: any = await apiResponse.json();
-    let jsonContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!jsonContent) throw new Error("IA retornou vazio");
+    let jsonString = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    // BLINDAGEM: Extração robusta de JSON (ignora conversas da IA)
-    const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+    if (!jsonString) throw new Error("IA retornou vazio.");
+
+    // CORREÇÃO: Extração robusta de JSON usando Regex
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-        jsonContent = jsonMatch[0];
+        jsonString = jsonMatch[0];
     } else {
-        // Fallback original
-        jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Fallback: limpeza simples caso o Regex falhe
+        jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
     }
-
-    // Validação final: Garantir que é um JSON válido antes de enviar
+    
+    // 3. ROBUSTEZ: Validação final se é um JSON válido antes de retornar
     try {
-        JSON.parse(jsonContent);
+      JSON.parse(jsonString);
     } catch (e) {
-        console.error("A IA retornou um JSON inválido:", jsonContent);
-        throw new Error("Falha na formatação da resposta da IA.");
+      console.error("A IA retornou um JSON inválido:", jsonString);
+      throw new Error("Falha na formatação da resposta da IA.");
     }
 
     return {
       statusCode: 200,
-      headers: headers, // Usando os headers com CORS
-      body: jsonContent,
+      headers: headers,
+      body: jsonString,
     };
 
   } catch (error) {
     const err = error as Error;
-    // 🔒 PRIVACIDADE: Logamos apenas a mensagem
-    console.error("[analyze-resume] Erro:", err.message);
-    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao processar currículo." }) };
+    // 🔒 PRIVACIDADE: Logamos apenas a mensagem, nunca o objeto completo
+    console.error("[analyze-pdf] Erro:", err.message);
+    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
   }
 };
