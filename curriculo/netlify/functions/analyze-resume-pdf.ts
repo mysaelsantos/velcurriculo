@@ -5,7 +5,7 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
-// Defina a URL do seu frontend em produção
+// Defina a URL do seu frontend em produção (sem barra no final)
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -33,20 +33,21 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
 export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS) e CONFIGURAÇÃO
-  const origin = event.headers.origin || event.headers.Origin;
-  const isLocalhost = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
 
-  // Headers padrão para permitir CORS em todas as respostas
+  // Headers padrão para permitir CORS apenas se a origem for permitida
   const headers = {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
-  // Verificação de origem para produção (Segurança extra)
-  if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
-     // Opcional: Descomentar abaixo para bloquear acessos externos rigorosamente
-     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
+  // Verificação de origem para produção (Segurança extra ATIVADA)
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     console.warn(`[Bloqueio de Segurança] Tentativa de acesso não autorizado da origem: ${origin}`);
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
   }
 
   // Responde imediatamente a requisições OPTIONS (pre-flight do navegador)
@@ -116,7 +117,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
     try {
       JSON.parse(jsonString);
     } catch (e) {
-      console.error("JSON inválido retornado pela IA:", jsonString);
+      // 🔒 SEGURANÇA: Logamos apenas uma amostra segura, não o texto completo com dados pessoais
+      console.error("JSON inválido retornado pela IA (amostra inicial):", jsonString.substring(0, 50) + "...");
       throw new Error("A IA não gerou um JSON válido.");
     }
 
