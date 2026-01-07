@@ -5,7 +5,7 @@ import mercadopago from "mercadopago";
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
 
 // Handler principal para verificação de status
-const handler: Handler = async (event: HandlerEvent) => {
+export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS)
   const origin = event.headers.origin || event.headers.Origin || "";
   const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
@@ -97,5 +97,3 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 };
-
-export { handler };
