@@ -1,58 +1,62 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import mercadopago from "mercadopago";
 
-// 🔒 SEGURANÇA: Configurações do Servidor
-// (Mantemos a estrutura original)
-
+// Handler principal para verificação de status
 const handler: Handler = async (event: HandlerEvent) => {
-  // 1. ROBUSTEZ: Headers CORS em todas as respostas
+  // 🔒 ETAPA 1: HEADERS CORS
+  // Permite que o frontend acesse esta função sem erros de bloqueio
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
+  // Responde rápido a requisições OPTIONS
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
-  // Verificação de método
+  // Verifica se é GET
   if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, headers, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers, body: JSON.stringify({ message: 'Método não permitido.' }) };
   }
 
-  // CORREÇÃO: Configuração da V1
+  // Verifica configuração do Token
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-      console.error("ERRO CRÍTICO: Token MP ausente.");
-      return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro de configuração." }) };
+      console.error("ERRO CRÍTICO: Token do Mercado Pago (MERCADO_PAGO_ACCESS_TOKEN) ausente no .env.");
+      return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
+  // Configura a SDK do Mercado Pago
   mercadopago.configure({
     access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
   });
 
   const paymentId = event.queryStringParameters?.paymentId;
 
-  // 2. ROBUSTEZ: Validação forte do ID (evita crash da lib com NaN)
-  if (!paymentId || typeof paymentId !== 'string' || isNaN(Number(paymentId))) {
+  // 🔒 ETAPA 2: VALIDAÇÃO FORTE
+  // Garante que o ID existe e é numérico antes de chamar a API externa
+  if (!paymentId || isNaN(Number(paymentId))) {
     return {
       statusCode: 400,
       headers: headers,
-      body: JSON.stringify({ message: 'Payment ID is required and must be a valid number.' }),
+      body: JSON.stringify({ message: 'ID do pagamento inválido ou ausente.' }),
     };
   }
 
   try {
-    // CORREÇÃO: Chamada da API da V1
+    // Busca informações do pagamento
     const payment = await mercadopago.payment.get(Number(paymentId));
 
     let frontendStatus = 'pending';
-    if (payment.body.status === 'approved') { // CORREÇÃO: Acesso ao status na V1
+    
+    // Mapeia os status do Mercado Pago para o que o frontend espera
+    if (payment.body.status === 'approved') {
         frontendStatus = 'succeeded';
-    }
-    // Adicional: Tratamento para falhas explícitas
-    else if (payment.body.status === 'rejected' || payment.body.status === 'cancelled') {
+    } else if (payment.body.status === 'rejected' || payment.body.status === 'cancelled') {
         frontendStatus = 'failed';
+    } else if (payment.body.status === 'in_process') {
+        frontendStatus = 'pending';
     }
     
     return {
@@ -60,20 +64,23 @@ const handler: Handler = async (event: HandlerEvent) => {
         headers: headers,
         body: JSON.stringify({
             status: frontendStatus,
+            id: payment.body.id,
+            date_created: payment.body.date_created
         }),
     };
 
   } catch (err) {
     const error = err as Error;
-    console.error(`[Pagamento Status] Erro: ${error.message}`);
+    console.error(`[Get Payment Status] Erro: ${error.message}`);
     
-    // Tratamento para erro 404 (ID não encontrado) vs erro 500 (Erro no servidor)
+    // Diferencia erro de "Não encontrado" (404) de erros do servidor
     const statusCode = (error as any).status === 404 ? 404 : 500;
+    const message = statusCode === 404 ? "Pagamento não encontrado." : "Erro ao verificar status.";
 
     return {
         statusCode: statusCode,
         headers: headers,
-        body: JSON.stringify({ message: "Erro ao verificar status do pagamento." }),
+        body: JSON.stringify({ message }),
     };
   }
 };
