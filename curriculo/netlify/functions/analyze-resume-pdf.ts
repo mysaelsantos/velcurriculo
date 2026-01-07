@@ -28,9 +28,9 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
   const origin = event.headers.origin || event.headers.Origin;
-  // if (origin && !origin.includes("localhost") && origin !== "https://seu-site.com") {
-  //    return { statusCode: 403, body: "Forbidden" };
-  // }
+  // Se quiser ser muito estrito (cuidado em localhost):
+  // const ALLOWED = "https://velcurriculo.com.br";
+  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, body: "Forbidden" };
 
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
   
@@ -74,6 +74,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     if (jsonMatch) {
         jsonContent = jsonMatch[0];
     } else {
+        // Fallback original
         jsonContent = jsonContent.replace(/```json/g, '').replace(/```/g, '').trim();
     }
 
