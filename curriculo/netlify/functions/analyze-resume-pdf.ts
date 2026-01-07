@@ -1,8 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// Usamos o modelo flash por ser mais rápido e económico para grandes textos
-const MODEL_NAME = "gemini-1.5-flash"; 
+// REVERTIDO: Mantendo a versão original conforme solicitado
+const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção
