@@ -1,15 +1,28 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import mercadopago from "mercadopago";
 
+// URL permitida em produção
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
 // Handler principal para verificação de status
 const handler: Handler = async (event: HandlerEvent) => {
-  // 🔒 ETAPA 1: HEADERS CORS
-  // Permite que o frontend acesse esta função sem erros de bloqueio
+  // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS)
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
+
+  // HEADERS CORS ESTRITOS
+  // Permite acesso apenas se a origem for válida
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
+
+  // Bloqueio de segurança
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+  }
 
   // Responde rápido a requisições OPTIONS
   if (event.httpMethod === 'OPTIONS') {
