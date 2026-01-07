@@ -43,16 +43,13 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
   throw lastError;
 };
 
-const handler: Handler = async (event: HandlerEvent) => {
+export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
   const origin = event.headers.origin || event.headers.Origin;
-  // Se quiser ser muito estrito (cuidado em localhost):
-  // const ALLOWED = "https://velcurriculo.com.br";
-  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, body: "Forbidden" };
-
+  
   // Headers de CORS para garantir acesso
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "*", // Em produção, considere restringir para origin || "*"
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
@@ -71,13 +68,25 @@ const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
-    const { jobTitle, experience } = JSON.parse(event.body || '{}');
+    // PROTEÇÃO: Parse seguro
+    let body;
+    try {
+        body = JSON.parse(event.body || '{}');
+    } catch (e) {
+        return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON de entrada inválido." }) };
+    }
+
+    const { jobTitle, experience } = body;
     if (!jobTitle) {
       return { statusCode: 400, headers, body: JSON.stringify({ message: "jobTitle é obrigatório." }) };
     }
 
+    // PROTEÇÃO: Sanitização básica para evitar injeção no prompt
+    const safeJobTitle = String(jobTitle).replace(/"""/g, "");
+    const safeExperience = experience ? String(experience).replace(/"""/g, "") : "";
+
     const systemPrompt = `Você é um especialista em Recrutamento e Seleção.`;
-    const userPrompt = `Com base no cargo de "${jobTitle}" e na seguinte descrição de experiência profissional: "${experience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
+    const userPrompt = `Com base no cargo de "${safeJobTitle}" e na seguinte descrição de experiência profissional: "${safeExperience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
 
     // ESTRUTURA IGUAL AO ENHANCE-TEXT (Chat Pattern)
     const payload = {
@@ -144,5 +153,3 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 };
-
-export { handler };
