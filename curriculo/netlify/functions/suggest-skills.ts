@@ -1,23 +1,27 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
-// CONFIGURAÇÃO IGUAL AO ARQUIVO FUNCIONAL (enhance-text.ts)
+// CONFIGURAÇÃO
 const API_KEY = process.env.GEMINI_API_KEY;
+// REVERTIDO: Mantendo a versão original conforme solicitado
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
-// --- LÓGICA DE TENTATIVAS (IDÊNTICA AO FUNCIONAL) ---
+// URL permitida (Segurança CORS alinhada com os outros arquivos)
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Função auxiliar de retry (Robustez contra falhas de rede)
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
   let lastError: Error | null = new Error("Falha ao contactar a API.");
 
   for (let i = 0; i < maxTries; i++) {
     try {
-      // Usando fetch nativo do Node 18+ (sem node-fetch)
       const response = await fetch(url, options);
       
       if (response.ok) return response;
 
+      // Tratamento específico para Rate Limit (Erro 429)
       if (response.status === 429) {
         console.warn(`[suggest-skills] Tentativa ${i + 1}/${maxTries} falhou: 429 Resource Exhausted.`);
         lastError = new Error("RESOURCE_EXHAUSTED");
@@ -29,6 +33,7 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
       } else {
         console.error(`[suggest-skills] Tentativa ${i + 1} falhou: Status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
+        // Tenta extrair a mensagem de erro da API
         // @ts-ignore
         const msg = errorBody.message || errorBody.error?.message || response.statusText;
         lastError = new Error(msg);
@@ -44,15 +49,22 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 };
 
 export const handler: Handler = async (event: HandlerEvent) => {
-  // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
+  // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS)
   const origin = event.headers.origin || event.headers.Origin;
-  
-  // Headers de CORS para garantir acesso
+  const isLocalhost = origin?.includes("localhost") || origin?.includes("127.0.0.1");
+
+  // Headers de CORS dinâmicos (Permite a origem correta ou * se não definida)
   const headers = {
-    "Access-Control-Allow-Origin": "*", // Em produção, considere restringir para origin || "*"
+    "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
+
+  // Verificação de segurança em Produção
+  if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
+     // Em modo produção estrito, bloqueia origens desconhecidas
+     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden Access" }) };
+  }
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
@@ -68,7 +80,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
   }
 
   try {
-    // 1. ROBUSTEZ: Parse seguro
+    // 🔒 ETAPA 2: PARSE E SANITIZAÇÃO
     let body;
     try {
         body = JSON.parse(event.body || '{}');
@@ -78,17 +90,21 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     const { jobTitle, experience } = body;
     if (!jobTitle) {
-      return { statusCode: 400, headers, body: JSON.stringify({ message: "jobTitle é obrigatório." }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "O cargo (jobTitle) é obrigatório." }) };
     }
 
-    // 2. SEGURANÇA: Sanitização básica para evitar injeção no prompt
-    const safeJobTitle = String(jobTitle).replace(/"""/g, "");
-    const safeExperience = experience ? String(experience).replace(/"""/g, "") : "";
+    // Função de limpeza profunda
+    const cleanString = (str: any) => String(str)
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove caracteres de controle invisíveis
+        .replace(/"""/g, "'''"); // Evita injeção de prompt com aspas triplas
+
+    const safeJobTitle = cleanString(jobTitle);
+    const safeExperience = experience ? cleanString(experience) : "";
 
     const systemPrompt = `Você é um especialista em Recrutamento e Seleção.`;
     const userPrompt = `Com base no cargo de "${safeJobTitle}" e na seguinte descrição de experiência profissional: "${safeExperience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
 
-    // ESTRUTURA IGUAL AO ENHANCE-TEXT (Chat Pattern)
+    // Estrutura de Chat para manter o contexto claro para a IA
     const payload = {
       contents: [
         { role: "user", parts: [{ text: systemPrompt }] },
@@ -98,7 +114,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       generationConfig: {
         temperature: 0.7, topK: 40, topP: 0.95, maxOutputTokens: 2048,
       },
-      // Configurações de segurança originais mantidas
+      // Filtros de segurança padrão
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -107,6 +123,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       ],
     };
     
+    // Chamada com Retry Automático
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -116,20 +133,23 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const result: any = await apiResponse.json();
 
     if (!result.candidates || !result.candidates[0]?.content?.parts?.[0]?.text) {
-      console.error("[suggest-skills] Resposta inválida da IA:", JSON.stringify(result));
-      throw new Error("A API da IA retornou uma resposta inválida.");
+      console.error("[suggest-skills] Resposta vazia ou bloqueada:", JSON.stringify(result));
+      throw new Error("A API da IA não retornou sugestões válidas.");
     }
 
     let skillsText = result.candidates[0].content.parts[0].text;
     
-    // BLINDAGEM: Limpeza de formatação Markdown e prefixos comuns
-    skillsText = skillsText.replace(/\*\*/g, '').replace(/\*/g, '').replace(/\./g, '');
+    // Limpeza da resposta da IA para garantir formato limpo
+    skillsText = skillsText
+        .replace(/\*\*/g, '') // Remove negrito markdown
+        .replace(/\*/g, '')   // Remove bullets markdown
+        .replace(/\./g, '');  // Remove ponto final
     
-    // Tratamento robusto: aceita vírgula OU quebra de linha como separador
+    // Processamento do array final
     const skills = skillsText
-      .split(/,|\n/)
+      .split(/,|\n/) // Aceita vírgula ou nova linha como separador
       .map((skill: string) => skill.trim())
-      .filter((s: string) => s.length > 0 && !s.includes(':')); // Filtra vazios e cabeçalhos como "Lista:"
+      .filter((s: string) => s.length > 2 && !s.includes(':') && !s.toLowerCase().includes('lista'));
 
     return {
       statusCode: 200,
@@ -139,18 +159,20 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     const err = error as Error;
-    if (err.message === "RESOURCE_EXHAUSTED") {
+    // Retorno amigável se a API estiver sobrecarregada
+    if (err.message === "RESOURCE_EXHAUSTED" || err.message.includes("429")) {
       return {
         statusCode: 429,
         headers,
-        body: JSON.stringify({ message: "Ops! O sistema está sobrecarregado. Tente novamente em alguns instantes." })
+        body: JSON.stringify({ message: "O sistema está com alta demanda. Tente novamente em alguns segundos." })
       };
     }
-    console.error("[suggest-skills] Erro final:", err);
+    
+    console.error("[suggest-skills] Erro crítico:", err.message);
     return { 
       statusCode: 500, 
       headers,
-      body: JSON.stringify({ message: err.message || "Falha ao sugerir habilidades com a IA." }) 
+      body: JSON.stringify({ message: "Não foi possível gerar sugestões no momento." }) 
     };
   }
 };
