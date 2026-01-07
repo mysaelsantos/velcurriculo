@@ -1,7 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = "gemini-flash-latest"; 
+// Usamos o modelo flash por ser mais rápido e económico para grandes textos
+const MODEL_NAME = "gemini-1.5-flash"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção
@@ -9,13 +10,14 @@ const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br"
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Função auxiliar de retry (mantida original)
+// Função auxiliar de retry completa para lidar com instabilidades da API
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
   let lastError: Error | null = new Error("Falha API.");
   for (let i = 0; i < maxTries; i++) {
     try {
       const response = await fetch(url, options);
       if (response.ok) return response;
+      // Se for erro de "Muitas requisições" (429), espera um pouco mais (backoff exponencial)
       if (response.status === 429 && i < maxTries - 1) {
          await sleep(Math.pow(2, i + 1) * 1000); 
          continue;
@@ -30,63 +32,66 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 };
 
 export const handler: Handler = async (event: HandlerEvent) => {
-  // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS) e ROBUSTEZ
+  // 🔒 ETAPA 1: PORTEIRO DIGITAL (CORS) e CONFIGURAÇÃO
   const origin = event.headers.origin || event.headers.Origin;
   const isLocalhost = origin?.includes("localhost") || origin?.includes("127.0.0.1");
 
-  // Headers padrão para permitir CORS em todas as respostas (erro ou sucesso)
+  // Headers padrão para permitir CORS em todas as respostas
   const headers = {
     "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
-  // Verificação de origem para produção
+  // Verificação de origem para produção (Segurança extra)
   if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
-     // Em produção, bloqueia se a origem não for a esperada
-     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden Access" }) };
+     // Opcional: Descomentar abaixo para bloquear acessos externos rigorosamente
+     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
   }
 
+  // Responde imediatamente a requisições OPTIONS (pre-flight do navegador)
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
+  // Apenas aceita POST
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
-  if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave ausente." }) };
+  if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave de API não configurada." }) };
 
   try {
-    // 1. ROBUSTEZ: Parse seguro do corpo da requisição
+    // 🔒 ETAPA 2: PARSE E SANITIZAÇÃO
     let body;
     try {
         body = JSON.parse(event.body || '{}');
     } catch (e) {
-        return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido no corpo da requisição." }) };
+        return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
     }
 
     const { fullText } = body;
-    if (!fullText) return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto vazio." }) };
+    if (!fullText) return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto do currículo vazio." }) };
 
-    // Limpeza de caracteres de controle
-    // 2. SEGURANÇA: Sanitização contra Prompt Injection (substitui aspas triplas)
+    // Limpeza de segurança: remove caracteres estranhos e evita injeção de prompt
     const safeText = fullText
-      .substring(0, 30000)
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, "")
-      .replace(/"""/g, "'''");
+      .substring(0, 30000) // Limita tamanho para não estourar tokens
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove caracteres de controle
+      .replace(/"""/g, "'''"); // Substitui aspas triplas para não quebrar o prompt
 
-    // 🔒 SEGURANÇA: Envelopamento do texto
+    // 🔒 ETAPA 3: CONSTRUÇÃO DO PROMPT
     const prompt = `
     Analise o currículo delimitado por três aspas abaixo.
     Texto do Currículo:
     """
     ${safeText}
     """
-    Extraia os dados em JSON estrito seguindo esta estrutura: { "personalInfo": {...}, "summary": "...", "experiences": [...], "education": [...], "courses": [...], "languages": [...], "skills": [...] }.
+    Extraia os dados em JSON estrito seguindo esta estrutura exata: { "personalInfo": {...}, "summary": "...", "experiences": [...], "education": [...], "courses": [...], "languages": [...], "skills": [...] }.
+    Não inclua blocos de código markdown (como \`\`\`json), retorne apenas o JSON cru.
     `;
     
     const payload = {
-      contents: [{ parts: [{ text: prompt }] }], // Enviamos tudo junto envelopado
+      contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
     };
 
+    // Chamada à API com Retry automático
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,23 +101,23 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const result: any = await apiResponse.json();
     let jsonString = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!jsonString) throw new Error("IA retornou vazio.");
+    if (!jsonString) throw new Error("A IA retornou uma resposta vazia.");
 
-    // CORREÇÃO: Extração robusta de JSON usando Regex
+    // Tratamento robusto para extrair apenas o JSON, caso a IA adicione texto extra
     const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         jsonString = jsonMatch[0];
     } else {
-        // Fallback: limpeza simples caso o Regex falhe
+        // Fallback: tenta limpar crases de markdown
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
     }
     
-    // 3. ROBUSTEZ: Validação final se é um JSON válido antes de retornar
+    // Validação final: garante que é um JSON válido antes de enviar ao front
     try {
       JSON.parse(jsonString);
     } catch (e) {
-      console.error("A IA retornou um JSON inválido:", jsonString);
-      throw new Error("Falha na formatação da resposta da IA.");
+      console.error("JSON inválido retornado pela IA:", jsonString);
+      throw new Error("A IA não gerou um JSON válido.");
     }
 
     return {
@@ -123,8 +128,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     const err = error as Error;
-    // 🔒 PRIVACIDADE: Logamos apenas a mensagem, nunca o objeto completo
-    console.error("[analyze-pdf] Erro:", err.message);
-    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
+    // Logamos o erro no servidor, mas retornamos mensagem genérica ao usuário
+    console.error("[analyze-resume-pdf] Erro:", err.message);
+    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao processar o currículo." }) };
   }
 };
