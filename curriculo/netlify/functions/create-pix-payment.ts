@@ -13,7 +13,7 @@ const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
 // Site permitido (troque pela sua URL de produção quando tiver, ou use localhost para testes)
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
 
-const handler: Handler = async (event: HandlerEvent) => {
+export const handler: Handler = async (event: HandlerEvent) => {
   // 1. Verificação de Origem (CORS - Etapa 2)
   const origin = event.headers.origin || event.headers.Origin || "";
   const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
@@ -115,5 +115,3 @@ const handler: Handler = async (event: HandlerEvent) => {
     };
   }
 };
-
-export { handler };
