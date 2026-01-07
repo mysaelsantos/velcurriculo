@@ -47,14 +47,11 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
 
 const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
-  // Verifica quem está chamando a função
+  // Adicionado no início para verificar a origem antes de processar qualquer coisa
   const origin = event.headers.origin || event.headers.Origin;
-  
-  // Se quiser bloquear chamadas externas no futuro, descomente as linhas abaixo:
-  // const ALLOWED_DOMAIN = "https://velcurriculo.com.br"; // Coloque seu domínio final
-  // if (origin && !origin.includes("localhost") && origin !== ALLOWED_DOMAIN) {
-  //    return { statusCode: 403, body: "Forbidden" };
-  // }
+  // Se quiser ser muito estrito (cuidado em localhost):
+  // const ALLOWED = "https://velcurriculo.com.br";
+  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, body: "Forbidden" };
 
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -82,6 +79,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     }
 
     // 🔒 SEGURANÇA: Sanitização Básica e Envelopamento
+    // Removemos caracteres de controle estranhos e delimitamos o input do usuário
     const sanitizedPrompt = prompt.replace(/[\x00-\x1F\x7F-\x9F]/g, ""); 
     
     // Instrução defensiva para a IA
@@ -101,7 +99,7 @@ const handler: Handler = async (event: HandlerEvent) => {
         { role: "user", parts: [{ text: userMessage }] }
       ],
       generationConfig: {
-        temperature: 0.4, 
+        temperature: 0.4, // Baixamos a temperatura para ser menos "criativo" e mais fiel
         topK: 40, 
         topP: 0.95, 
         maxOutputTokens: 2048,
