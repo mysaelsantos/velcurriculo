@@ -5,6 +5,9 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
+// Defina a URL do seu frontend em produção
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
 // 🔒 SEGURANÇA: Limite de caracteres para evitar abuso e custos altos
 const MAX_INPUT_LENGTH = 2500; 
 
@@ -45,19 +48,24 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
   throw lastError;
 };
 
-const handler: Handler = async (event: HandlerEvent) => {
+export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
-  // Headers padrão para permitir CORS em todas as respostas
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
+
+  // Headers padrão para permitir CORS apenas para origens permitidas
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json"
   };
 
-  const origin = event.headers.origin || event.headers.Origin;
-  // Se quiser ser muito estrito (cuidado em localhost):
-  // const ALLOWED = "https://velcurriculo.com.br";
-  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, headers, body: "Forbidden" };
+  // Bloqueio de segurança para origens não autorizadas
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+    console.warn(`[Bloqueio Enhance] Origem não permitida: ${origin}`);
+    return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+  }
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
