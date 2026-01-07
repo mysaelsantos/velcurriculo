@@ -5,9 +5,9 @@ import type { ResumeData } from '../types';
 // Importação direta da biblioteca (requer 'pdfjs-dist' no package.json)
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configuração do Worker usando CDN confiável (JsDelivr) para a versão exata 4.4.168
-// Isso evita erros de "versão incompatível" e garante que o processamento não trave a tela.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+// Configuração do Worker usando arquivo local para maior segurança e independência
+// Requer que o arquivo 'pdf.worker.min.mjs' esteja na pasta public do projeto.
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 // Função segura para lidar com respostas
 async function handleResponse(response: Response, context: string) {
