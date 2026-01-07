@@ -891,11 +891,22 @@ const AppContent: React.FC = () => {
 
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
+            
+            // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
+            // Agora enviamos o cupom e dados do pagador, não mais o flag 'isDiscounted'
+            const payload = {
+                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
+                email: resumeData.personalInfo.email,
+                firstName: resumeData.personalInfo.name.split(' ')[0],
+                lastName: resumeData.personalInfo.name.split(' ').slice(1).join(' ')
+            };
+
             const response = await fetch(backendUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ isDiscounted: !!editingResumeId })
+                body: JSON.stringify(payload)
             });
+            
             const data = await response.json();
             if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
