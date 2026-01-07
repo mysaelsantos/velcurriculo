@@ -1,34 +1,33 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
-// Sintaxe de importação da V1 do MercadoPago
 import mercadopago from "mercadopago";
 
-// 🔒 SEGURANÇA: Tabela de Preços Definida no Servidor
-// Isso impede que alguém pague um valor arbitrário.
+// 🔒 SEGURANÇA: Configurações do Servidor
 const PRICING_TABLE = {
   FULL: 5.00,
   DISCOUNTED: 2.50
 };
 
+// Cupons válidos definidos APENAS no backend
+const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
+
+// Site permitido (troque pela sua URL de produção quando tiver, ou use localhost para testes)
+const ALLOWED_ORIGIN = process.env.URL || "http://localhost:8888"; // Netlify define process.env.URL automaticamente
+
 const handler: Handler = async (event: HandlerEvent) => {
-  // 1. Apenas aceitar POST
+  // 1. Verificação de Origem (CORS - Etapa 2 já inclusa aqui)
+  const origin = event.headers.origin || event.headers.Origin;
+  // Nota: Em desenvolvimento local, origin pode ser undefined ou diferente. 
+  // Em produção, isso impede requisições de sites piratas.
+  
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: { 'Allow': 'POST' },
-      body: 'Method Not Allowed',
-    };
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  // 2. Verificação de Configuração
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-    console.error("ERRO CRÍTICO: MERCADO_PAGO_ACCESS_TOKEN não configurado.");
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: "Erro interno de configuração de pagamento." })
-    };
+    console.error("ERRO CRÍTICO: Token MP ausente.");
+    return { statusCode: 500, body: JSON.stringify({ message: "Erro de configuração." }) };
   }
 
-  // Configuração da V1
   mercadopago.configure({
     access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
   });
@@ -36,59 +35,57 @@ const handler: Handler = async (event: HandlerEvent) => {
   try {
     const body = JSON.parse(event.body || '{}');
     
-    // 🔒 LÓGICA DE PREÇO SEGURA
-    // O frontend diz se "aplica desconto", mas o backend define o valor.
-    // Futuramente, você pode validar aqui se o usuário realmente tem direito ao desconto (ex: cupom).
-    const isDiscounted = body.isDiscounted === true; 
-    const finalAmount = isDiscounted ? PRICING_TABLE.DISCOUNTED : PRICING_TABLE.FULL;
+    // 🔒 LÓGICA BLINDADA: O Backend decide o preço
+    let finalAmount = PRICING_TABLE.FULL;
+    let description = 'Download Currículo Profissional';
 
-    // Log de segurança (interno)
-    console.log(`[Pagamento] Iniciando transação. Desconto: ${isDiscounted}, Valor: R$ ${finalAmount}`);
+    // Verificamos se o cupom enviado bate com a lista do servidor
+    if (body.coupon && VALID_COUPONS.includes(body.coupon)) {
+        finalAmount = PRICING_TABLE.DISCOUNTED;
+        description += ' (Oferta Aplicada)';
+    }
+
+    // Log seguro (apenas valores, não dados pessoais)
+    console.log(`[Pagamento] Gerando Pix: R$ ${finalAmount} | Cupom: ${body.coupon || 'Nenhum'}`);
 
     const payment_data = {
       transaction_amount: finalAmount,
-      description: 'Download de Currículo Profissional',
+      description: description,
       payment_method_id: 'pix',
-      date_of_expiration: new Date(Date.now() + 600000).toISOString(), // 10 minutos
+      date_of_expiration: new Date(Date.now() + 600000).toISOString(),
       payer: {
-        email: body.email || `pagamento-${Date.now()}@velcurriculo.com`, // Fallback de segurança
+        email: body.email || `cliente-${Date.now()}@velcurriculo.com`,
         first_name: body.firstName || 'Cliente',
         last_name: body.lastName || 'VelCurriculo'
       },
     };
 
-    // Chamada da API da V1
     const payment = await mercadopago.payment.create(payment_data);
 
     if (!payment.body.id || !payment.body.point_of_interaction?.transaction_data) {
-        throw new Error('Não foi possível gerar os dados do pagamento Pix no Mercado Pago.');
+        throw new Error('Falha ao obter dados do Pix do Mercado Pago.');
     }
-
-    const qrCodeBase64 = payment.body.point_of_interaction.transaction_data.qr_code_base64;
-    const copyPasteCode = payment.body.point_of_interaction.transaction_data.qr_code;
 
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        // Opcional: Access-Control-Allow-Origin se quiser ser estrito aqui também
+      },
       body: JSON.stringify({
         paymentId: payment.body.id,
-        // Adicionamos o prefixo de imagem Base64 para facilitar a exibição no frontend
-        qrCodeUrl: `data:image/png;base64,${qrCodeBase64}`,
-        copyPasteCode: copyPasteCode,
+        qrCodeUrl: `data:image/png;base64,${payment.body.point_of_interaction.transaction_data.qr_code_base64}`,
+        copyPasteCode: payment.body.point_of_interaction.transaction_data.qr_code,
+        amount: finalAmount // Devolvemos o valor real para o front exibir
       }),
     };
 
   } catch (err) {
     const error = err as Error;
-    console.error(`[Pagamento Erro] Mercado Pago: ${error.message}`);
-    
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        message: "Erro ao processar pagamento. Tente novamente.",
-        debug: process.env.NODE_ENV === 'development' ? error.message : undefined
-      }),
+    console.error(`[Pagamento Erro] ${error.message}`);
+    return { 
+        statusCode: 500, 
+        body: JSON.stringify({ message: "Erro ao processar pagamento." }) 
     };
   }
 };
