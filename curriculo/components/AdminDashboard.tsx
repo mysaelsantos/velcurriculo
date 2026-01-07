@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 import { auth, db } from '../services/firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, orderBy, limit, updateDoc, deleteDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart
@@ -10,7 +10,6 @@ import {
 import { format, subDays, isAfter, isBefore, endOfDay, startOfDay, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Correção de Tipagem: Importações limpas
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
@@ -37,14 +36,15 @@ const Icons = {
     Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
     Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
     Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
-    DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+    DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
+    Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const AdminDashboard: React.FC = () => {
     const [user, setUser] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'resumes' | 'analytics' | 'reviews'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'resumes' | 'analytics' | 'reviews' | 'coupons'>('overview');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     
@@ -56,10 +56,11 @@ const AdminDashboard: React.FC = () => {
     const [datePreset, setDatePreset] = useState<'7d' | '30d' | 'month' | 'custom'>('30d');
 
     // --- DADOS DO FIREBASE ---
-    const [dailyStats, setDailyStats] = useState<any[]>([]); // Visitantes diários (Novo sistema)
-    const [leads, setLeads] = useState<any[]>([]); // Leads brutos (Dados antigos e novos)
-    const [transactions, setTransactions] = useState<any[]>([]); // Transações (Dados antigos e novos)
+    const [dailyStats, setDailyStats] = useState<any[]>([]); 
+    const [leads, setLeads] = useState<any[]>([]); 
+    const [transactions, setTransactions] = useState<any[]>([]); 
     const [reviews, setReviews] = useState<any[]>([]);
+    const [coupons, setCoupons] = useState<any[]>([]); // 🔥 NOVO: Cupons
     
     // --- DADOS PROCESSADOS (KPIs) ---
     const [kpis, setKpis] = useState({
@@ -75,9 +76,9 @@ const AdminDashboard: React.FC = () => {
     const [dailyChartData, setDailyChartData] = useState<any[]>([]);
     const [cityData, setCityData] = useState<any[]>([]);
     const [ageData, setAgeData] = useState<any[]>([]);
-    const [jobData, setJobData] = useState<any[]>([]); // Top Cargos
-    const [templateData, setTemplateData] = useState<any[]>([]); // Ranking Templates
-    const [funnelData, setFunnelData] = useState<any[]>([]); // Funil de Vendas
+    const [jobData, setJobData] = useState<any[]>([]); 
+    const [templateData, setTemplateData] = useState<any[]>([]);
+    const [funnelData, setFunnelData] = useState<any[]>([]);
     const [revenueData, setRevenueData] = useState<any[]>([]); 
 
     // Login & Preview States
@@ -93,33 +94,32 @@ const AdminDashboard: React.FC = () => {
     const measurementRootRef = useRef<any>(null);
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
+    // --- ESTADOS DO FORM DE CUPOM ---
+    const [newCoupon, setNewCoupon] = useState({ code: '', type: 'fixed', value: '', maxUses: '' });
+    const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
+
     useEffect(() => { const u = onAuthStateChanged(auth, setUser); return () => u(); }, []);
 
     // 0. FETCH DE DADOS ROBUSTO
     useEffect(() => {
         if (!user) return;
 
-        // 1. Puxar Leads (Aumentado limite para pegar histórico)
         const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(500));
-        onSnapshot(leadsQ, (snap) => {
-            setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
+        onSnapshot(leadsQ, (snap) => setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-        // 2. Puxar Transações (Vendas Antigas e Novas)
         const transQ = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(500));
-        onSnapshot(transQ, (snap) => {
-            setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
+        onSnapshot(transQ, (snap) => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-        // 3. Puxar Daily Stats (Novo, apenas visitantes por enquanto)
         const dailyQ = query(collection(db, 'stats_daily'), orderBy('date', 'asc'));
-        onSnapshot(dailyQ, (snap) => {
-            setDailyStats(snap.docs.map(d => d.data()));
-        });
+        onSnapshot(dailyQ, (snap) => setDailyStats(snap.docs.map(d => d.data())));
 
-        // 4. Reviews
         onSnapshot(query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50)), (snap) => {
             setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        // 🔥 NOVO: Listener de Cupons
+        onSnapshot(query(collection(db, 'coupons'), orderBy('createdAt', 'desc')), (snap) => {
+            setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
     }, [user]);
@@ -133,9 +133,6 @@ const AdminDashboard: React.FC = () => {
         const start = startOfDay(parseISO(dateRange.start));
         const end = endOfDay(parseISO(dateRange.end));
 
-        // --- FILTRAGEM INTELIGENTE (Usa dados brutos para garantir histórico) ---
-        
-        // Leads no período
         const filteredLeads = leads.filter(lead => {
             if (!lead.generated_at) return false;
             // @ts-ignore
@@ -143,7 +140,6 @@ const AdminDashboard: React.FC = () => {
             return isAfter(d, start) && isBefore(d, end);
         });
 
-        // Vendas no período
         const filteredTrans = transactions.filter(t => {
             if (!t.created_at) return false;
             // @ts-ignore
@@ -151,37 +147,30 @@ const AdminDashboard: React.FC = () => {
             return isAfter(d, start) && isBefore(d, end);
         });
 
-        // Visitantes (Mistura stats_daily novo com estimativa ou 0 para antigo)
         const filteredDailyVisitors = dailyStats.filter(day => {
             const d = parseISO(day.date);
             return (isAfter(d, start) || day.date === dateRange.start) && (isBefore(d, end) || day.date === dateRange.end);
         });
 
-        // --- C. CALCULAR KPIs ---
-        // Agora somamos das coleções brutas, garantindo que o passado não zere
         const totalRev = filteredTrans.reduce((acc, curr) => acc + (curr.amount || 0), 0);
         const totalSales = filteredTrans.length;
         const totalRes = filteredLeads.length;
-        // Visitantes: Somamos do daily (novo). Infelizmente o passado de visitantes não existe por dia, então será baixo em períodos antigos.
         const totalVis = filteredDailyVisitors.reduce((acc, curr) => acc + (curr.visitors || 0), 0);
 
         setKpis({
             revenue: totalRev,
             salesCount: totalSales,
-            visitors: totalVis, // Visitantes podem parecer baixos no filtro de 30 dias pois só começamos a contar hoje
+            visitors: totalVis, 
             resumes: totalRes,
-            conversionRate: totalVis > 0 ? (totalSales / totalVis) * 100 : (totalRes > 0 ? (totalSales/totalRes)*10 : 0), // Fallback inteligente
+            conversionRate: totalVis > 0 ? (totalSales / totalVis) * 100 : (totalRes > 0 ? (totalSales/totalRes)*10 : 0),
             avgTicket: totalSales > 0 ? (totalRev / totalSales) : 0
         });
 
-        // --- D. PREPARAR GRÁFICO DE TENDÊNCIA (RECONSTRUÇÃO HISTÓRICA) ---
-        // Criamos um array com todos os dias do intervalo para preencher lacunas
         const daysInterval = eachDayOfInterval({ start, end });
         
         const chartData = daysInterval.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
             
-            // Busca dados reais brutos para esse dia
             const leadsCount = leads.filter(l => {
                 // @ts-ignore
                 const d = l.generated_at?.toDate ? l.generated_at.toDate() : new Date(l.generated_at.seconds * 1000);
@@ -194,7 +183,6 @@ const AdminDashboard: React.FC = () => {
                 return isSameDay(d, day);
             }).length;
 
-            // Busca visitantes do novo sistema (será 0 para dias antes de hoje)
             const dailyStat = dailyStats.find(ds => ds.date === dayStr);
             
             return {
@@ -206,14 +194,12 @@ const AdminDashboard: React.FC = () => {
         });
         setDailyChartData(chartData);
 
-        // --- E. GRÁFICOS DE ANÁLISE ---
         const cities: Record<string, number> = {};
         const jobs: Record<string, number> = {};
         const templates: Record<string, number> = {};
         const ages: any = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
 
         filteredLeads.forEach(lead => {
-            // Cidades
             let city = lead.city || 'Desconhecido';
             if (lead.full_data_backup) { 
                 try {
@@ -227,16 +213,13 @@ const AdminDashboard: React.FC = () => {
             }
             cities[city] = (cities[city] || 0) + 1;
 
-            // Cargos
             const job = lead.jobTitle ? lead.jobTitle.trim() : 'Geral';
             jobs[job] = (jobs[job] || 0) + 1;
 
-            // Templates
             const tpl = lead.template || 'template-modern';
             const tplName = tpl.replace('template-', '').charAt(0).toUpperCase() + tpl.slice(10); 
             templates[tplName] = (templates[tplName] || 0) + 1;
 
-            // Idades
             const age = parseInt(lead.age);
             if (age) {
                 if (age >= 18 && age <= 24) ages['18-24']++;
@@ -251,14 +234,12 @@ const AdminDashboard: React.FC = () => {
         setTemplateData(Object.entries(templates).map(([k, v]) => ({ name: k, value: v })));
         setAgeData(Object.entries(ages).map(([k, v]) => ({ name: k, value: v })));
 
-        // Funil
         setFunnelData([
             { name: 'Visitantes', value: totalVis, fill: '#3b82f6' },
             { name: 'Leads (Currículos)', value: totalRes, fill: '#8b5cf6' },
             { name: 'Vendas Confirmadas', value: totalSales, fill: '#10b981' }
         ]);
         
-        // Revenue antigo (Legacy support)
         const groupedRev: Record<string, number> = {};
         filteredTrans.forEach(t => {
              // @ts-ignore
@@ -282,6 +263,50 @@ const AdminDashboard: React.FC = () => {
             setDateRange({ start: format(start, 'yyyy-MM-dd'), end: format(today, 'yyyy-MM-dd') });
         }
     };
+
+    // --- FUNÇÕES DE CUPONS ---
+    const handleCreateCoupon = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCreatingCoupon(true);
+        try {
+            const cleanCode = newCoupon.code.trim().toUpperCase();
+            if(!cleanCode || !newCoupon.value) throw new Error("Preencha os campos obrigatórios");
+
+            // Validação simples
+            const val = parseFloat(newCoupon.value);
+            if(isNaN(val) || val <= 0) throw new Error("Valor inválido");
+            if(newCoupon.type === 'percentage' && val > 100) throw new Error("Porcentagem não pode ser maior que 100");
+
+            await setDoc(doc(db, 'coupons', cleanCode), {
+                code: cleanCode,
+                type: newCoupon.type,
+                value: val,
+                maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : 9999,
+                usageCount: 0,
+                isActive: true,
+                createdAt: Timestamp.now(),
+                usedBy: []
+            });
+
+            setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '' });
+            alert("Cupom criado com sucesso!");
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setIsCreatingCoupon(false);
+        }
+    };
+
+    const toggleCouponStatus = async (id: string, currentStatus: boolean) => {
+        await updateDoc(doc(db, 'coupons', id), { isActive: !currentStatus });
+    };
+
+    const deleteCoupon = async (id: string) => {
+        if(confirm("Tem certeza que deseja excluir este cupom? Esta ação não pode ser desfeita.")) {
+            await deleteDoc(doc(db, 'coupons', id));
+        }
+    };
+
 
     // UTILS
     useEffect(() => {
@@ -315,7 +340,6 @@ const AdminDashboard: React.FC = () => {
         };
     }, []);
 
-    // --- LÓGICA DE PAGINAÇÃO COMPLETA ---
     const calculatePagination = useCallback(async (dataToPaginate: any) => {
         const container = measurementContainerRef.current;
         if (!container) return;
@@ -453,31 +477,22 @@ const AdminDashboard: React.FC = () => {
         setIsPreviewReady(true);
     }, []);
 
-    // --- CORREÇÃO: EFEITO PARA GERAR PAGINAÇÃO QUANDO UM CURRÍCULO É SELECIONADO ---
     useEffect(() => {
         if (selectedResume) {
             setIsPreviewReady(false);
-            
             let dataToProcess = { ...selectedResume };
-            
-            // Tenta recuperar os dados completos do backup se existir (JSON string)
             if (selectedResume.full_data_backup) {
                 try {
                     const parsed = JSON.parse(selectedResume.full_data_backup);
-                    // Mescla para garantir que temos tudo, priorizando o backup estruturado
                     dataToProcess = { ...selectedResume, ...parsed }; 
-                    // Se o parsed tiver a estrutura correta de 'personalInfo', usamos ele como base principal
                     if (parsed.personalInfo) {
                         dataToProcess = parsed;
-                        // Reinjetamos metadados do lead se necessário
                         dataToProcess.id = selectedResume.id;
                     }
                 } catch (e) {
                     console.error("Erro ao processar backup do currículo:", e);
                 }
             }
-            
-            // Fallback para garantir estrutura mínima se for dados antigos/planos e não tiver backup
             if (!dataToProcess.style) dataToProcess.style = { template: 'template-modern', color: '#000000', showQRCode: false };
             if (!dataToProcess.personalInfo) {
                 dataToProcess.personalInfo = {
@@ -486,12 +501,9 @@ const AdminDashboard: React.FC = () => {
                     email: selectedResume.email || '',
                     phone: selectedResume.phone || '',
                     address: selectedResume.city || '',
-                    // Preenche outros campos obrigatórios com vazio para não quebrar
                     age: '', maritalStatus: '', cnh: '', profilePicture: ''
                 };
             }
-
-            // Inicia o calculo das páginas
             calculatePagination(dataToProcess);
         }
     }, [selectedResume, calculatePagination]);
@@ -499,7 +511,6 @@ const AdminDashboard: React.FC = () => {
 
     const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError('Credenciais inválidas.'); } };
     
-    // --- GERAR PDF COMPLETO ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
@@ -555,7 +566,6 @@ const AdminDashboard: React.FC = () => {
     // LOGIN SCREEN
     if (!user) { return ( <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-poppins"> <div className="bg-white p-8 md:p-10 rounded-2xl shadow-2xl w-full max-w-sm relative overflow-hidden"> <div className="absolute top-0 left-0 w-full h-2 bg-blue-700"></div> <div className="text-center mb-8"> <img src="/logo-azul.png" alt="Vel" className="h-10 mx-auto mb-4" /> <h2 className="text-2xl font-bold text-gray-800">Painel Inteligente</h2> <p className="text-gray-400 text-sm">Vel Currículo Business Intelligence</p> </div> <form onSubmit={handleLogin} className="space-y-5"> {error && <div className="text-red-600 bg-red-50 p-3 rounded-lg text-sm text-center font-medium">{error}</div>} <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" /> <input type="password" placeholder="Senha" value={password} onChange={e => setPassword(e.target.value)} className="w-full mt-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" /> <button className="w-full bg-blue-800 text-white font-bold py-3 rounded-lg hover:bg-blue-900 transition">Acessar Dashboard</button> </form> </div> </div> ); }
 
-    // --- RENDERIZAÇÃO DO PAINEL PRINCIPAL ---
     return (
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
             <style>{` .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; } @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } `}</style>
@@ -571,6 +581,8 @@ const AdminDashboard: React.FC = () => {
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')} icon={<Icons.FileText />} label="Leads & Currículos" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<Icons.TrendingUp />} label="Business Intelligence" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" />
+                    {/* 🔥 NOVO ITEM NO MENU */}
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'coupons'} onClick={() => setActiveTab('coupons')} icon={<Icons.Ticket />} label="Cupons & Promoções" />
                 </nav>
                 <div className="p-4 border-t border-white/10"><button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 transition ${sidebarCollapsed ? 'justify-center' : ''}`}><Icons.LogOut /> {!sidebarCollapsed && <span>Sair</span>}</button></div>
             </aside>
@@ -585,22 +597,21 @@ const AdminDashboard: React.FC = () => {
                             <SidebarItem collapsed={false} active={activeTab === 'overview'} onClick={() => {setActiveTab('overview'); setMobileMenuOpen(false)}} icon={<Icons.Grid />} label="Visão Geral" />
                             <SidebarItem collapsed={false} active={activeTab === 'resumes'} onClick={() => {setActiveTab('resumes'); setMobileMenuOpen(false)}} icon={<Icons.FileText />} label="Leads" />
                             <SidebarItem collapsed={false} active={activeTab === 'analytics'} onClick={() => {setActiveTab('analytics'); setMobileMenuOpen(false)}} icon={<Icons.TrendingUp />} label="BI & Dados" />
-                            {/* 🔥 CORREÇÃO: Adicionada a aba Avaliações no Mobile */}
                             <SidebarItem collapsed={false} active={activeTab === 'reviews'} onClick={() => {setActiveTab('reviews'); setMobileMenuOpen(false)}} icon={<Icons.MessageSquare />} label="Avaliações" />
+                            <SidebarItem collapsed={false} active={activeTab === 'coupons'} onClick={() => {setActiveTab('coupons'); setMobileMenuOpen(false)}} icon={<Icons.Ticket />} label="Cupons" />
                         </nav>
                     </div>
                 </div>
             )}
 
             <main className="flex-1 overflow-y-auto w-full">
-                {/* TOP HEADER COM FILTRO DE DATAS */}
+                {/* TOP HEADER */}
                 <header className="bg-white h-auto lg:h-20 border-b border-gray-200 flex flex-col lg:flex-row items-center justify-between px-4 lg:px-8 sticky top-0 z-20 shadow-sm py-3 lg:py-0 gap-3">
                     <div className="flex items-center gap-3 w-full lg:w-auto">
                         <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600"><Icons.Menu /></button>
                         <h1 className="text-xl font-bold text-gray-800">Dashboard Gerencial</h1>
                     </div>
 
-                    {/* BARRA DE FILTROS INTELIGENTE */}
                     <div className="flex flex-wrap items-center gap-2 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
                         <button onClick={() => handlePresetChange('7d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '7d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>7 Dias</button>
                         <button onClick={() => handlePresetChange('30d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '30d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>30 Dias</button>
@@ -619,7 +630,6 @@ const AdminDashboard: React.FC = () => {
                     {/* VISÃO GERAL (OVERVIEW) */}
                     {activeTab === 'overview' && (
                         <div className="space-y-6 animate-fade-in">
-                            {/* LINHA 1: KPIS ESTRATÉGICOS */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <KpiCard title="Faturamento" value={kpis.revenue} isMoney icon={<Icons.DollarSign />} color="bg-emerald-500" sub="No período selecionado" />
                                 <KpiCard title="Vendas" value={kpis.salesCount} icon={<Icons.Check />} color="bg-blue-500" sub={`Conv: ${kpis.conversionRate.toFixed(1)}%`} />
@@ -627,9 +637,7 @@ const AdminDashboard: React.FC = () => {
                                 <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`Visitantes: ${kpis.visitors}`} />
                             </div>
 
-                            {/* LINHA 2: GRÁFICOS PRINCIPAIS */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {/* Gráfico de Tendência (Misto) */}
                                 <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.TrendingUp /> Tendência de Tráfego e Vendas</h3>
                                     <div className="h-[300px]">
@@ -649,7 +657,6 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Funil de Conversão */}
                                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.Filter /> Funil de Conversão</h3>
                                     <div className="h-[300px] flex flex-col justify-center gap-4">
@@ -660,7 +667,6 @@ const AdminDashboard: React.FC = () => {
                                                     <span className="font-bold">{step.value}</span>
                                                 </div>
                                                 <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                                    {/* Lógica segura: Se Visitors for 0, usa o próximo passo como base para não quebrar o visual */}
                                                     <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${(step.value / (funnelData[0].value || step.value || 1)) * 100}%`, backgroundColor: step.fill }}></div>
                                                 </div>
                                                 {idx > 0 && <div className="text-right text-[10px] text-gray-400 mt-1">
@@ -674,11 +680,9 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* TAB BI & ANALYTICS AVANÇADO */}
                     {activeTab === 'analytics' && (
                         <div className="space-y-6 animate-fade-in">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {/* Top Cargos - REDESIGNED */}
                                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
                                         <Icons.Target /> Cargos em Alta
@@ -706,7 +710,6 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Preferência de Templates */}
                                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-4">Modelos Favoritos</h3>
                                     <div className="h-[200px]">
@@ -722,7 +725,6 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {/* Top Cidades */}
                                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                     <h3 className="font-bold text-gray-700 mb-4">Top Cidades</h3>
                                     <div className="space-y-3">
@@ -741,7 +743,6 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* TAB RESUMES / LEADS */}
                     {activeTab === 'resumes' && (
                         <div className="animate-fade-in space-y-4">
                              <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
@@ -772,7 +773,6 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* TAB REVIEWS (AVALIAÇÕES) */}
                     {activeTab === 'reviews' && (
                         <div className="animate-fade-in space-y-6">
                             <div className="flex items-center justify-between">
@@ -821,18 +821,10 @@ const AdminDashboard: React.FC = () => {
                                                     {review.created_at?.toDate ? format(review.created_at.toDate(), "dd/MM/yyyy") : 'Data desconhecida'}
                                                 </span>
                                                 <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => toggleReviewStatus(review.id, review.approved)}
-                                                        className={`p-2 rounded-lg transition-colors ${review.approved ? 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'}`}
-                                                        title={review.approved ? "Ocultar Depoimento" : "Aprovar Depoimento"}
-                                                    >
+                                                    <button onClick={() => toggleReviewStatus(review.id, review.approved)} className={`p-2 rounded-lg transition-colors ${review.approved ? 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'}`} title={review.approved ? "Ocultar Depoimento" : "Aprovar Depoimento"}>
                                                         {review.approved ? <Icons.X /> : <Icons.Check />}
                                                     </button>
-                                                    <button
-                                                        onClick={() => deleteReview(review.id)}
-                                                        className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                                                        title="Excluir Permanentemente"
-                                                    >
+                                                    <button onClick={() => deleteReview(review.id)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Excluir Permanentemente">
                                                         <Icons.Trash />
                                                     </button>
                                                 </div>
@@ -843,10 +835,106 @@ const AdminDashboard: React.FC = () => {
                             )}
                         </div>
                     )}
+
+                    {/* 🔥 TAB DE CUPONS */}
+                    {activeTab === 'coupons' && (
+                        <div className="animate-fade-in space-y-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 className="font-bold text-gray-700 text-xl">Gestão de Cupons & Promoções</h3>
+                                    <p className="text-sm text-gray-500">Crie códigos promocionais para impulsionar vendas.</p>
+                                </div>
+                                <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
+                                    <span className="text-sm text-blue-800 font-bold">{coupons.filter(c => c.isActive).length} Cupons Ativos</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {/* Formulário de Criação */}
+                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-fit">
+                                    <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Icons.Ticket /> Criar Novo Cupom</h4>
+                                    <form onSubmit={handleCreateCoupon} className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Código do Cupom</label>
+                                            <input type="text" placeholder="EX: PROMO10" value={newCoupon.code} onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono tracking-wider" required />
+                                            <p className="text-[10px] text-gray-400 mt-1">O cliente usará este código exato.</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Tipo</label>
+                                                <select value={newCoupon.type} onChange={e => setNewCoupon({...newCoupon, type: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                                                    <option value="fixed">Valor Fixo (R$)</option>
+                                                    <option value="percentage">Porcentagem (%)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Valor</label>
+                                                <input type="number" placeholder={newCoupon.type === 'fixed' ? '2.50' : '10'} value={newCoupon.value} onChange={e => setNewCoupon({...newCoupon, value: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required step="0.01" />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Limite de Usos (Opcional)</label>
+                                            <input type="number" placeholder="Ex: 100" value={newCoupon.maxUses} onChange={e => setNewCoupon({...newCoupon, maxUses: e.target.value})} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                                        </div>
+
+                                        <button type="submit" disabled={isCreatingCoupon} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg shadow-blue-600/20 flex justify-center">
+                                            {isCreatingCoupon ? 'Criando...' : 'Criar Cupom'}
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* Lista de Cupons */}
+                                <div className="lg:col-span-2 space-y-4">
+                                    {coupons.length === 0 ? (
+                                        <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                            <p className="text-gray-400">Nenhum cupom criado ainda.</p>
+                                        </div>
+                                    ) : (
+                                        coupons.map((coupon) => (
+                                            <div key={coupon.id} className={`bg-white p-4 rounded-xl border flex flex-col md:flex-row justify-between items-center gap-4 transition-all ${coupon.isActive ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-60 bg-gray-50'}`}>
+                                                <div className="flex items-center gap-4 w-full md:w-auto">
+                                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl ${coupon.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                                                        %
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-800 text-lg tracking-wide">{coupon.code}</h4>
+                                                        <p className="text-sm text-gray-500">
+                                                            {coupon.type === 'fixed' ? `Desconto de R$ ${parseFloat(coupon.value).toFixed(2)}` : `Desconto de ${coupon.value}%`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                                                    <div className="text-center">
+                                                        <span className="block text-xs text-gray-400 font-bold uppercase">Usos</span>
+                                                        <span className="font-bold text-gray-700">{coupon.usageCount} <span className="text-gray-300 font-normal">/ {coupon.maxUses}</span></span>
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => toggleCouponStatus(coupon.id, coupon.isActive)} 
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${coupon.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                                                        >
+                                                            {coupon.isActive ? 'ATIVO' : 'PAUSADO'}
+                                                        </button>
+                                                        <button onClick={() => deleteCoupon(coupon.id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition">
+                                                            <Icons.Trash />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
 
-            {/* MODAL DE PREVIEW (Mantido Igual) */}
+            {/* MODAL DE PREVIEW */}
             {selectedResume && (
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedResume(null)}></div>
