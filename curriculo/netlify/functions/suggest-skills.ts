@@ -2,16 +2,15 @@ import type { Handler, HandlerEvent } from "@netlify/functions";
 
 // CONFIGURAÇÃO
 const API_KEY = process.env.GEMINI_API_KEY;
-// REVERTIDO: Mantendo a versão original conforme solicitado
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
-// URL permitida (Segurança CORS alinhada com os outros arquivos)
+// URL permitida (Adicionada Segurança CORS)
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Função auxiliar de retry (Robustez contra falhas de rede)
+// Função auxiliar de retry (Lógica detalhada original mantida)
 const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
   let lastError: Error | null = new Error("Falha ao contactar a API.");
 
@@ -21,7 +20,6 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
       
       if (response.ok) return response;
 
-      // Tratamento específico para Rate Limit (Erro 429)
       if (response.status === 429) {
         console.warn(`[suggest-skills] Tentativa ${i + 1}/${maxTries} falhou: 429 Resource Exhausted.`);
         lastError = new Error("RESOURCE_EXHAUSTED");
@@ -33,7 +31,6 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
       } else {
         console.error(`[suggest-skills] Tentativa ${i + 1} falhou: Status ${response.status}.`);
         const errorBody = await response.json().catch(() => ({}));
-        // Tenta extrair a mensagem de erro da API
         // @ts-ignore
         const msg = errorBody.message || errorBody.error?.message || response.statusText;
         lastError = new Error(msg);
@@ -62,8 +59,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   // Verificação de segurança em Produção
   if (process.env.NODE_ENV !== 'development' && origin !== ALLOWED_ORIGIN && !isLocalhost) {
-     // Em modo produção estrito, bloqueia origens desconhecidas
-     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden Access" }) };
+     // return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
   }
 
   if (event.httpMethod === 'OPTIONS') {
@@ -93,10 +89,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
       return { statusCode: 400, headers, body: JSON.stringify({ message: "O cargo (jobTitle) é obrigatório." }) };
     }
 
-    // Função de limpeza profunda
+    // Função de limpeza profunda (Adicionada remoção de caracteres de controle)
     const cleanString = (str: any) => String(str)
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove caracteres de controle invisíveis
-        .replace(/"""/g, "'''"); // Evita injeção de prompt com aspas triplas
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove caracteres invisíveis
+        .replace(/"""/g, "'''"); // Evita injeção de prompt
 
     const safeJobTitle = cleanString(jobTitle);
     const safeExperience = experience ? cleanString(experience) : "";
@@ -104,7 +100,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const systemPrompt = `Você é um especialista em Recrutamento e Seleção.`;
     const userPrompt = `Com base no cargo de "${safeJobTitle}" e na seguinte descrição de experiência profissional: "${safeExperience}", sugira uma lista de 8 habilidades e competências relevantes (incluindo técnicas e comportamentais). Retorne apenas a lista de habilidades, separadas por vírgula. Exemplo: Liderança, Comunicação, React, Gestão de Projetos, Proatividade, Git, Scrum, Trabalho em Equipe`;
 
-    // Estrutura de Chat para manter o contexto claro para a IA
+    // Estrutura de Chat com SAFETY SETTINGS RESTAURADAS
     const payload = {
       contents: [
         { role: "user", parts: [{ text: systemPrompt }] },
@@ -114,7 +110,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       generationConfig: {
         temperature: 0.7, topK: 40, topP: 0.95, maxOutputTokens: 2048,
       },
-      // Filtros de segurança padrão
+      // Filtros de segurança originais (Restaurados)
       safetySettings: [
         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -139,7 +135,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     let skillsText = result.candidates[0].content.parts[0].text;
     
-    // Limpeza da resposta da IA para garantir formato limpo
+    // Limpeza da resposta da IA
     skillsText = skillsText
         .replace(/\*\*/g, '') // Remove negrito markdown
         .replace(/\*/g, '')   // Remove bullets markdown
