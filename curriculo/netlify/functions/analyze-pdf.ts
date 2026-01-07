@@ -4,6 +4,9 @@ const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
+// Defina a URL do seu frontend em produção
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Função auxiliar de retry (mantida igual)
@@ -28,18 +31,33 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
 
 const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
-  const origin = event.headers.origin || event.headers.Origin;
-  // Se quiser ser muito estrito (cuidado em localhost):
-  // const ALLOWED = "https://velcurriculo.com.br";
-  // if (origin && !origin.includes("localhost") && origin !== ALLOWED) return { statusCode: 403, body: "Forbidden" };
+  const origin = event.headers.origin || event.headers.Origin || "";
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+  const isAllowed = origin === ALLOWED_ORIGIN || isLocalhost;
 
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
+  // Headers estritos: responde apenas para a origem permitida
+  const headers = {
+    "Access-Control-Allow-Origin": isAllowed ? origin : ALLOWED_ORIGIN,
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  };
 
-  if (!API_KEY) return { statusCode: 500, body: JSON.stringify({ message: "Chave ausente." }) };
+  // Bloqueio de segurança em Produção
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     console.warn(`[analyze-pdf] Bloqueio de origem não autorizada: ${origin}`);
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+  }
+
+  // Tratamento de OPTIONS (Pre-flight)
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
+
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' };
+
+  if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave ausente." }) };
 
   try {
     const { fullText } = JSON.parse(event.body || '{}');
-    if (!fullText) return { statusCode: 400, body: JSON.stringify({ message: "Texto vazio." }) };
+    if (!fullText) return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto vazio." }) };
 
     // Limpeza de caracteres de controle
     const safeText = fullText.substring(0, 30000).replace(/[\x00-\x1F\x7F-\x9F]/g, "");
@@ -82,7 +100,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: headers,
       body: jsonString,
     };
 
@@ -90,7 +108,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     const err = error as Error;
     // 🔒 PRIVACIDADE: Logamos apenas a mensagem, nunca o objeto completo
     console.error("[analyze-pdf] Erro:", err.message);
-    return { statusCode: 500, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
+    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
   }
 };
 
