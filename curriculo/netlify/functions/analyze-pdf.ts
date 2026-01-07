@@ -29,7 +29,7 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
   throw lastError;
 };
 
-const handler: Handler = async (event: HandlerEvent) => {
+export const handler: Handler = async (event: HandlerEvent) => {
   // 🔒 ETAPA 2: PORTEIRO DIGITAL (CORS)
   const origin = event.headers.origin || event.headers.Origin || "";
   const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
@@ -111,5 +111,3 @@ const handler: Handler = async (event: HandlerEvent) => {
     return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao analisar PDF." }) };
   }
 };
-
-export { handler };
