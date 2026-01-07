@@ -14,18 +14,29 @@ const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
 const ALLOWED_ORIGIN = process.env.URL || "http://localhost:8888"; // Netlify define process.env.URL automaticamente
 
 const handler: Handler = async (event: HandlerEvent) => {
+  // 1. ROBUSTEZ: Headers CORS padronizados para todas as respostas
+  const headers = {
+    "Access-Control-Allow-Origin": "*", // Em produção, ajuste para event.headers.origin || "*"
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Content-Type": "application/json"
+  };
+
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
+  }
+  
   // 1. Verificação de Origem (CORS - Etapa 2 já inclusa aqui)
   const origin = event.headers.origin || event.headers.Origin;
   // Nota: Em desenvolvimento local, origin pode ser undefined ou diferente. 
   // Em produção, isso impede requisições de sites piratas.
   
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers, body: 'Method Not Allowed' };
   }
 
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
     console.error("ERRO CRÍTICO: Token MP ausente.");
-    return { statusCode: 500, body: JSON.stringify({ message: "Erro de configuração." }) };
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro de configuração." }) };
   }
 
   mercadopago.configure({
@@ -33,7 +44,13 @@ const handler: Handler = async (event: HandlerEvent) => {
   });
 
   try {
-    const body = JSON.parse(event.body || '{}');
+    // 2. ROBUSTEZ: Parse Seguro do Body
+    let body;
+    try {
+        body = JSON.parse(event.body || '{}');
+    } catch (e) {
+        return { statusCode: 400, headers, body: JSON.stringify({ message: "Requisição inválida (JSON esperado)." }) };
+    }
     
     // 🔒 LÓGICA BLINDADA: O Backend decide o preço
     let finalAmount = PRICING_TABLE.FULL;
@@ -48,13 +65,18 @@ const handler: Handler = async (event: HandlerEvent) => {
     // Log seguro (apenas valores, não dados pessoais)
     console.log(`[Pagamento] Gerando Pix: R$ ${finalAmount} | Cupom: ${body.coupon || 'Nenhum'}`);
 
+    // Validação básica de dados obrigatórios
+    if (!body.email) {
+        return { statusCode: 400, headers, body: JSON.stringify({ message: "Email é obrigatório." }) };
+    }
+
     const payment_data = {
       transaction_amount: finalAmount,
       description: description,
       payment_method_id: 'pix',
       date_of_expiration: new Date(Date.now() + 600000).toISOString(),
       payer: {
-        email: body.email || `cliente-${Date.now()}@velcurriculo.com`,
+        email: body.email,
         first_name: body.firstName || 'Cliente',
         last_name: body.lastName || 'VelCurriculo'
       },
@@ -68,10 +90,7 @@ const handler: Handler = async (event: HandlerEvent) => {
 
     return {
       statusCode: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        // Opcional: Access-Control-Allow-Origin se quiser ser estrito aqui também
-      },
+      headers: headers, // Headers com CORS
       body: JSON.stringify({
         paymentId: payment.body.id,
         qrCodeUrl: `data:image/png;base64,${payment.body.point_of_interaction.transaction_data.qr_code_base64}`,
@@ -85,6 +104,7 @@ const handler: Handler = async (event: HandlerEvent) => {
     console.error(`[Pagamento Erro] ${error.message}`);
     return { 
         statusCode: 500, 
+        headers: headers, // Headers com CORS garantidos mesmo no erro
         body: JSON.stringify({ message: "Erro ao processar pagamento." }) 
     };
   }
