@@ -39,7 +39,8 @@ const Icons = {
     Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
     DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
     Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>,
-    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    ThumbsUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -90,7 +91,16 @@ const AdminDashboard: React.FC = () => {
     const [templateData, setTemplateData] = useState<any[]>([]);
     const [funnelData, setFunnelData] = useState<any[]>([]);
     const [revenueData, setRevenueData] = useState<any[]>([]); 
-    const [peakHourData, setPeakHourData] = useState<any[]>([]); // 🔥 NOVO: Horários de Pico
+    const [peakHourData, setPeakHourData] = useState<any[]>([]);
+
+    // --- ESTATISTICAS DE REVIEWS (NOVO) ---
+    const [reviewStats, setReviewStats] = useState({
+        total: 0,
+        avgRating: 0,
+        pending: 0,
+        distribution: [] as any[],
+        timeline: [] as any[]
+    });
 
     // Login & Preview States
     const [email, setEmail] = useState('');
@@ -124,7 +134,8 @@ const AdminDashboard: React.FC = () => {
         const dailyQ = query(collection(db, 'stats_daily'), orderBy('date', 'asc'));
         onSnapshot(dailyQ, (snap) => setDailyStats(snap.docs.map(d => d.data())));
 
-        onSnapshot(query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(50)), (snap) => {
+        // Buscar reviews (limite maior para cálculo de estatísticas)
+        onSnapshot(query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(200)), (snap) => {
             setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
@@ -134,10 +145,47 @@ const AdminDashboard: React.FC = () => {
 
     }, [user]);
 
-    // 1. PROCESSADOR MESTRE DE DADOS (KPIs e Gráficos Inteligentes)
+    // 1. PROCESSADOR MESTRE DE DADOS
     useEffect(() => {
         processAllData();
-    }, [leads, dailyStats, transactions, dateRange]);
+        processReviewData();
+    }, [leads, dailyStats, transactions, dateRange, reviews]);
+
+    const processReviewData = () => {
+        if (reviews.length === 0) return;
+
+        const total = reviews.length;
+        const sum = reviews.reduce((acc, r) => acc + (r.rating || 0), 0);
+        const avgRating = total > 0 ? sum / total : 0;
+        const pending = reviews.filter(r => !r.approved).length;
+
+        // Distribuição de Estrelas
+        const dist = [0, 0, 0, 0, 0];
+        reviews.forEach(r => {
+            if (r.rating >= 1 && r.rating <= 5) dist[r.rating - 1]++;
+        });
+        const distData = dist.map((count, i) => ({ stars: i + 1, count })).reverse();
+
+        // Timeline (Volume por Data)
+        const timelineMap: Record<string, number> = {};
+        reviews.forEach(r => {
+            // @ts-ignore
+            const d = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at?.seconds * 1000);
+            if(d) {
+                const dateKey = format(d, 'dd/MM');
+                timelineMap[dateKey] = (timelineMap[dateKey] || 0) + 1;
+            }
+        });
+        const timelineData = Object.entries(timelineMap).map(([date, count]) => ({ date, count })).reverse().slice(0, 14).reverse();
+
+        setReviewStats({
+            total,
+            avgRating,
+            pending,
+            distribution: distData,
+            timeline: timelineData
+        });
+    };
 
     const processAllData = () => {
         const start = startOfDay(parseISO(dateRange.start));
@@ -207,7 +255,7 @@ const AdminDashboard: React.FC = () => {
             revenue: calcGrowth(totalRev, prevRev),
             resumes: calcGrowth(totalRes, prevLeads),
             salesCount: calcGrowth(totalSales, prevSales),
-            visitors: 0 // Visitors é difícil comparar sem dados diários perfeitos do passado na store local, mantendo 0
+            visitors: 0
         });
 
         // --- CHART: DAILY ACTIVITY ---
@@ -234,7 +282,7 @@ const AdminDashboard: React.FC = () => {
         });
         setDailyChartData(chartData);
 
-        // --- CHART: TEMPLATES (CORRIGIDO) ---
+        // --- CHART: TEMPLATES & OTHERS ---
         const cities: Record<string, number> = {};
         const jobs: Record<string, number> = {};
         const templates: Record<string, number> = {};
@@ -242,7 +290,6 @@ const AdminDashboard: React.FC = () => {
         const hourCounts: number[] = new Array(24).fill(0);
 
         filteredLeads.forEach(lead => {
-            // City
             let city = lead.city || 'Desconhecido';
             if (lead.full_data_backup) { 
                 try {
@@ -256,17 +303,14 @@ const AdminDashboard: React.FC = () => {
             }
             cities[city] = (cities[city] || 0) + 1;
 
-            // Job
             const job = lead.jobTitle ? lead.jobTitle.trim() : 'Geral';
             jobs[job] = (jobs[job] || 0) + 1;
 
-            // Template (FIXED LOGIC)
             const tpl = lead.template || 'template-modern';
             const cleanTpl = tpl.replace('template-', '');
             const tplName = cleanTpl.charAt(0).toUpperCase() + cleanTpl.slice(1); 
             templates[tplName] = (templates[tplName] || 0) + 1;
 
-            // Age
             const age = parseInt(lead.age);
             if (age) {
                 if (age >= 18 && age <= 24) ages['18-24']++;
@@ -275,7 +319,6 @@ const AdminDashboard: React.FC = () => {
                 else if (age >= 45) ages['45+']++;
             }
 
-            // Hour Analysis (Peak Hours)
              // @ts-ignore
              const d = lead.generated_at?.toDate ? lead.generated_at.toDate() : new Date(lead.generated_at.seconds * 1000);
              const hour = d.getHours();
@@ -287,11 +330,7 @@ const AdminDashboard: React.FC = () => {
         setTemplateData(Object.entries(templates).map(([k, v]) => ({ name: k, value: v })));
         setAgeData(Object.entries(ages).map(([k, v]) => ({ name: k, value: v })));
         
-        // Data for Peak Hours Chart
-        setPeakHourData(hourCounts.map((count, hour) => ({
-            hour: `${hour}h`,
-            count: count
-        })));
+        setPeakHourData(hourCounts.map((count, hour) => ({ hour: `${hour}h`, count: count })));
 
         setFunnelData([
             { name: 'Visitantes', value: totalVis, fill: '#3b82f6' },
@@ -331,8 +370,6 @@ const AdminDashboard: React.FC = () => {
         try {
             const cleanCode = newCoupon.code.trim().toUpperCase();
             if(!cleanCode || !newCoupon.value) throw new Error("Preencha os campos obrigatórios");
-
-            // Validação simples
             const val = parseFloat(newCoupon.value);
             if(isNaN(val) || val <= 0) throw new Error("Valor inválido");
             if(newCoupon.type === 'percentage' && val > 100) throw new Error("Porcentagem não pode ser maior que 100");
@@ -347,7 +384,6 @@ const AdminDashboard: React.FC = () => {
                 createdAt: Timestamp.now(),
                 usedBy: []
             });
-
             setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '' });
             alert("Cupom criado com sucesso!");
         } catch (err: any) {
@@ -366,7 +402,6 @@ const AdminDashboard: React.FC = () => {
             await deleteDoc(doc(db, 'coupons', id));
         }
     };
-
 
     // UTILS & PDF GENERATION
     useEffect(() => {
@@ -628,7 +663,7 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
-            <style>{` .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; } @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } `}</style>
+            <style>{` .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; } @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; } `}</style>
 
             {/* SIDEBAR */}
             <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white hidden lg:flex flex-col transition-all duration-300 shadow-xl z-30 relative`}>
@@ -880,13 +915,67 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
+                    {/* 🔥 TAB DE AVALIAÇÕES RENOVADA */}
                     {activeTab === 'reviews' && (
                         <div className="animate-fade-in space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-gray-700 text-xl">Gerenciamento de Avaliações</h3>
-                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">
-                                    {reviews.length} Avaliações
-                                </span>
+                            
+                            {/* DASHBOARD DE REPUTAÇÃO */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* CARD PRINCIPAL: NOTA MÉDIA */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5 flex flex-col items-center justify-center text-center">
+                                    <h4 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Nota Geral</h4>
+                                    <div className="text-5xl font-bold text-gray-800 mb-2">{reviewStats.avgRating.toFixed(1)}</div>
+                                    <div className="flex gap-1 mb-2">
+                                        {[1,2,3,4,5].map(s => <div key={s} className={s <= Math.round(reviewStats.avgRating) ? "text-yellow-400" : "text-gray-200"}><Icons.Star /></div>)}
+                                    </div>
+                                    <p className="text-xs text-gray-400">{reviewStats.total} avaliações totais</p>
+                                </div>
+
+                                {/* GRÁFICO: DISTRIBUIÇÃO */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
+                                    <h4 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Distribuição de Notas</h4>
+                                    <div className="h-[120px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart layout="vertical" data={reviewStats.distribution}>
+                                                <XAxis type="number" hide />
+                                                <YAxis dataKey="stars" type="category" width={20} tickFormatter={val => `${val}★`} tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                                                <Bar dataKey="count" fill="#fbbf24" radius={[0, 4, 4, 0]} barSize={10} background={{ fill: '#f1f5f9' }} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* GRÁFICO: TIMELINE */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
+                                    <h4 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Novas Avaliações</h4>
+                                    <div className="h-[120px]">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={reviewStats.timeline}>
+                                                <defs>
+                                                    <linearGradient id="colorReviews" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <Area type="monotone" dataKey="count" stroke="#8b5cf6" fill="url(#colorReviews)" strokeWidth={2} />
+                                                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '12px'}} />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <p className="text-xs text-center text-gray-400 mt-2">Últimos 14 dias com atividade</p>
+                                </div>
+                            </div>
+
+                            {/* CABEÇALHO DA LISTA */}
+                            <div className="flex items-center justify-between mt-8">
+                                <h3 className="font-bold text-gray-700 text-xl flex items-center gap-2"><Icons.MessageSquare /> Feed de Depoimentos</h3>
+                                <div className="flex gap-2">
+                                    {reviewStats.pending > 0 && (
+                                        <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold border border-yellow-200 animate-pulse">
+                                            {reviewStats.pending} Pendentes de Aprovação
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             {reviews.length === 0 ? (
@@ -897,15 +986,15 @@ const AdminDashboard: React.FC = () => {
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {reviews.map((review) => (
-                                        <div key={review.id} className={`bg-white p-6 rounded-xl border transition-all ${review.approved ? 'border-green-200 shadow-sm' : 'border-yellow-200 shadow-md ring-1 ring-yellow-100'}`}>
+                                        <div key={review.id} className={`bg-white p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg ${review.approved ? 'border-gray-100 shadow-sm' : 'border-yellow-300 shadow-md ring-1 ring-yellow-100 bg-yellow-50/10'}`}>
                                             <div className="flex justify-between items-start mb-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${review.approved ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-sm ${review.approved ? 'bg-blue-50 text-blue-600' : 'bg-yellow-100 text-yellow-600'}`}>
                                                         {review.author ? review.author.charAt(0).toUpperCase() : '?'}
                                                     </div>
                                                     <div>
-                                                        <h4 className="font-bold text-gray-800 leading-tight">{review.author || 'Anônimo'}</h4>
-                                                        <div className="flex items-center mt-1">
+                                                        <h4 className="font-bold text-gray-800 leading-tight text-sm">{review.author || 'Anônimo'}</h4>
+                                                        <div className="flex items-center mt-1 text-xs">
                                                             {[1, 2, 3, 4, 5].map((star) => (
                                                                 <div key={star} className={star <= review.rating ? "text-yellow-400" : "text-gray-200"}>
                                                                     <Icons.Star />
@@ -915,20 +1004,20 @@ const AdminDashboard: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 {review.approved ? (
-                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Publicado</span>
+                                                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-green-200">Visível</span>
                                                 ) : (
-                                                    <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">Pendente</span>
+                                                    <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider border border-yellow-200">Pendente</span>
                                                 )}
                                             </div>
 
-                                            <p className="text-gray-600 text-sm mb-6 italic min-h-[60px]">"{review.text}"</p>
+                                            <p className="text-gray-600 text-sm mb-6 italic min-h-[60px] line-clamp-3">"{review.text}"</p>
 
                                             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                                                 <span className="text-xs text-gray-400 font-medium">
                                                     {review.created_at?.toDate ? format(review.created_at.toDate(), "dd/MM/yyyy") : 'Data desconhecida'}
                                                 </span>
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => toggleReviewStatus(review.id, review.approved)} className={`p-2 rounded-lg transition-colors ${review.approved ? 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'}`} title={review.approved ? "Ocultar Depoimento" : "Aprovar Depoimento"}>
+                                                    <button onClick={() => toggleReviewStatus(review.id, review.approved)} className={`p-2 rounded-lg transition-colors ${review.approved ? 'bg-gray-100 text-gray-500 hover:bg-yellow-50 hover:text-yellow-600' : 'bg-green-600 text-white hover:bg-green-700 shadow-sm shadow-green-200'}`} title={review.approved ? "Ocultar Depoimento" : "Aprovar Depoimento"}>
                                                         {review.approved ? <Icons.X /> : <Icons.Check />}
                                                     </button>
                                                     <button onClick={() => deleteReview(review.id)} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Excluir Permanentemente">
