@@ -7,7 +7,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
     BarChart, Bar, PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart
 } from 'recharts';
-import { format, subDays, isAfter, isBefore, endOfDay, startOfDay, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
+import { format, subDays, isAfter, isBefore, endOfDay, startOfDay, parseISO, eachDayOfInterval, isSameDay, sub } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { toPng } from 'html-to-image';
@@ -21,6 +21,7 @@ const Icons = {
     Users: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
     FileText: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
     TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+    TrendingDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
     LogOut: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
     ChevronLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
     ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
@@ -37,7 +38,8 @@ const Icons = {
     Filter: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
     Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>,
     DollarSign: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
-    Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>
+    Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>,
+    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -53,14 +55,14 @@ const AdminDashboard: React.FC = () => {
         start: format(subDays(new Date(), 30), 'yyyy-MM-dd'), // Padrão: Últimos 30 dias
         end: format(new Date(), 'yyyy-MM-dd') 
     });
-    const [datePreset, setDatePreset] = useState<'7d' | '30d' | 'month' | 'custom'>('30d');
+    const [datePreset, setDatePreset] = useState<'today' | '7d' | '30d' | 'month' | 'custom'>('30d');
 
     // --- DADOS DO FIREBASE ---
     const [dailyStats, setDailyStats] = useState<any[]>([]); 
     const [leads, setLeads] = useState<any[]>([]); 
     const [transactions, setTransactions] = useState<any[]>([]); 
     const [reviews, setReviews] = useState<any[]>([]);
-    const [coupons, setCoupons] = useState<any[]>([]); // 🔥 NOVO: Cupons
+    const [coupons, setCoupons] = useState<any[]>([]);
     
     // --- DADOS PROCESSADOS (KPIs) ---
     const [kpis, setKpis] = useState({
@@ -69,6 +71,14 @@ const AdminDashboard: React.FC = () => {
         visitors: 0,
         conversionRate: 0,
         avgTicket: 0,
+        salesCount: 0
+    });
+    
+    // KPIs de Comparação (Growth)
+    const [growth, setGrowth] = useState({
+        revenue: 0,
+        resumes: 0,
+        visitors: 0,
         salesCount: 0
     });
 
@@ -80,6 +90,7 @@ const AdminDashboard: React.FC = () => {
     const [templateData, setTemplateData] = useState<any[]>([]);
     const [funnelData, setFunnelData] = useState<any[]>([]);
     const [revenueData, setRevenueData] = useState<any[]>([]); 
+    const [peakHourData, setPeakHourData] = useState<any[]>([]); // 🔥 NOVO: Horários de Pico
 
     // Login & Preview States
     const [email, setEmail] = useState('');
@@ -104,10 +115,10 @@ const AdminDashboard: React.FC = () => {
     useEffect(() => {
         if (!user) return;
 
-        const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(500));
+        const leadsQ = query(collection(db, 'leads'), orderBy('generated_at', 'desc'), limit(1000));
         onSnapshot(leadsQ, (snap) => setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-        const transQ = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(500));
+        const transQ = query(collection(db, 'transactions'), orderBy('created_at', 'desc'), limit(1000));
         onSnapshot(transQ, (snap) => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
         const dailyQ = query(collection(db, 'stats_daily'), orderBy('date', 'asc'));
@@ -117,7 +128,6 @@ const AdminDashboard: React.FC = () => {
             setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
-        // 🔥 NOVO: Listener de Cupons
         onSnapshot(query(collection(db, 'coupons'), orderBy('createdAt', 'desc')), (snap) => {
             setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
@@ -133,6 +143,7 @@ const AdminDashboard: React.FC = () => {
         const start = startOfDay(parseISO(dateRange.start));
         const end = endOfDay(parseISO(dateRange.end));
 
+        // --- FILTRO DO PERÍODO ATUAL ---
         const filteredLeads = leads.filter(lead => {
             if (!lead.generated_at) return false;
             // @ts-ignore
@@ -152,10 +163,36 @@ const AdminDashboard: React.FC = () => {
             return (isAfter(d, start) || day.date === dateRange.start) && (isBefore(d, end) || day.date === dateRange.end);
         });
 
+        // --- CALCULO KPIs ATUAIS ---
         const totalRev = filteredTrans.reduce((acc, curr) => acc + (curr.amount || 0), 0);
         const totalSales = filteredTrans.length;
         const totalRes = filteredLeads.length;
         const totalVis = filteredDailyVisitors.reduce((acc, curr) => acc + (curr.visitors || 0), 0);
+
+        // --- LOGICA DE COMPARAÇÃO (PERÍODO ANTERIOR) ---
+        const duration = end.getTime() - start.getTime();
+        const prevEnd = new Date(start.getTime() - 1);
+        const prevStart = new Date(prevEnd.getTime() - duration);
+
+        const prevLeads = leads.filter(l => {
+            // @ts-ignore
+            const d = l.generated_at?.toDate ? l.generated_at.toDate() : new Date(l.generated_at.seconds * 1000);
+            return isAfter(d, prevStart) && isBefore(d, prevEnd);
+        }).length;
+        
+        const prevTrans = transactions.filter(t => {
+            // @ts-ignore
+            const d = t.created_at?.toDate ? t.created_at.toDate() : new Date(t.created_at.seconds * 1000);
+            return isAfter(d, prevStart) && isBefore(d, prevEnd);
+        });
+        const prevRev = prevTrans.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+        const prevSales = prevTrans.length;
+
+        // Calculo de % de crescimento
+        const calcGrowth = (curr: number, prev: number) => {
+            if (prev === 0) return curr > 0 ? 100 : 0;
+            return ((curr - prev) / prev) * 100;
+        };
 
         setKpis({
             revenue: totalRev,
@@ -166,25 +203,28 @@ const AdminDashboard: React.FC = () => {
             avgTicket: totalSales > 0 ? (totalRev / totalSales) : 0
         });
 
+        setGrowth({
+            revenue: calcGrowth(totalRev, prevRev),
+            resumes: calcGrowth(totalRes, prevLeads),
+            salesCount: calcGrowth(totalSales, prevSales),
+            visitors: 0 // Visitors é difícil comparar sem dados diários perfeitos do passado na store local, mantendo 0
+        });
+
+        // --- CHART: DAILY ACTIVITY ---
         const daysInterval = eachDayOfInterval({ start, end });
-        
         const chartData = daysInterval.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            
             const leadsCount = leads.filter(l => {
                 // @ts-ignore
                 const d = l.generated_at?.toDate ? l.generated_at.toDate() : new Date(l.generated_at.seconds * 1000);
                 return isSameDay(d, day);
             }).length;
-
             const salesCount = transactions.filter(t => {
                 // @ts-ignore
                 const d = t.created_at?.toDate ? t.created_at.toDate() : new Date(t.created_at.seconds * 1000);
                 return isSameDay(d, day);
             }).length;
-
             const dailyStat = dailyStats.find(ds => ds.date === dayStr);
-            
             return {
                 date: format(day, 'dd/MM'),
                 visitantes: dailyStat?.visitors || 0,
@@ -194,12 +234,15 @@ const AdminDashboard: React.FC = () => {
         });
         setDailyChartData(chartData);
 
+        // --- CHART: TEMPLATES (CORRIGIDO) ---
         const cities: Record<string, number> = {};
         const jobs: Record<string, number> = {};
         const templates: Record<string, number> = {};
         const ages: any = { '18-24': 0, '25-34': 0, '35-44': 0, '45+': 0 };
+        const hourCounts: number[] = new Array(24).fill(0);
 
         filteredLeads.forEach(lead => {
+            // City
             let city = lead.city || 'Desconhecido';
             if (lead.full_data_backup) { 
                 try {
@@ -213,13 +256,17 @@ const AdminDashboard: React.FC = () => {
             }
             cities[city] = (cities[city] || 0) + 1;
 
+            // Job
             const job = lead.jobTitle ? lead.jobTitle.trim() : 'Geral';
             jobs[job] = (jobs[job] || 0) + 1;
 
+            // Template (FIXED LOGIC)
             const tpl = lead.template || 'template-modern';
-            const tplName = tpl.replace('template-', '').charAt(0).toUpperCase() + tpl.slice(10); 
+            const cleanTpl = tpl.replace('template-', '');
+            const tplName = cleanTpl.charAt(0).toUpperCase() + cleanTpl.slice(1); 
             templates[tplName] = (templates[tplName] || 0) + 1;
 
+            // Age
             const age = parseInt(lead.age);
             if (age) {
                 if (age >= 18 && age <= 24) ages['18-24']++;
@@ -227,12 +274,24 @@ const AdminDashboard: React.FC = () => {
                 else if (age >= 35 && age <= 44) ages['35-44']++;
                 else if (age >= 45) ages['45+']++;
             }
+
+            // Hour Analysis (Peak Hours)
+             // @ts-ignore
+             const d = lead.generated_at?.toDate ? lead.generated_at.toDate() : new Date(lead.generated_at.seconds * 1000);
+             const hour = d.getHours();
+             hourCounts[hour]++;
         });
 
         setCityData(Object.entries(cities).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 5));
         setJobData(Object.entries(jobs).map(([k, v]) => ({ name: k, value: v })).sort((a,b) => b.value - a.value).slice(0, 8));
         setTemplateData(Object.entries(templates).map(([k, v]) => ({ name: k, value: v })));
         setAgeData(Object.entries(ages).map(([k, v]) => ({ name: k, value: v })));
+        
+        // Data for Peak Hours Chart
+        setPeakHourData(hourCounts.map((count, hour) => ({
+            hour: `${hour}h`,
+            count: count
+        })));
 
         setFunnelData([
             { name: 'Visitantes', value: totalVis, fill: '#3b82f6' },
@@ -250,11 +309,12 @@ const AdminDashboard: React.FC = () => {
         setRevenueData(Object.keys(groupedRev).map(k => ({ name: k, value: groupedRev[k] })).reverse());
     };
 
-    const handlePresetChange = (preset: '7d' | '30d' | 'month' | 'custom') => {
+    const handlePresetChange = (preset: 'today' | '7d' | '30d' | 'month' | 'custom') => {
         setDatePreset(preset);
         const today = new Date();
         let start = new Date();
         
+        if (preset === 'today') start = today;
         if (preset === '7d') start = subDays(today, 7);
         if (preset === '30d') start = subDays(today, 30);
         if (preset === 'month') start = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -308,7 +368,7 @@ const AdminDashboard: React.FC = () => {
     };
 
 
-    // UTILS
+    // UTILS & PDF GENERATION
     useEffect(() => {
         const handleResize = () => {
             const width = window.innerWidth;
@@ -581,7 +641,6 @@ const AdminDashboard: React.FC = () => {
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')} icon={<Icons.FileText />} label="Leads & Currículos" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<Icons.TrendingUp />} label="Business Intelligence" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" />
-                    {/* 🔥 NOVO ITEM NO MENU */}
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'coupons'} onClick={() => setActiveTab('coupons')} icon={<Icons.Ticket />} label="Cupons & Promoções" />
                 </nav>
                 <div className="p-4 border-t border-white/10"><button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 transition ${sidebarCollapsed ? 'justify-center' : ''}`}><Icons.LogOut /> {!sidebarCollapsed && <span>Sair</span>}</button></div>
@@ -604,23 +663,30 @@ const AdminDashboard: React.FC = () => {
                 </div>
             )}
 
-            <main className="flex-1 overflow-y-auto w-full">
-                {/* TOP HEADER */}
-                <header className="bg-white h-auto lg:h-20 border-b border-gray-200 flex flex-col lg:flex-row items-center justify-between px-4 lg:px-8 sticky top-0 z-20 shadow-sm py-3 lg:py-0 gap-3">
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                        <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600"><Icons.Menu /></button>
+            <main className="flex-1 overflow-y-auto w-full bg-slate-50">
+                {/* TOP HEADER COM NOVO FILTRO */}
+                <header className="bg-white h-auto border-b border-gray-200 flex flex-col md:flex-row items-center justify-between px-4 lg:px-8 py-4 sticky top-0 z-20 shadow-sm/50 gap-4">
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600 hover:bg-gray-100 p-2 rounded-md"><Icons.Menu /></button>
                         <h1 className="text-xl font-bold text-gray-800">Dashboard Gerencial</h1>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 bg-gray-100 p-1.5 rounded-lg border border-gray-200">
-                        <button onClick={() => handlePresetChange('7d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '7d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>7 Dias</button>
-                        <button onClick={() => handlePresetChange('30d')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === '30d' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>30 Dias</button>
-                        <button onClick={() => handlePresetChange('month')} className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${datePreset === 'month' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}>Este Mês</button>
-                        <div className="h-4 w-px bg-gray-300 mx-1"></div>
-                        <div className="flex items-center gap-2">
-                            <input type="date" value={dateRange.start} onChange={e => {setDateRange({...dateRange, start: e.target.value}); setDatePreset('custom')}} className="text-xs border-none bg-transparent p-0 w-24 focus:ring-0 text-gray-600 font-medium" />
-                            <span className="text-gray-400 text-xs">até</span>
-                            <input type="date" value={dateRange.end} onChange={e => {setDateRange({...dateRange, end: e.target.value}); setDatePreset('custom')}} className="text-xs border-none bg-transparent p-0 w-24 focus:ring-0 text-gray-600 font-medium" />
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto bg-gray-50 p-1.5 rounded-xl border border-gray-200/60 shadow-inner">
+                        <div className="flex w-full sm:w-auto bg-white rounded-lg shadow-sm p-0.5">
+                             <button onClick={() => handlePresetChange('today')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'today' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Hoje</button>
+                             <button onClick={() => handlePresetChange('7d')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '7d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>7D</button>
+                             <button onClick={() => handlePresetChange('30d')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '30d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>30D</button>
+                             <button onClick={() => handlePresetChange('month')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'month' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Mês</button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-3">
+                            <div className="relative flex-1">
+                                <input type="date" value={dateRange.start} onChange={e => {setDateRange({...dateRange, start: e.target.value}); setDatePreset('custom')}} className="w-full text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
+                            </div>
+                            <span className="text-gray-400 text-xs font-medium">até</span>
+                            <div className="relative flex-1">
+                                <input type="date" value={dateRange.end} onChange={e => {setDateRange({...dateRange, end: e.target.value}); setDatePreset('custom')}} className="w-full text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -631,46 +697,57 @@ const AdminDashboard: React.FC = () => {
                     {activeTab === 'overview' && (
                         <div className="space-y-6 animate-fade-in">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <KpiCard title="Faturamento" value={kpis.revenue} isMoney icon={<Icons.DollarSign />} color="bg-emerald-500" sub="No período selecionado" />
-                                <KpiCard title="Vendas" value={kpis.salesCount} icon={<Icons.Check />} color="bg-blue-500" sub={`Conv: ${kpis.conversionRate.toFixed(1)}%`} />
+                                <KpiCard title="Faturamento" value={kpis.revenue} isMoney icon={<Icons.DollarSign />} color="bg-emerald-500" growth={growth.revenue} />
+                                <KpiCard title="Vendas" value={kpis.salesCount} icon={<Icons.Check />} color="bg-blue-500" sub={`Conv: ${kpis.conversionRate.toFixed(1)}%`} growth={growth.salesCount} />
                                 <KpiCard title="Ticket Médio" value={kpis.avgTicket} isMoney icon={<Icons.Target />} color="bg-purple-500" sub="Por cliente" />
-                                <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`Visitantes: ${kpis.visitors}`} />
+                                <KpiCard title="Novos Leads" value={kpis.resumes} icon={<Icons.Users />} color="bg-orange-500" sub={`Visitantes: ${kpis.visitors}`} growth={growth.resumes} />
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
                                     <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.TrendingUp /> Tendência de Tráfego e Vendas</h3>
-                                    <div className="h-[300px]">
+                                    <div className="h-[320px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <ComposedChart data={dailyChartData}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                                                <XAxis dataKey="date" tick={{fontSize: 12}} axisLine={false} tickLine={false} />
-                                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" hide />
-                                                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" hide />
-                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                                <Legend />
-                                                <Bar yAxisId="left" dataKey="visitantes" name="Visitantes (Novo)" fill="#e2e8f0" barSize={20} radius={[4, 4, 0, 0]} />
-                                                <Line yAxisId="left" type="monotone" dataKey="curriculos" name="Leads" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                                                <Line yAxisId="right" type="monotone" dataKey="vendas" name="Vendas" stroke="#10b981" strokeWidth={3} dot={{r: 4}} />
+                                                <defs>
+                                                    <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                <XAxis dataKey="date" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} dy={10} />
+                                                <YAxis yAxisId="left" orientation="left" stroke="#94a3b8" hide />
+                                                <YAxis yAxisId="right" orientation="right" stroke="#94a3b8" hide />
+                                                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} cursor={{fill: '#f8fafc'}} />
+                                                <Legend iconType="circle" />
+                                                <Area yAxisId="left" type="monotone" dataKey="visitantes" name="Visitantes" fill="url(#colorVisits)" stroke="#3b82f6" strokeWidth={2} />
+                                                <Bar yAxisId="left" dataKey="curriculos" name="Leads Criados" fill="#8b5cf6" barSize={12} radius={[4, 4, 0, 0]} />
+                                                <Line yAxisId="right" type="monotone" dataKey="vendas" name="Vendas Confirmadas" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill:'#10b981', strokeWidth: 2, stroke:'#fff'}} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5 flex flex-col">
                                     <h3 className="font-bold text-gray-700 mb-6 flex items-center gap-2"><Icons.Filter /> Funil de Conversão</h3>
-                                    <div className="h-[300px] flex flex-col justify-center gap-4">
+                                    <div className="flex-1 flex flex-col justify-center gap-6">
                                         {funnelData.map((step, idx) => (
                                             <div key={step.name} className="relative group">
-                                                <div className="flex justify-between text-sm font-medium mb-1 text-gray-600">
-                                                    <span>{step.name}</span>
-                                                    <span className="font-bold">{step.value}</span>
+                                                <div className="flex justify-between text-sm font-medium mb-2 text-gray-600">
+                                                    <span className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full" style={{backgroundColor: step.fill}}></span>
+                                                        {step.name}
+                                                    </span>
+                                                    <span className="font-bold text-gray-800">{step.value}</span>
                                                 </div>
-                                                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${(step.value / (funnelData[0].value || step.value || 1)) * 100}%`, backgroundColor: step.fill }}></div>
+                                                <div className="w-full bg-gray-50 rounded-full h-3 overflow-hidden shadow-inner">
+                                                    <div className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden" style={{ width: `${(step.value / (funnelData[0].value || step.value || 1)) * 100}%`, backgroundColor: step.fill }}>
+                                                        <div className="absolute inset-0 bg-white/20"></div>
+                                                    </div>
                                                 </div>
-                                                {idx > 0 && <div className="text-right text-[10px] text-gray-400 mt-1">
-                                                    {funnelData[idx-1].value > 0 ? ((step.value / funnelData[idx-1].value) * 100).toFixed(1) : 0}% conversão
+                                                {idx > 0 && <div className="text-right text-[11px] font-bold text-gray-400 mt-1">
+                                                    {funnelData[idx-1].value > 0 ? ((step.value / funnelData[idx-1].value) * 100).toFixed(1) : 0}% de conversão
                                                 </div>}
                                             </div>
                                         ))}
@@ -683,11 +760,35 @@ const AdminDashboard: React.FC = () => {
                     {activeTab === 'analytics' && (
                         <div className="space-y-6 animate-fade-in">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                                
+                                {/* TEMPLATES FAVORITOS (CORRIGIDO) */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
+                                    <h3 className="font-bold text-gray-700 mb-4">Modelos Favoritos</h3>
+                                    <div className="h-[250px] relative">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie data={templateData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                                                    {templateData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                                </Pie>
+                                                <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                                <Legend verticalAlign="bottom" height={36} iconSize={10} formatter={(value, entry: any) => <span className="text-xs text-gray-500 font-medium ml-1">{value} ({entry.payload.value})</span>}/>
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <div className="text-center">
+                                                <span className="block text-2xl font-bold text-gray-800">{templateData.reduce((a,b) => a + b.value, 0)}</span>
+                                                <span className="text-[10px] text-gray-400 uppercase tracking-wider">Gerados</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* CARGOS EM ALTA */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
                                     <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
                                         <Icons.Target /> Cargos em Alta
                                     </h3>
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                         {jobData.map((job, idx) => (
                                             <div key={idx} className="group">
                                                 <div className="flex justify-between text-sm mb-1">
@@ -699,7 +800,7 @@ const AdminDashboard: React.FC = () => {
                                                     </span>
                                                     <span className="font-bold text-gray-900">{job.value}</span>
                                                 </div>
-                                                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-1000" 
                                                         style={{ width: `${(job.value / (jobData[0]?.value || 1)) * 100}%` }}
@@ -710,34 +811,40 @@ const AdminDashboard: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                    <h3 className="font-bold text-gray-700 mb-4">Modelos Favoritos</h3>
+                                {/* NOVO: HORÁRIOS DE PICO */}
+                                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
+                                    <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2"><Icons.Clock /> Horários de Pico</h3>
+                                    <p className="text-xs text-gray-400 mb-4">Volume de criação de currículos por hora do dia.</p>
                                     <div className="h-[200px]">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={templateData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                                    {templateData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                                                </Pie>
-                                                <Tooltip />
-                                                <Legend verticalAlign="bottom" height={36} iconSize={10}/>
-                                            </PieChart>
+                                            <BarChart data={peakHourData}>
+                                                <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{borderRadius: '8px'}} />
+                                                <XAxis dataKey="hour" tick={{fontSize: 10}} interval={3} axisLine={false} tickLine={false} />
+                                                <Bar dataKey="count" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                    <h3 className="font-bold text-gray-700 mb-4">Top Cidades</h3>
-                                    <div className="space-y-3">
-                                        {cityData.map((city, idx) => (
-                                            <div key={idx} className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 flex items-center gap-2"><span className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-500">{idx + 1}</span> {city.name}</span>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{width: `${(city.value / cityData[0].value) * 100}%`}}></div></div>
-                                                    <span className="text-xs font-bold text-gray-700">{city.value}</span>
+                             {/* TOP CIDADES (WIDE) */}
+                             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-lg shadow-blue-900/5">
+                                <h3 className="font-bold text-gray-700 mb-6">Geolocalização dos Usuários</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                    {cityData.map((city, idx) => (
+                                        <div key={idx} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                                                {idx + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-gray-800 text-sm">{city.name}</h4>
+                                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                                                    <div className="h-full bg-blue-500 rounded-full" style={{width: `${(city.value / cityData[0].value) * 100}%`}}></div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <span className="font-bold text-gray-600">{city.value}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -760,10 +867,10 @@ const AdminDashboard: React.FC = () => {
                                                 <tr key={lead.id} className="hover:bg-blue-50/30 transition">
                                                     <td className="px-6 py-4 font-medium text-gray-800">{lead.name}<div className="text-xs text-gray-400 font-normal">{lead.email}</div></td>
                                                     <td className="px-6 py-4"><span className="bg-gray-100 px-2 py-1 rounded text-xs">{lead.jobTitle || 'Geral'}</span></td>
-                                                    <td className="px-6 py-4 text-xs text-gray-500">{lead.template?.replace('template-', '') || '-'}</td>
+                                                    <td className="px-6 py-4 text-xs text-gray-500 capitalize">{lead.template ? lead.template.replace('template-', '') : '-'}</td>
                                                     {/* @ts-ignore */}
                                                     <td className="px-6 py-4 text-gray-500">{lead.generated_at?.toDate ? format(lead.generated_at.toDate(), 'dd/MM/yy HH:mm') : '-'}</td>
-                                                    <td className="px-6 py-4"><button onClick={() => setSelectedResume(lead)} className="text-blue-600 hover:text-blue-800 font-bold text-xs">Ver Currículo</button></td>
+                                                    <td className="px-6 py-4"><button onClick={() => setSelectedResume(lead)} className="text-blue-600 hover:text-blue-800 font-bold text-xs bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition">Ver Currículo</button></td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -959,15 +1066,21 @@ const SidebarItem = ({ collapsed, active, onClick, icon, label }: any) => (
     </button>
 );
 
-const KpiCard = ({ title, value, icon, color, isMoney, sub }: any) => (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-        <div className="flex justify-between items-start mb-2">
-            <div className={`w-10 h-10 ${color} text-white rounded-lg flex items-center justify-center shadow-md`}>{icon}</div>
-            {sub && <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100">{sub}</span>}
+const KpiCard = ({ title, value, icon, color, isMoney, sub, growth }: any) => (
+    <div className="bg-white p-5 rounded-2xl shadow-lg shadow-blue-900/5 border border-gray-100 hover:-translate-y-1 transition-transform duration-300">
+        <div className="flex justify-between items-start mb-3">
+            <div className={`w-12 h-12 ${color} text-white rounded-xl flex items-center justify-center shadow-md shadow-opacity-20`}>{icon}</div>
+            {growth !== undefined && growth !== 0 && (
+                <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${growth > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {growth > 0 ? <Icons.TrendingUp /> : <Icons.TrendingDown />}
+                    <span className="ml-1">{Math.abs(growth).toFixed(0)}%</span>
+                </div>
+            )}
         </div>
         <div>
-            <p className="text-gray-500 text-xs font-bold uppercase">{title}</p>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{title}</p>
             <h3 className="text-2xl font-bold text-gray-800 mt-1">{isMoney ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0) : (value || 0)}</h3>
+            {sub && <p className="text-[10px] text-gray-400 mt-1">{sub}</p>}
         </div>
     </div>
 );
