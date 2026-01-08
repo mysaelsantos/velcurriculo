@@ -112,22 +112,22 @@ export const handler: Handler = async (event: HandlerEvent) => {
     
     // Instrução defensiva para a IA
     const userMessage = `
-    Analise e melhore o texto delimitado por três aspas abaixo.
-    Texto do Usuário:
+    Aprimore o texto abaixo para um currículo profissional.
+    Texto Original:
     """
     ${sanitizedPrompt}
     """
-    Lembre-se das regras: Verdade, Tamanho (máx +20%), Formatação e Tom Profissional.
+    SAÍDA OBRIGATÓRIA: Retorne APENAS o texto aprimorado. NÃO coloque aspas, NÃO coloque prefixos como "Texto Polido:", NÃO use formatação Markdown (negrito/itálico). Apenas o texto puro.
     `;
 
     const payload = {
       contents: [
-        { role: "user", parts: [{ text: "Atue como um Consultor de Carreira Sênior especializado em polir currículos. REGRAS RÍGIDAS: (1) NÃO invente fatos; (2) Mantenha o tamanho próximo do original; (3) Use voz ativa e profissional; (4) Se o texto for ofensivo ou sem sentido, retorne o original intacto." }] },
-        { role: "model", parts: [{ text: "Entendido. Aguardo o texto para processar seguindo as regras de segurança e estilo." }] },
+        { role: "user", parts: [{ text: "Atue como um Consultor de Carreira Sênior. Sua tarefa é reescrever textos de currículos. REGRAS RÍGIDAS: (1) NÃO invente fatos; (2) Mantenha o tamanho próximo do original; (3) Use voz ativa e profissional; (4) Se o texto for ofensivo ou sem sentido, retorne o original intacto; (5) RETORNE SOMENTE O TEXTO FINAL, sem introduções, sem aspas e sem explicações." }] },
+        { role: "model", parts: [{ text: "Entendido. Retornarei estritamente o texto reescrito, sem nenhum comentário ou formatação adicional." }] },
         { role: "user", parts: [{ text: userMessage }] }
       ],
       generationConfig: {
-        temperature: 0.4, // Baixamos a temperatura para ser menos "criativo" e mais fiel
+        temperature: 0.3, // Reduzido levemente para evitar criatividade na formatação
         topK: 40, 
         topP: 0.95, 
         maxOutputTokens: 2048,
@@ -146,7 +146,16 @@ export const handler: Handler = async (event: HandlerEvent) => {
       throw new Error("A IA não retornou um texto válido.");
     }
 
-    const text = result.candidates[0].content.parts[0].text;
+    let text = result.candidates[0].content.parts[0].text;
+
+    // Limpeza final de segurança no código (caso a IA falhe levemente)
+    text = text.trim();
+    // Remove aspas do início e fim se a IA insistir em colocar
+    if (text.startsWith('"') && text.endsWith('"')) {
+        text = text.slice(1, -1);
+    }
+    // Remove prefixos comuns de alucinação
+    text = text.replace(/^Texto Polido:\s*/i, "").replace(/^Revisão:\s*/i, "").replace(/^\*\*/, "").replace(/\*\*$/, "");
 
     return {
       statusCode: 200,
