@@ -5,8 +5,14 @@ import { ResumeData } from '../types';
 // Referência para os totais gerais (acumulado histórico)
 const statsRef = doc(db, 'stats', 'general');
 
-// Helper para pegar a data de hoje no formato YYYY-MM-DD
-const getTodayStr = () => new Date().toISOString().split('T')[0];
+// Helper para pegar a data de hoje no formato YYYY-MM-DD (Ajustado para Data Local)
+const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export const trackVisitor = async () => {
     if (typeof window === 'undefined') return;
@@ -17,8 +23,8 @@ export const trackVisitor = async () => {
         // Evita contar o mesmo visitante várias vezes no mesmo dia (F5)
         if (sessionStorage.getItem(sessionKey)) return;
 
-        // 1. Incrementa Total Geral
-        await updateDoc(statsRef, { active_visitors: increment(1) });
+        // 1. Incrementa Total Geral (Alterado para setDoc para garantir criação se não existir)
+        await setDoc(statsRef, { active_visitors: increment(1) }, { merge: true });
         
         // 2. Incrementa Stats do Dia (Novo!)
         const dailyRef = doc(db, 'stats_daily', today);
@@ -37,11 +43,11 @@ export const trackResumeGenerated = async (data?: ResumeData) => {
         const today = getTodayStr();
         const dailyRef = doc(db, 'stats_daily', today);
 
-        // 1. Atualiza contadores
-        await updateDoc(statsRef, {
+        // 1. Atualiza contadores (Alterado para setDoc para evitar erro se 'general' não existir)
+        await setDoc(statsRef, {
             total_resumes: increment(1),
             last_updated: Timestamp.now()
-        });
+        }, { merge: true });
 
         // Contabiliza geração no dia
         await setDoc(dailyRef, { 
@@ -92,8 +98,8 @@ export const trackSale = async (amount: number, customerName: string, paymentId:
             status: 'approved', payment_method: 'pix', created_at: Timestamp.now()
         });
 
-        // 2. Atualiza totais gerais
-        await updateDoc(statsRef, { total_revenue: increment(amount) });
+        // 2. Atualiza totais gerais (Alterado para setDoc)
+        await setDoc(statsRef, { total_revenue: increment(amount) }, { merge: true });
 
         // 3. Atualiza totais do dia (Para o gráfico de faturamento diário)
         await setDoc(dailyRef, { 
