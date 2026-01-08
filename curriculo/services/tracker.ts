@@ -5,7 +5,7 @@ import { ResumeData } from '../types';
 // Referência para os totais gerais (acumulado histórico)
 const statsRef = doc(db, 'stats', 'general');
 
-// Helper para pegar a data de hoje no formato YYYY-MM-DD (Ajustado para Data Local)
+// Helper para pegar a data de hoje no formato YYYY-MM-DD (Corrigido para Data Local)
 const getTodayStr = () => {
     const d = new Date();
     const year = d.getFullYear();
@@ -23,10 +23,10 @@ export const trackVisitor = async () => {
         // Evita contar o mesmo visitante várias vezes no mesmo dia (F5)
         if (sessionStorage.getItem(sessionKey)) return;
 
-        // 1. Incrementa Total Geral (Alterado para setDoc para garantir criação se não existir)
+        // 1. Incrementa Total Geral (Mudei para setDoc para criar se não existir)
         await setDoc(statsRef, { active_visitors: increment(1) }, { merge: true });
         
-        // 2. Incrementa Stats do Dia (Novo!)
+        // 2. Incrementa Stats do Dia
         const dailyRef = doc(db, 'stats_daily', today);
         await setDoc(dailyRef, { 
             date: today,
@@ -43,7 +43,8 @@ export const trackResumeGenerated = async (data?: ResumeData) => {
         const today = getTodayStr();
         const dailyRef = doc(db, 'stats_daily', today);
 
-        // 1. Atualiza contadores (Alterado para setDoc para evitar erro se 'general' não existir)
+        // 1. Atualiza contadores
+        // Importante: setDoc com merge previne erro se o documento 'general' foi deletado
         await setDoc(statsRef, {
             total_resumes: increment(1),
             last_updated: Timestamp.now()
@@ -98,7 +99,7 @@ export const trackSale = async (amount: number, customerName: string, paymentId:
             status: 'approved', payment_method: 'pix', created_at: Timestamp.now()
         });
 
-        // 2. Atualiza totais gerais (Alterado para setDoc)
+        // 2. Atualiza totais gerais
         await setDoc(statsRef, { total_revenue: increment(amount) }, { merge: true });
 
         // 3. Atualiza totais do dia (Para o gráfico de faturamento diário)
