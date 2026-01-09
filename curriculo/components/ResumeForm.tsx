@@ -34,7 +34,7 @@ const WIZARD_STEPS = [
 ];
 
 const SKILL_SUGGESTIONS = [
-    "Pacote Office", "Excel Avançado", "Comunicação Efetiva", "Trabalho em Equipa",
+    "Pacote Office", "Excel Avançado", "Comunicação Efetiva", "Trabalho em Equipe",
     "Liderança", "Proatividade", "Organização", "Atendimento ao Cliente", "Gestão de Tempo"
 ];
 
@@ -78,6 +78,15 @@ const SUMMARY_SUGGESTIONS = [
             "Busco uma posição desafiadora onde eu possa contribuir para o crescimento da empresa.",
             "Meu objetivo é desenvolver minha carreira em um ambiente dinâmico.",
             "Disponível para contribuir ativamente com os objetivos da equipe e da organização.",
+        ],
+    },
+    {
+        title: "Para o primeiro emprego:",
+        suggestions: [
+            "Em busca da minha primeira oportunidade profissional para aplicar minha dedicação e vontade de aprender.",
+            "Jovem organizado, responsável e proativo em busca do primeiro emprego para crescer junto com a empresa.",
+            "Busco ingressar no mercado de trabalho para desenvolver minhas habilidades e contribuir com os resultados da equipe.",
+            "Com grande vontade de aprender e colaborar, busco minha primeira experiência profissional.",
         ],
     },
 ];
@@ -145,6 +154,9 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
+  // ESTADO PARA CONTROLE DO ACORDEÃO DE SUGESTÕES DE RESUMO
+  const [expandedSummaryGroup, setExpandedSummaryGroup] = useState<number | null>(null);
+
   const [currentSkillInput, setCurrentSkillInput] = useState('');
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +169,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             stepsContainerRef.current.style.height = `${activeStepNode.scrollHeight}px`;
         }
     }
-  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills]);
+  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup]);
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -263,7 +275,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const handleEducationShortcut = (degree: string) => {
      const newId = Date.now().toString();
      const newEdu: Education = { id: newId, degree, institution: '', startDate: '', endDate: '' };
-     handleDataChange('education', [newEdu]);
+     // CORREÇÃO: Agora adiciona ao array existente ao invés de substituir
+     handleDataChange('education', [...data.education, newEdu]);
      setOpenAccordion(prev => ({...prev, education: newId}));
   };
   
@@ -545,23 +558,47 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                     maxLength={CHAR_LIMITS.summary}></textarea>
                 <CharacterCounter current={data.summary.length} max={CHAR_LIMITS.summary} />
                 
-                <div className="mt-4 space-y-4">
+                <div className="mt-4 space-y-2">
+                    <p className="text-sm text-gray-600 mb-2">Sugestões rápidas:</p>
                     {SUMMARY_SUGGESTIONS.map((group, index) => (
-                        <div key={index}>
-                            <h4 className="text-sm font-semibold text-gray-800 mb-3">{group.title}</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {group.suggestions.map((suggestion, sIndex) => (
-                                    <button
-                                        key={sIndex}
-                                        type="button"
-                                        onClick={() => handleAddSummarySuggestion(suggestion)}
-                                        className="flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all bg-indigo-100 text-indigo-800 hover:bg-indigo-200 hover:-translate-y-0.5 hover:shadow-md"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                        <span className="text-left">{suggestion}</span>
-                                    </button>
-                                ))}
-                            </div>
+                        <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                            <button 
+                                type="button"
+                                onClick={() => setExpandedSummaryGroup(expandedSummaryGroup === index ? null : index)}
+                                className="w-full px-4 py-3 flex justify-between items-center text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+                            >
+                                <span className="text-sm font-semibold text-gray-800">{group.title}</span>
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="16" 
+                                    height="16" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round" 
+                                    className={`text-gray-500 transition-transform duration-200 ${expandedSummaryGroup === index ? 'rotate-180' : ''}`}
+                                >
+                                    <path d="m6 9 6 6 6-6"/>
+                                </svg>
+                            </button>
+                            
+                            {expandedSummaryGroup === index && (
+                                <div className="p-3 bg-white border-t border-gray-100 flex flex-col gap-2 animate-fade-in">
+                                    {group.suggestions.map((suggestion, sIndex) => (
+                                        <button
+                                            key={sIndex}
+                                            type="button"
+                                            onClick={() => handleAddSummarySuggestion(suggestion)}
+                                            className="text-left text-xs p-2 rounded-md hover:bg-indigo-50 text-gray-700 hover:text-indigo-700 transition-colors border border-transparent hover:border-indigo-100 flex items-start gap-2 group"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5 text-gray-400 group-hover:text-indigo-500"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            <span>{suggestion}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
