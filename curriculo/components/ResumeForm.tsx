@@ -762,7 +762,34 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                                             <input type="text" placeholder="Instituição de Ensino" className="w-full p-2 border rounded-lg bg-white border-gray-300 text-gray-900" value={edu.institution} onChange={e => updateEducation(edu.id, 'institution', e.target.value)} maxLength={CHAR_LIMITS.education.institution} />
                                             <div className="flex gap-3">
                                                 <input type="tel" placeholder="Início (Ex: 2016)" className="w-1/2 p-2 border rounded-lg bg-white border-gray-300 text-gray-900" value={edu.startDate} onChange={e => updateEducation(edu.id, 'startDate', e.target.value.replace(/\D/g, '').substring(0, 4))} maxLength={4} />
-                                                <input type="tel" placeholder="Fim (Ex: 2020)" className="w-1/2 p-2 border rounded-lg bg-white border-gray-300 text-gray-900" value={edu.endDate} onChange={e => updateEducation(edu.id, 'endDate', e.target.value.replace(/\D/g, '').substring(0, 4))} maxLength={4} />
+                                                <div className="w-1/2 relative">
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Fim (Ex: 2020)" 
+                                                        className={`w-full p-2 border rounded-lg bg-white border-gray-300 text-gray-900 ${edu.endDate === 'Atualmente' ? 'bg-gray-100 text-gray-500' : ''}`} 
+                                                        value={edu.endDate} 
+                                                        onChange={e => {
+                                                            const val = e.target.value.replace(/\D/g, '').substring(0, 4);
+                                                            updateEducation(edu.id, 'endDate', val);
+                                                        }} 
+                                                        maxLength={edu.endDate === 'Atualmente' ? 20 : 4} 
+                                                        disabled={edu.endDate === 'Atualmente'}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <input
+                                                    id={`currently-studying-${edu.id}`}
+                                                    type="checkbox"
+                                                    checked={edu.endDate === 'Atualmente'}
+                                                    onChange={(e) => {
+                                                        updateEducation(edu.id, 'endDate', e.target.checked ? 'Atualmente' : '');
+                                                    }}
+                                                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                                <label htmlFor={`currently-studying-${edu.id}`} className="text-sm text-gray-700 cursor-pointer select-none">
+                                                    Cursando atualmente
+                                                </label>
                                             </div>
                                         </div>
                                     )}
