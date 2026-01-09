@@ -255,7 +255,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 <div className="flex justify-between items-baseline flex-wrap">
                                     <div className="pr-4">
                                         <h4 className="font-semibold">{edu.degree || 'Curso/Formação'}</h4>
-                                        <p className="text-gray-700">{edu.institution || 'Instituição'}</p>
+                                        {edu.institution && (
+                                            <p className="text-gray-700">{edu.institution}</p>
+                                        )}
                                     </div>
                                     <p className="text-xs text-gray-500 text-right whitespace-nowrap">{edu.startDate} {edu.startDate && edu.endDate ? ' - ' : ''} {edu.endDate}</p>
                                 </div>
@@ -279,7 +281,9 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
                                 <div className="flex justify-between items-baseline flex-wrap">
                                     <div className="pr-4">
                                         <h4 className="font-semibold">{course.name || 'Nome do Curso'}</h4>
-                                        <p className="text-gray-700">{course.institution || 'Instituição'}</p>
+                                        {course.institution && (
+                                            <p className="text-gray-700">{course.institution}</p>
+                                        )}
                                     </div>
                                     <p className="text-xs text-gray-500 text-right whitespace-nowrap">{course.completionDate}</p>
                                 </div>
