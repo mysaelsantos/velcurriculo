@@ -1,4 +1,4 @@
-import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
+import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo, useState } from 'react';
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
@@ -39,11 +39,26 @@ const CollapsedPlaceholder = ({ label }: { label: string }) => (
     </div>
 );
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint }, ref) => {
+// Interface atualizada com enableProtection
+interface ResumePreviewProps {
+  data: PageData;
+  isDemoMode?: boolean;
+  isFirstPage?: boolean;
+  isMeasurement?: boolean;
+  hideEmptySections?: boolean;
+  isPrint?: boolean;
+  enableProtection?: boolean;
+}
+
+const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false }, ref) => {
   const safeData = data || {};
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
+  
+  // Estados para controle de segurança
+  const [isHidingContent, setIsHidingContent] = useState(false); // Para Key Logger (PrintScreen)
+  const [isBlurred, setIsBlurred] = useState(false); // Para Anti-Snipping (Perda de foco)
 
   useImperativeHandle(ref, () => ({
     getElement: () => previewRef.current,
@@ -54,6 +69,53 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         document.documentElement.style.setProperty('--theme-color', style.color);
     }
   }, [style?.color]);
+
+  // --- IMPLEMENTAÇÃO DAS CAMADAS DE SEGURANÇA ---
+  useEffect(() => {
+    if (!enableProtection) return;
+
+    // 1. Camada de Teclado (Key Logger para PrintScreen)
+    const handleKeyDown = (e: KeyboardEvent) => {
+        // Detecta PrintScreen e combinações comuns de captura (Win+Shift+S, Cmd+Shift+3/4)
+        if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4'))) {
+            setIsHidingContent(true);
+            // Mantém escondido por um tempo suficiente para frustrar o print e mostra o alerta
+            setTimeout(() => {
+                alert("A captura de tela está desabilitada nesta versão.");
+                setIsHidingContent(false);
+            }, 500); 
+        }
+    };
+
+    // 2. Camada de Foco (Anti-Snipping Tool)
+    // Se a janela perder o foco (ex: usuário clicou na ferramenta de recorte), borra a tela.
+    const handleBlur = () => {
+        setIsBlurred(true);
+    };
+
+    const handleFocus = () => {
+        setIsBlurred(false);
+    };
+
+    // Bloqueia menu de contexto (botão direito) para dificultar "Salvar Imagem"
+    const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        return false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+    // Adiciona listener no documento para garantir captura do context menu
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('focus', handleFocus);
+        document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [enableProtection]);
 
   const templateKey = style?.template || 'template-modern';
   // @ts-ignore
@@ -164,12 +226,52 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
+      // Aplica o filtro blur se a proteção estiver ativa e a janela perder o foco
+      (isBlurred && enableProtection) ? 'blur-xl transition-all duration-300' : 'transition-all duration-300',
   ].filter(Boolean).join(' ');
 
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
     <div id="resume-preview" ref={previewRef} className={containerClasses}>
+      
+      {/* --- CAMADA 3: BLOQUEIO DE IMPRESSÃO (CSS) --- */}
+      <style>{`
+        @media print {
+            ${enableProtection ? `
+                body {
+                    visibility: hidden !important;
+                    background: white !important;
+                }
+                body:before {
+                    content: "Visualização protegida. Para baixar o PDF, finalize o pagamento no site.";
+                    visibility: visible !important;
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: #333;
+                    text-align: center;
+                    width: 100%;
+                }
+                .resume-preview {
+                    display: none !important;
+                }
+            ` : ''}
+        }
+      `}</style>
+
+      {/* --- CAMADA 1: BLOQUEIO VISUAL (KEY LOGGER) --- */}
+      {isHidingContent && enableProtection && (
+          <div className="absolute inset-0 z-[100] bg-gray-100 flex flex-col items-center justify-center text-center p-8">
+              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <h3 className="text-xl font-bold text-gray-800">Proteção Ativa</h3>
+              <p className="text-gray-600 mt-2">O recurso de captura de tela está desabilitado na versão de demonstração.</p>
+          </div>
+      )}
+
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
