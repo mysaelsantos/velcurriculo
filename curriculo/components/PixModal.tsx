@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// Declaração para acessar a lib global de QR Code (mesma usada no QRCode.tsx)
+declare const QRCode: any;
+
 interface PixPaymentData {
   qrCodeUrl: string;
   copyPasteCode: string;
@@ -21,6 +24,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   const [status, setStatus] = useState<PaymentStatus>('pending');
   const [isCopied, setIsCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutos em segundos
+  const [localQrCodeUrl, setLocalQrCodeUrl] = useState<string | null>(null); // Estado para o QR gerado localmente
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkPaymentStatus = async () => {
@@ -38,6 +42,37 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
       setStatus('error');
     }
   };
+
+  // Gerar QR Code localmente com correção de erro alta para suportar o logo
+  useEffect(() => {
+    const generateHighResQR = async () => {
+        // Verifica se a lib existe e se temos o código copia e cola
+        if (!paymentData.copyPasteCode || typeof QRCode === 'undefined') {
+             setLocalQrCodeUrl(null);
+             return;
+        }
+
+        try {
+            const url = await QRCode.toDataURL(paymentData.copyPasteCode, {
+                errorCorrectionLevel: 'H', // Nível Alto (30%) permite cobrir o centro com logo
+                margin: 0,
+                width: 300,
+                color: {
+                    dark: "#000000",
+                    light: "#ffffff"
+                }
+            });
+            setLocalQrCodeUrl(url);
+        } catch (error) {
+            console.error("Failed to generate client-side QR:", error);
+            setLocalQrCodeUrl(null);
+        }
+    };
+
+    if (isOpen && status === 'pending') {
+        generateHighResQR();
+    }
+  }, [paymentData.copyPasteCode, isOpen, status]);
   
   // biome-ignore lint/correctness/useExhaustiveDependencies: This effect should only run when the status changes to 'success'
   useEffect(() => {
@@ -166,9 +201,26 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                         {formattedAmount}
                     </p>
 
-                    <div className="p-4 border rounded-lg bg-gray-50 flex justify-center">
-                        <img src={paymentData.qrCodeUrl} alt="QR Code Pix" className="w-48 h-48" />
+                    <div className="p-4 border rounded-lg bg-gray-50 flex justify-center items-center">
+                        <div className="relative inline-block w-48 h-48">
+                            {/* Usa o QR gerado localmente (Level H) ou fallback para o da API */}
+                            <img 
+                                src={localQrCodeUrl || paymentData.qrCodeUrl} 
+                                alt="QR Code Pix" 
+                                className="w-full h-full object-contain" 
+                            />
+                            
+                            {/* Logo Centralizado */}
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-1 shadow-sm flex items-center justify-center w-12 h-12">
+                                <img 
+                                    src="/vel-qr-pix.png" 
+                                    alt="Logo Pix" 
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                        </div>
                     </div>
+
                     <p className="text-center text-sm text-gray-500 mb-2 mt-4">Ou use o Pix Copia e Cola:</p>
                     <div className="relative">
                         <input type="text" readOnly value={paymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-lg p-3 text-sm text-gray-700 pr-24" />
