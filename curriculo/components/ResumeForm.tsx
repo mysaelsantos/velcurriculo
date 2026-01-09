@@ -159,6 +159,9 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
+  // ESTADO PARA SUGESTÃO DE TEMPLATES NO FINAL
+  const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
+
   // ESTADO PARA CONTROLE DO ACORDEÃO DE SUGESTÕES DE RESUMO
   const [expandedSummaryGroup, setExpandedSummaryGroup] = useState<number | null>(null);
 
@@ -167,6 +170,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // EFEITO PARA AJUSTE DE ALTURA DO CONTAINER
   useEffect(() => {
     if (!isFinished && stepsContainerRef.current) {
         const activeStepNode = stepRefs.current[currentStep];
@@ -174,7 +178,25 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             stepsContainerRef.current.style.height = `${activeStepNode.scrollHeight}px`;
         }
     }
-  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup]);
+  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup, showTemplateSuggestion]);
+
+  // EFEITO PARA EXIBIR BOTÃO DE SUGESTÃO DE TEMPLATE APÓS 3 SEGUNDOS NA ETAPA DE SKILLS
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    // 7 é o índice de "Habilidades e Competências" no array WIZARD_STEPS
+    if (currentStep === 7) {
+        timer = setTimeout(() => {
+            setShowTemplateSuggestion(true);
+        }, 3000);
+    } else {
+        setShowTemplateSuggestion(false);
+    }
+
+    return () => {
+        if (timer) clearTimeout(timer);
+    };
+  }, [currentStep]);
 
   const addCourse = () => {
     const newId = Date.now().toString();
@@ -431,6 +453,18 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
       setIsAnalyzingPdf(false);
       const fileInput = document.getElementById('experience-pdf-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
+    }
+  };
+
+  const handleTryOtherTemplates = () => {
+    setCurrentStep(0); // Volta para a etapa de Estilo e Design
+    // Rola para o topo do wizard
+    if (stepsContainerRef.current) {
+        // Encontra o elemento pai do container para rolar
+        const wizardContainer = document.getElementById('form-wizard');
+        if (wizardContainer) {
+            wizardContainer.scrollIntoView({ behavior: 'smooth' });
+        }
     }
   };
 
@@ -935,6 +969,25 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                             {aiSkillSuggestions.length > 0 ? 'Sugerir Mais' : 'Sugerir com IA'}
                         </button>
                     </div>
+
+                    {/* --- BOTÃO DE EXPERIMENTAR OUTROS TEMPLATES (DELAY 3s) --- */}
+                    {showTemplateSuggestion && (
+                        <div className="mt-8 pt-4 border-t border-gray-100 animate-fade-in">
+                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 flex flex-col items-center text-center shadow-sm">
+                                <div className="mb-2 p-2 bg-white rounded-full shadow-sm text-indigo-600">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-palette"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                                </div>
+                                <h4 className="font-semibold text-gray-800 mb-1">Quer ver como fica em outro estilo?</h4>
+                                <p className="text-xs text-gray-600 mb-3 max-w-xs">Seus dados já estão salvos. Experimente mudar o design antes de finalizar.</p>
+                                <button 
+                                    onClick={handleTryOtherTemplates}
+                                    className="text-sm font-semibold text-indigo-600 bg-white border border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 py-2 px-6 rounded-full transition-all shadow-sm hover:shadow"
+                                >
+                                    Experimentar Templates
+                                </button>
+                             </div>
+                        </div>
+                    )}
                 </>
             );
             break;
