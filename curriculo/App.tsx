@@ -1172,7 +1172,9 @@ const AppContent: React.FC = () => {
                                 data={paginatedData[currentPage - 1]}
                                 isDemoMode={isDemoMode}
                                 isFirstPage={currentPage === 1}
-                                hideEmptySections={paginatedData.length > 1} 
+                                hideEmptySections={paginatedData.length > 1}
+                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                enableProtection={!hasPaidInSession}
                              />
                            )}
                         </div>
