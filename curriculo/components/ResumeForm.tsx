@@ -34,7 +34,7 @@ const WIZARD_STEPS = [
 ];
 
 const SKILL_SUGGESTIONS = [
-    "Pacote Office", "Excel Avançado", "Comunicação Efetiva", "Trabalho em Equipe",
+    "Pacote Office", "Excel Básico", "Comunicação Efetiva", "Trabalho em Equipe",
     "Liderança", "Proatividade", "Organização", "Atendimento ao Cliente", "Gestão de Tempo"
 ];
 
@@ -136,9 +136,14 @@ const formatPhoneNumber = (value: string) => {
 
 const capitalizeName = (value: string): string => {
   if (!value) return '';
+  const exceptions = ['da', 'do', 'de', 'das', 'dos'];
   return value
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map(word => {
+        const lower = word.toLowerCase();
+        if (exceptions.includes(lower)) return lower;
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
     .join(' ');
 };
 
