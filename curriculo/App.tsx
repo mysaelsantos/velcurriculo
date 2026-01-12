@@ -335,6 +335,8 @@ const AppContent: React.FC = () => {
                 if (!expiration || expiration > new Date()) {
                     console.log('Restaurando sessão de pagamento PIX...');
                     setPixPaymentData(parsedPix);
+                    // Se precisar re-setar o valor, pode tentar deduzir ou salvar junto
+                    // Por padrão, se está pendente, assume-se o valor atual ou salvo no objeto (se tivesse)
                     setIsPixModalOpen(true);
                 } else {
                     // Se expirou, limpa
@@ -923,13 +925,20 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
-            // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
-            // Agora enviamos o cupom e dados do pagador, não mais o flag 'isDiscounted'
+            // PAYLOAD CORRIGIDO para bater com o seu backend atual
             const payload = {
-                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
-                email: resumeData.personalInfo.email,
-                firstName: resumeData.personalInfo.name.split(' ')[0],
-                lastName: resumeData.personalInfo.name.split(' ').slice(1).join(' ')
+                transaction_amount: currentAmount, // Adicionado
+                payer: {
+                    email: resumeData.personalInfo.email,
+                    first_name: resumeData.personalInfo.name.split(' ')[0],
+                    last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'Cliente',
+                    identification: {
+                        type: 'CPF', 
+                        number: '' 
+                    }
+                },
+                // Mantemos o cupom apenas caso você implemente no futuro, mas não quebra o envio atual
+                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null 
             };
 
             const response = await fetch(backendUrl, {
@@ -943,7 +952,7 @@ const AppContent: React.FC = () => {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
             
-            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA
+            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA (Fix Mobile)
             setPixPaymentData(data);
             localStorage.setItem(STORAGE_PIX_KEY, JSON.stringify(data));
             
@@ -957,7 +966,7 @@ const AppContent: React.FC = () => {
     };
 
     const handlePaymentSuccess = () => {
-        // LIMPA O STORAGE
+        // LIMPA O STORAGE APÓS SUCESSO
         localStorage.removeItem(STORAGE_PIX_KEY);
         
         setIsPixModalOpen(false);
