@@ -203,7 +203,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     
                     <button 
                         onClick={handleCloseInternal} 
-                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
+                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-xl hover:bg-gray-300 transition-colors"
                     >
                         Voltar
                     </button>
@@ -220,10 +220,10 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <h3 className="text-2xl font-bold text-gray-800 mt-6">Código Pix Expirado</h3>
                     <p className="text-gray-600 mt-2 max-w-xs">O tempo para pagamento acabou. Por favor, gere um novo código.</p>
                     <div className="flex flex-col gap-3 mt-6 w-full">
-                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors">
                             Gerar Novo Código
                         </button>
-                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium">
+                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium py-2">
                             Voltar
                         </button>
                     </div>
@@ -240,10 +240,10 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <p className="text-gray-600 mt-2 max-w-xs">O código de pagamento não é mais válido. Por favor, gere um novo.</p>
                     
                     <div className="flex flex-col gap-3 mt-6 w-full">
-                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors">
                             Gerar Novo Código
                         </button>
-                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium">
+                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium py-2">
                             Voltar
                         </button>
                     </div>
@@ -264,7 +264,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                         {formattedAmount}
                     </p>
 
-                    <div className="p-4 border rounded-lg bg-gray-50 flex justify-center">
+                    <div className="p-4 border rounded-xl bg-gray-50 flex justify-center shadow-inner">
                          {/* MUDANÇA AQUI: Container relativo para sobrepor o logo */}
                         <div className="relative w-48 h-48">
                             <img 
@@ -283,22 +283,23 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     </div>
                     <p className="text-center text-sm text-gray-500 mb-2 mt-4">Ou use o Pix Copia e Cola:</p>
                     <div className="relative">
-                        <input type="text" readOnly value={activePaymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-lg p-3 text-sm text-gray-700 pr-24" />
-                        <button onClick={handleCopy} className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs font-bold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors">
+                        {/* ATUALIZADO: text-base para evitar zoom no iPhone, rounded-xl para estilo */}
+                        <input type="text" readOnly value={activePaymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-xl p-3 text-base text-gray-700 pr-24 outline-none focus:ring-2 focus:ring-blue-500" />
+                        <button onClick={handleCopy} className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs font-bold py-2 px-3 rounded-lg hover:bg-blue-700 transition-colors">
                             {isCopied ? 'Copiado!' : 'Copiar'}
                         </button>
                     </div>
                     <div className="mt-6 text-center">
                         <div className="flex justify-center items-center gap-2">
                            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                           <p className="text-gray-700 font-medium">Aguardando confirmação de pagamento...</p>
+                           <p className="text-gray-700 font-medium">Aguardando confirmação...</p>
                         </div>
                          <p className="text-sm text-gray-500 mt-2">O código expira em: <span className="font-bold text-gray-800">{minutes}:{seconds}</span></p>
                     </div>
 
                     <button 
                         onClick={handleCloseInternal} 
-                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
+                        className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-full hover:bg-gray-300 transition-colors"
                     >
                         Voltar
                     </button>
@@ -309,7 +310,8 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm relative transition-all duration-300">
+      {/* ATUALIZADO: rounded-2xl para visual mais 'Apple' */}
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative transition-all duration-300 animate-fade-in-scale">
         
         {renderContent()}
       </div>
