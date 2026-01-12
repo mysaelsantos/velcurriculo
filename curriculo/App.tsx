@@ -24,6 +24,9 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
+// Chave para salvar no localStorage
+const STORAGE_PIX_KEY = 'vel_curriculo_pending_pix';
+
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -209,6 +212,7 @@ interface PixPaymentData {
     qrCodeUrl: string;
     copyPasteCode: string;
     paymentId: string;
+    date_of_expiration?: string; // Adicionado para verificação de validade
 }
 
 const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => (
@@ -317,6 +321,32 @@ const AppContent: React.FC = () => {
 
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
+
+    // EFEITO DE RECUPERAÇÃO DO PIX (REIDRATAÇÃO)
+    useEffect(() => {
+        const savedPix = localStorage.getItem(STORAGE_PIX_KEY);
+        if (savedPix) {
+            try {
+                const parsedPix = JSON.parse(savedPix);
+                // Verifica se o PIX ainda é válido (se tiver data de expiração)
+                const expiration = parsedPix.date_of_expiration ? new Date(parsedPix.date_of_expiration) : null;
+                
+                // Se não tiver data (modo teste) ou se a data for futura, restaura
+                if (!expiration || expiration > new Date()) {
+                    console.log('Restaurando sessão de pagamento PIX...');
+                    setPixPaymentData(parsedPix);
+                    setIsPixModalOpen(true);
+                } else {
+                    // Se expirou, limpa
+                    console.log('PIX expirado removido do storage');
+                    localStorage.removeItem(STORAGE_PIX_KEY);
+                }
+            } catch (e) {
+                console.error('Erro ao recuperar PIX salvo:', e);
+                localStorage.removeItem(STORAGE_PIX_KEY);
+            }
+        }
+    }, []);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
@@ -878,11 +908,12 @@ const AppContent: React.FC = () => {
 
         if (isPixTestMode) {
             setTimeout(() => {
-                setPixPaymentData({
+                const testData = {
                     qrCodeUrl: 'https://files.catbox.moe/5n52e5.png',
                     copyPasteCode: '00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5913Test_User_Name6009SAO_PAULO62070503***6304E2A4',
                     paymentId: `pi_test_${Date.now()}`,
-                });
+                };
+                setPixPaymentData(testData);
                 setIsPixModalOpen(true);
                 setIsPaymentProcessing(false);
             }, 1000);
@@ -911,7 +942,11 @@ const AppContent: React.FC = () => {
             if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
+            
+            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA
             setPixPaymentData(data);
+            localStorage.setItem(STORAGE_PIX_KEY, JSON.stringify(data));
+            
             setIsPixModalOpen(true);
         } catch (error) {
             console.error("Erro ao solicitar pagamento Pix:", error);
@@ -922,6 +957,9 @@ const AppContent: React.FC = () => {
     };
 
     const handlePaymentSuccess = () => {
+        // LIMPA O STORAGE
+        localStorage.removeItem(STORAGE_PIX_KEY);
+        
         setIsPixModalOpen(false);
         setPixPaymentData(null);
         setHasPaidInSession(true);
