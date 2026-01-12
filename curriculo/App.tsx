@@ -489,9 +489,19 @@ const AppContent: React.FC = () => {
         setPendingSavedData(null);
     };
 
+    // AQUI ESTÁ A CORREÇÃO:
     const handleStartEditing = () => {
+        // 1. Capturamos o estilo (template e cor) que o usuário escolheu visualmente na etapa 0
+        const currentStyle = resumeData.style;
+
         setIsDemoMode(false);
-        setResumeData(INITIAL_DATA);
+        
+        // 2. Ao resetar os dados, preservamos o 'style' capturado
+        setResumeData({
+            ...INITIAL_DATA,
+            style: currentStyle
+        });
+
         setCurrentStep(0);
         setIsFinished(false);
         setHasPaidInSession(false);
