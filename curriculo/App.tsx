@@ -322,7 +322,7 @@ const AppContent: React.FC = () => {
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // EFEITO DE RECUPERAÇÃO DO PIX (REIDRATAÇÃO INTELIGENTE)
+    // EFEITO DE RECUPERAÇÃO DO PIX (REIDRATAÇÃO)
     useEffect(() => {
         const savedPix = localStorage.getItem(STORAGE_PIX_KEY);
         if (savedPix) {
@@ -489,7 +489,6 @@ const AppContent: React.FC = () => {
     const handleStartNew = () => {
         try {
             localStorage.removeItem('inProgressResume');
-            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
@@ -506,7 +505,6 @@ const AppContent: React.FC = () => {
         setEditingResumeId(null);
         try {
             localStorage.removeItem('inProgressResume');
-            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
@@ -901,15 +899,6 @@ const AppContent: React.FC = () => {
     }, [triggerFeedback]);
 
     const handlePaymentRequest = async () => {
-        // 1. VALIDAÇÃO DE E-MAIL (CORREÇÃO DE "Missing Required Fields")
-        // O Mercado Pago exige e-mail. Se estiver vazio, avisamos o usuário e paramos aqui.
-        if (!resumeData.personalInfo.email || !resumeData.personalInfo.email.includes('@')) {
-            alert("Por favor, preencha um e-mail válido na seção 'Informações Pessoais' antes de prosseguir com o pagamento.");
-            // Opcional: Você pode querer redirecionar o usuário para o passo 1 (Informações Pessoais)
-            // setCurrentStep(1); 
-            return;
-        }
-
         if(hasPaidInSession) {
             exportToPdf(resumeData);
             return;
@@ -936,20 +925,20 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
-            // PAYLOAD RESTAURADO (Como estava antes, mas com e-mail garantido)
-            // Removemos apenas o CUPOM que você disse que estava causando problemas
+            // PAYLOAD CORRIGIDO para bater com o seu backend atual
             const payload = {
-                transaction_amount: currentAmount,
+                transaction_amount: currentAmount, // Adicionado
                 payer: {
                     email: resumeData.personalInfo.email,
                     first_name: resumeData.personalInfo.name.split(' ')[0],
                     last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'Cliente',
                     identification: {
                         type: 'CPF', 
-                        number: '' // Mantemos como estava (string vazia), já que o problema era e-mail ou cupom
+                        number: '' 
                     }
-                }
-                // REMOVIDO: coupon (Causa do erro de limitação segundo seu relato)
+                },
+                // Mantemos o cupom apenas caso você implemente no futuro, mas não quebra o envio atual
+                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null 
             };
 
             const response = await fetch(backendUrl, {
@@ -963,14 +952,14 @@ const AppContent: React.FC = () => {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
             
-            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA
+            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA (Fix Mobile)
             setPixPaymentData(data);
             localStorage.setItem(STORAGE_PIX_KEY, JSON.stringify(data));
             
             setIsPixModalOpen(true);
         } catch (error) {
             console.error("Erro ao solicitar pagamento Pix:", error);
-            alert("Erro ao iniciar pagamento. Verifique se o e-mail está preenchido corretamente.");
+            alert((error as Error).message);
         } finally {
             setIsPaymentProcessing(false);
         }
@@ -1019,13 +1008,6 @@ const AppContent: React.FC = () => {
         }, 300);
     };
 
-    // NOVA FUNÇÃO: LIMPEZA INTELIGENTE AO FECHAR MANUALMENTE
-    const handlePixModalClose = () => {
-        setIsPixModalOpen(false);
-        setPixPaymentData(null);
-        localStorage.removeItem(STORAGE_PIX_KEY); // Remove do storage se o usuário fechou intencionalmente
-    };
-
     const handleEditResume = (savedAt: string) => {
         const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
         if (resumeToEdit) {
@@ -1034,8 +1016,6 @@ const AppContent: React.FC = () => {
             setIsMyResumesModalOpen(false);
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
-            // Ao editar um novo, limpamos qualquer PIX pendente anterior
-            localStorage.removeItem(STORAGE_PIX_KEY);
         }
     };
 
@@ -1062,8 +1042,6 @@ const AppContent: React.FC = () => {
         setIsDemoMode(false); 
         setHasPaidInSession(false); 
         setEditingResumeId(null);
-        // Ao preencher demo, limpamos PIX pendente
-        localStorage.removeItem(STORAGE_PIX_KEY);
         showToast("Dados de DEMO preenchidos com sucesso!", "success");
     };
 
@@ -1157,16 +1135,9 @@ const AppContent: React.FC = () => {
         {/* MODAIS DIVERSOS */}
         <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
         {isPixModalOpen && pixPaymentData && (
-            <PixModal 
-                isOpen={isPixModalOpen} 
-                onClose={handlePixModalClose} // USANDO A NOVA FUNÇÃO DE FECHAMENTO INTELIGENTE
-                paymentData={pixPaymentData} 
-                onPaymentSuccess={handlePaymentSuccess} 
-                isTestMode={isPixTestMode} 
-                amount={paymentAmount} 
-            />
+            <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
         )}
-        
+        {/* AQUI ESTÁ A CONEXÃO: isOpen recebe o estado e onClose fecha */}
         {isMyResumesModalOpen && (
             <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
         )}
