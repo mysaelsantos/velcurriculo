@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import mercadopago from "mercadopago";
+import * as admin from "firebase-admin";
 
 // 🔒 SEGURANÇA: Configurações do Servidor
 const PRICING_TABLE = {
@@ -7,11 +8,29 @@ const PRICING_TABLE = {
   DISCOUNTED: 2.50
 };
 
-// Cupons válidos
+// Cupons válidos definidos APENAS no backend
 const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
 
 // Site permitido
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
+// --- INICIALIZAÇÃO DO FIREBASE ADMIN (SINGLETON) ---
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        // Garante que quebras de linha na chave privada sejam tratadas corretamente
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch (error) {
+    console.error("Erro ao inicializar Firebase Admin:", error);
+  }
+}
+
+const db = admin.firestore();
 
 export const handler: Handler = async (event: HandlerEvent) => {
   // 1. Verificação de Origem (CORS)
@@ -25,22 +44,21 @@ export const handler: Handler = async (event: HandlerEvent) => {
     "Content-Type": "application/json"
   };
 
+  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
+     return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+  }
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
   
-  // Bloqueio de segurança em produção
-  if (process.env.NODE_ENV !== 'development' && !isAllowed) {
-     return { statusCode: 403, headers, body: JSON.stringify({ message: "Origem não permitida." }) };
-  }
-
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: 'Method Not Allowed' };
   }
 
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-    console.error("ERRO: Token MP ausente.");
-    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro de configuração." }) };
+    console.error("ERRO CRÍTICO: Token MP ausente.");
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro de configuração interna." }) };
   }
 
   mercadopago.configure({
@@ -55,24 +73,28 @@ export const handler: Handler = async (event: HandlerEvent) => {
         return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
     }
     
+    // Validação de e-mail
     if (!body.email) {
         return { statusCode: 400, headers, body: JSON.stringify({ message: "Email é obrigatório." }) };
     }
 
-    // 🔒 LÓGICA DE PREÇO NO BACKEND
+    // Lógica de Preço
     let finalAmount = PRICING_TABLE.FULL;
     let description = 'Download Currículo Profissional';
+    let couponApplied = null;
 
     if (body.coupon && VALID_COUPONS.includes(body.coupon)) {
         finalAmount = PRICING_TABLE.DISCOUNTED;
         description += ' (Oferta Aplicada)';
+        couponApplied = body.coupon;
     }
 
+    // Cria preferência no Mercado Pago
     const payment_data = {
       transaction_amount: finalAmount,
       description: description,
       payment_method_id: 'pix',
-      date_of_expiration: new Date(Date.now() + 600000).toISOString(), // 10 minutos
+      date_of_expiration: new Date(Date.now() + 600000).toISOString(), // 10 min
       payer: {
         email: body.email,
         first_name: body.firstName || 'Cliente',
@@ -83,15 +105,34 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const payment = await mercadopago.payment.create(payment_data);
 
     if (!payment.body.id || !payment.body.point_of_interaction?.transaction_data) {
-        throw new Error('Falha ao obter dados do Pix.');
+        throw new Error('Falha ao obter dados do Pix do Mercado Pago.');
     }
 
-    // Retorna apenas os dados necessários para o Frontend
+    const paymentId = payment.body.id.toString();
+
+    // 💾 PERSISTÊNCIA: Salvar no Firestore para o ADM ver
+    try {
+        await db.collection('transactions').add({
+            paymentId: paymentId,
+            amount: finalAmount,
+            status: 'pending', // Começa pendente
+            email: body.email,
+            created_at: admin.firestore.FieldValue.serverTimestamp(),
+            description: description,
+            coupon: couponApplied,
+            product: 'curriculo-download'
+        });
+        console.log(`[Banco de Dados] Transação ${paymentId} registrada com sucesso.`);
+    } catch (dbError) {
+        console.error("[Banco de Dados] Erro ao salvar transação:", dbError);
+        // Não interrompe o fluxo para o usuário não perder o QR Code, mas loga o erro crítico
+    }
+
     return {
       statusCode: 200,
       headers: headers,
       body: JSON.stringify({
-        paymentId: payment.body.id,
+        paymentId: paymentId,
         qrCodeUrl: `data:image/png;base64,${payment.body.point_of_interaction.transaction_data.qr_code_base64}`,
         copyPasteCode: payment.body.point_of_interaction.transaction_data.qr_code,
         amount: finalAmount
@@ -99,7 +140,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
     };
 
   } catch (err) {
-    console.error(`[Pagamento Erro] ${(err as Error).message}`);
+    const error = err as Error;
+    console.error(`[Pagamento Erro] ${error.message}`);
     return { 
         statusCode: 500, 
         headers: headers,
