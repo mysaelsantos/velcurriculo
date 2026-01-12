@@ -20,16 +20,79 @@ interface PixModalProps {
 
 type PaymentStatus = 'pending' | 'success' | 'expired' | 'error';
 
+const STORAGE_KEY = '@velcurriculo:pix_session_v1';
+
 const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPaymentSuccess, isTestMode = false, amount }) => {
+  // Estado para gerenciar os dados ativos (seja da prop ou recuperado do cache)
+  const [activePaymentData, setActivePaymentData] = useState<PixPaymentData>(paymentData);
+  
   const [status, setStatus] = useState<PaymentStatus>('pending');
   const [isCopied, setIsCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutos em segundos
   const [localQrCodeUrl, setLocalQrCodeUrl] = useState<string | null>(null); // Estado para o QR gerado localmente
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Função auxiliar para limpar a sessão salva
+  const clearSession = () => {
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  // Função auxiliar para salvar a sessão
+  const saveSession = (data: PixPaymentData) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        data: data,
+        timestamp: Date.now()
+    }));
+  };
+
+  // Efeito para Gerenciar Sessão Inteligente (Salvar/Recuperar)
+  useEffect(() => {
+    if (isOpen) {
+        const savedSession = localStorage.getItem(STORAGE_KEY);
+        const now = Date.now();
+        let shouldUseSavedSession = false;
+
+        if (savedSession) {
+            try {
+                const parsedSession = JSON.parse(savedSession);
+                // Verifica se a sessão salva é válida (menos de 10 minutos atrás)
+                const elapsedSeconds = Math.floor((now - parsedSession.timestamp) / 1000);
+                const remainingTime = 600 - elapsedSeconds;
+
+                if (remainingTime > 0) {
+                    // Sessão válida encontrada: Restaurar
+                    console.log("Sessão PIX restaurada do cache local.");
+                    setActivePaymentData(parsedSession.data);
+                    setTimeLeft(remainingTime);
+                    shouldUseSavedSession = true;
+                } else {
+                    // Sessão expirada: Limpar
+                    console.log("Sessão PIX expirada no cache. Iniciando nova.");
+                    clearSession();
+                }
+            } catch (e) {
+                console.error("Erro ao ler sessão PIX, resetando:", e);
+                clearSession();
+            }
+        }
+
+        // Se não recuperamos uma sessão, usamos os dados novos que vieram via props
+        if (!shouldUseSavedSession) {
+            setActivePaymentData(paymentData);
+            // Salvamos a nova sessão apenas se os IDs forem diferentes ou se o tempo tiver resetado
+            if (paymentData.paymentId !== activePaymentData.paymentId || timeLeft <= 0) {
+                 setTimeLeft(600);
+                 saveSession(paymentData);
+            }
+        }
+    }
+  }, [isOpen, paymentData.paymentId]); 
+  // Dependência no ID para garantir que se o pai mandar um ID novo EXPLICITAMENTE, a gente avalia.
+
   const checkPaymentStatus = async () => {
     try {
-      const backendUrl = `/.netlify/functions/get-payment-status?paymentId=${paymentData.paymentId}`;
+      // Usa activePaymentData para garantir que estamos verificando o ID correto (recuperado ou novo)
+      const backendUrl = `/.netlify/functions/get-payment-status?paymentId=${activePaymentData.paymentId}`;
       
       const response = await fetch(backendUrl);
       const data = await response.json();
@@ -46,12 +109,12 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   // Gera o QR Code localmente com correção de erro alta para suportar o logo
   useEffect(() => {
     const generateHighResQR = async () => {
-        if (!paymentData.copyPasteCode || typeof QRCode === 'undefined') {
+        if (!activePaymentData.copyPasteCode || typeof QRCode === 'undefined') {
              setLocalQrCodeUrl(null);
              return;
         }
         try {
-            const url = await QRCode.toDataURL(paymentData.copyPasteCode, {
+            const url = await QRCode.toDataURL(activePaymentData.copyPasteCode, {
                 errorCorrectionLevel: 'H', // Nível Alto permite o logo no centro
                 margin: 0,
                 width: 300,
@@ -64,12 +127,13 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
         }
     };
     if (isOpen && status === 'pending') generateHighResQR();
-  }, [paymentData.copyPasteCode, isOpen, status]);
+  }, [activePaymentData.copyPasteCode, isOpen, status]);
   
   // biome-ignore lint/correctness/useExhaustiveDependencies: This effect should only run when the status changes to 'success'
   useEffect(() => {
     if (status === 'success') {
         if (intervalRef.current) clearInterval(intervalRef.current);
+        clearSession(); // Limpa a sessão ao confirmar sucesso
         // AUMENTADO DE 3000ms para 8000ms (8 Segundos)
         setTimeout(() => {
             onPaymentSuccess();
@@ -93,7 +157,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
         if (intervalRef.current) clearInterval(intervalRef.current);
       };
     }
-  }, [isOpen, status, paymentData.paymentId, isTestMode]);
+  }, [isOpen, status, activePaymentData.paymentId, isTestMode]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -101,15 +165,22 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
         timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     } else if (timeLeft === 0 && status === 'pending') {
         setStatus('expired');
+        clearSession(); // Limpa sessão ao expirar
         if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => clearTimeout(timer);
   }, [isOpen, timeLeft, status]);
   
   const handleCopy = () => {
-    navigator.clipboard.writeText(paymentData.copyPasteCode);
+    navigator.clipboard.writeText(activePaymentData.copyPasteCode);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
+  };
+
+  // Wrapper para fechar e limpar a sessão (caso o usuário desista)
+  const handleCloseInternal = () => {
+      clearSession();
+      onClose();
   };
 
   if (!isOpen) return null;
@@ -131,7 +202,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <p className="text-gray-600 mt-2">Seu download iniciará automaticamente em breve.</p>
                     
                     <button 
-                        onClick={onClose} 
+                        onClick={handleCloseInternal} 
                         className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
                     >
                         Voltar
@@ -149,10 +220,10 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <h3 className="text-2xl font-bold text-gray-800 mt-6">Código Pix Expirado</h3>
                     <p className="text-gray-600 mt-2 max-w-xs">O tempo para pagamento acabou. Por favor, gere um novo código.</p>
                     <div className="flex flex-col gap-3 mt-6 w-full">
-                        <button onClick={onClose} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                             Gerar Novo Código
                         </button>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 font-medium">
+                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium">
                             Voltar
                         </button>
                     </div>
@@ -169,10 +240,10 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     <p className="text-gray-600 mt-2 max-w-xs">O código de pagamento não é mais válido. Por favor, gere um novo.</p>
                     
                     <div className="flex flex-col gap-3 mt-6 w-full">
-                        <button onClick={onClose} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                        <button onClick={handleCloseInternal} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
                             Gerar Novo Código
                         </button>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700 font-medium">
+                        <button onClick={handleCloseInternal} className="text-gray-500 hover:text-gray-700 font-medium">
                             Voltar
                         </button>
                     </div>
@@ -197,7 +268,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                          {/* MUDANÇA AQUI: Container relativo para sobrepor o logo */}
                         <div className="relative w-48 h-48">
                             <img 
-                                src={localQrCodeUrl || paymentData.qrCodeUrl} 
+                                src={localQrCodeUrl || activePaymentData.qrCodeUrl} 
                                 alt="QR Code Pix" 
                                 className="w-full h-full object-contain" 
                             />
@@ -212,7 +283,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     </div>
                     <p className="text-center text-sm text-gray-500 mb-2 mt-4">Ou use o Pix Copia e Cola:</p>
                     <div className="relative">
-                        <input type="text" readOnly value={paymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-lg p-3 text-sm text-gray-700 pr-24" />
+                        <input type="text" readOnly value={activePaymentData.copyPasteCode} className="w-full bg-gray-100 border-gray-300 rounded-lg p-3 text-sm text-gray-700 pr-24" />
                         <button onClick={handleCopy} className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white text-xs font-bold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors">
                             {isCopied ? 'Copiado!' : 'Copiar'}
                         </button>
@@ -226,7 +297,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     </div>
 
                     <button 
-                        onClick={onClose} 
+                        onClick={handleCloseInternal} 
                         className="mt-6 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
                     >
                         Voltar
