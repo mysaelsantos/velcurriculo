@@ -489,7 +489,7 @@ const AppContent: React.FC = () => {
     const handleStartNew = () => {
         try {
             localStorage.removeItem('inProgressResume');
-            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE: Remove PIX pendente ao começar novo
+            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
@@ -506,7 +506,7 @@ const AppContent: React.FC = () => {
         setEditingResumeId(null);
         try {
             localStorage.removeItem('inProgressResume');
-            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE: Remove PIX pendente ao editar
+            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
@@ -927,19 +927,17 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
-            // PAYLOAD PADRÃO
+            // PAYLOAD CORRIGIDO (Removido campos opcionais que quebravam e coupon inacabado)
             const payload = {
                 transaction_amount: currentAmount,
                 payer: {
-                    email: resumeData.personalInfo.email,
-                    first_name: resumeData.personalInfo.name.split(' ')[0],
-                    last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'Cliente',
-                    identification: {
-                        type: 'CPF', 
-                        number: '' 
-                    }
-                },
-                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null 
+                    // Se o usuário não preencheu e-mail, usamos um genérico para não travar o pagamento
+                    email: resumeData.personalInfo.email || 'cliente@velcurriculo.com.br',
+                    first_name: resumeData.personalInfo.name.split(' ')[0] || 'Cliente',
+                    last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'VelCurrículo'
+                    // REMOVIDO: identification (estava enviando vazio e causando erro)
+                }
+                // REMOVIDO: coupon (evita conflitos com função inacabada)
             };
 
             const response = await fetch(backendUrl, {
@@ -960,7 +958,8 @@ const AppContent: React.FC = () => {
             setIsPixModalOpen(true);
         } catch (error) {
             console.error("Erro ao solicitar pagamento Pix:", error);
-            alert((error as Error).message);
+            // Mensagem mais amigável
+            alert("Erro ao iniciar pagamento. Verifique sua conexão ou tente novamente mais tarde.");
         } finally {
             setIsPaymentProcessing(false);
         }
