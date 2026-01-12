@@ -489,7 +489,7 @@ const AppContent: React.FC = () => {
         setPendingSavedData(null);
     };
 
-    // AQUI ESTÁ A CORREÇÃO:
+    // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
     const handleStartEditing = () => {
         // 1. Capturamos o estilo (template e cor) que o usuário escolheu visualmente na etapa 0
         const currentStyle = resumeData.style;
@@ -1057,9 +1057,9 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-        {/* LOADING OVERLAY */}
+        {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
         {isLoading && (
-            <div className="fixed inset-0 w-screen h-screen z-[200] bg-white flex items-center justify-center">
+            <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
                     <img 
                         src="/logo-azul.png" 
@@ -1254,7 +1254,8 @@ const AppContent: React.FC = () => {
             </section>
         </main>
         
-        <footer className="bg-gray-900 text-white py-10 md:py-12">
+        {/* FOOTER ATUALIZADO: padding extra para home indicator (pb-12 -> pb-16 no mobile) */}
+        <footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12">
             <div className="container mx-auto px-4 max-w-7xl">
                 <div className="flex flex-col md:flex-row justify-between items-center">
                     <div className="mb-6 md:mb-0 text-center md:text-left">
