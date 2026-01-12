@@ -327,23 +327,33 @@ const AppContent: React.FC = () => {
         trackVisitor();
     }, []);
 
-    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX (CALIBRADA) ---
+    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX (COM HIERARQUIA) ---
     useEffect(() => {
         try {
+            // VERIFICA SE EXISTE PROGRESSO PENDENTE (Hierarquia 1)
+            const savedProgress = localStorage.getItem('inProgressResume');
+            const hasPendingProgress = !!savedProgress;
+
             const savedSession = localStorage.getItem(PIX_SESSION_KEY);
             if (savedSession) {
                 const parsedSession = JSON.parse(savedSession);
                 const now = Date.now();
                 
-                // INTELEGÊNCIA: Aumentamos a janela de tolerância para 15 minutos (900000ms).
-                // Motivo: Se o PIX expirou há 1 minuto, o usuário pode ter pago no último segundo.
-                // Deixamos o App abrir o modal, e o PixModal decide se já expirou ou valida um pagamento tardio.
+                // Janela de 15 minutos para tolerância
                 if (now - parsedSession.timestamp < 900000) { 
                      setPixPaymentData(parsedSession.data);
-                     setIsPixModalOpen(true);
-                     console.log("Sessão PIX restaurada automaticamente (com tolerância).");
+                     
+                     // INTELIGÊNCIA AQUI:
+                     // Se existe um progresso pendente (modal de "Continuar"), NÃO abrimos o PIX agora.
+                     // Deixamos ele carregado, mas invisível.
+                     if (!hasPendingProgress) {
+                         setIsPixModalOpen(true);
+                         console.log("Sessão PIX restaurada automaticamente.");
+                     } else {
+                         console.log("Sessão PIX carregada em background (Aguardando decisão do usuário).");
+                         setIsPixModalOpen(false);
+                     }
                 } else {
-                    // Se passou de 15 minutos, consideramos 'velho demais' e limpamos.
                     localStorage.removeItem(PIX_SESSION_KEY);
                 }
             }
@@ -477,6 +487,11 @@ const AppContent: React.FC = () => {
             setCurrentStep(savedStep);
             setIsFinished(savedIsFinished);
             setIsDemoMode(false);
+            
+            // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
+            if (pixPaymentData) {
+                setIsPixModalOpen(true);
+            }
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
@@ -485,11 +500,15 @@ const AppContent: React.FC = () => {
     const handleStartNew = () => {
         try {
             localStorage.removeItem('inProgressResume');
+            // INTELIGÊNCIA: Se o usuário quer começar do zero, o PIX antigo NÃO serve mais.
+            localStorage.removeItem(PIX_SESSION_KEY);
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
+        setPixPaymentData(null); // Limpa estado visual também
+        setIsPixModalOpen(false);
     };
 
     // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
@@ -509,8 +528,13 @@ const AppContent: React.FC = () => {
         setIsFinished(false);
         setHasPaidInSession(false);
         setEditingResumeId(null);
+        setPixPaymentData(null); // Limpa PIX antigo
+        setIsPixModalOpen(false);
+
         try {
             localStorage.removeItem('inProgressResume');
+            // INTELIGÊNCIA: Limpa PIX antigo também ao reiniciar no meio do processo
+            localStorage.removeItem(PIX_SESSION_KEY);
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
