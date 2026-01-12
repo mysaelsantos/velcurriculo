@@ -24,6 +24,9 @@ interface SavedResume extends ResumeData {
   savedAt: string;
 }
 
+// Chave para persistência da sessão PIX (Mesma usada no PixModal)
+const PIX_SESSION_KEY = '@velcurriculo:pix_session_v1';
+
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -322,6 +325,28 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         runAutoSetup();
         trackVisitor();
+    }, []);
+
+    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX ---
+    useEffect(() => {
+        try {
+            const savedSession = localStorage.getItem(PIX_SESSION_KEY);
+            if (savedSession) {
+                const parsedSession = JSON.parse(savedSession);
+                const now = Date.now();
+                // Verifica se ainda está dentro da janela de 10 minutos (600000ms)
+                if (now - parsedSession.timestamp < 600000) {
+                     setPixPaymentData(parsedSession.data);
+                     setIsPixModalOpen(true);
+                     console.log("Sessão PIX restaurada automaticamente.");
+                } else {
+                    // Limpa se expirou para não manter lixo
+                    localStorage.removeItem(PIX_SESSION_KEY);
+                }
+            }
+        } catch (error) {
+            console.error("Falha ao restaurar sessão PIX:", error);
+        }
     }, []);
 
     const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
