@@ -654,7 +654,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
             content = (
                 <>
                     <div className="mb-6 p-4 border border-dashed rounded-lg bg-indigo-50/50">
-                        <h4 className="font-semibold text-gray-800 mb-2">Preenchimento Automático com IA</h4>
+                        <h4 className="font-semibold text-gray-800 mb-2">Preenchimento Automático</h4>
                         <p className="text-sm text-gray-600 mb-1">
                             Anexe o PDF da sua Carteira de Trabalho Digital para preencher suas experiências automaticamente.
                         </p>
