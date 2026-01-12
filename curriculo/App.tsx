@@ -322,7 +322,7 @@ const AppContent: React.FC = () => {
     const previewRef = useRef<ResumePreviewRef>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
-    // EFEITO DE RECUPERAÇÃO DO PIX (REIDRATAÇÃO)
+    // EFEITO DE RECUPERAÇÃO DO PIX (REIDRATAÇÃO INTELIGENTE)
     useEffect(() => {
         const savedPix = localStorage.getItem(STORAGE_PIX_KEY);
         if (savedPix) {
@@ -489,6 +489,7 @@ const AppContent: React.FC = () => {
     const handleStartNew = () => {
         try {
             localStorage.removeItem('inProgressResume');
+            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE: Remove PIX pendente ao começar novo
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
@@ -505,6 +506,7 @@ const AppContent: React.FC = () => {
         setEditingResumeId(null);
         try {
             localStorage.removeItem('inProgressResume');
+            localStorage.removeItem(STORAGE_PIX_KEY); // LIMPEZA INTELIGENTE: Remove PIX pendente ao editar
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
@@ -925,9 +927,9 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
-            // PAYLOAD CORRIGIDO para bater com o seu backend atual
+            // PAYLOAD PADRÃO
             const payload = {
-                transaction_amount: currentAmount, // Adicionado
+                transaction_amount: currentAmount,
                 payer: {
                     email: resumeData.personalInfo.email,
                     first_name: resumeData.personalInfo.name.split(' ')[0],
@@ -937,7 +939,6 @@ const AppContent: React.FC = () => {
                         number: '' 
                     }
                 },
-                // Mantemos o cupom apenas caso você implemente no futuro, mas não quebra o envio atual
                 coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null 
             };
 
@@ -952,7 +953,7 @@ const AppContent: React.FC = () => {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
             
-            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA (Fix Mobile)
+            // SALVA NO LOCALSTORAGE PARA PERSISTÊNCIA
             setPixPaymentData(data);
             localStorage.setItem(STORAGE_PIX_KEY, JSON.stringify(data));
             
@@ -1008,6 +1009,13 @@ const AppContent: React.FC = () => {
         }, 300);
     };
 
+    // NOVA FUNÇÃO: LIMPEZA INTELIGENTE AO FECHAR MANUALMENTE
+    const handlePixModalClose = () => {
+        setIsPixModalOpen(false);
+        setPixPaymentData(null);
+        localStorage.removeItem(STORAGE_PIX_KEY); // Remove do storage se o usuário fechou intencionalmente
+    };
+
     const handleEditResume = (savedAt: string) => {
         const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
         if (resumeToEdit) {
@@ -1016,6 +1024,8 @@ const AppContent: React.FC = () => {
             setIsMyResumesModalOpen(false);
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
+            // Ao editar um novo, limpamos qualquer PIX pendente anterior
+            localStorage.removeItem(STORAGE_PIX_KEY);
         }
     };
 
@@ -1042,6 +1052,8 @@ const AppContent: React.FC = () => {
         setIsDemoMode(false); 
         setHasPaidInSession(false); 
         setEditingResumeId(null);
+        // Ao preencher demo, limpamos PIX pendente
+        localStorage.removeItem(STORAGE_PIX_KEY);
         showToast("Dados de DEMO preenchidos com sucesso!", "success");
     };
 
@@ -1135,9 +1147,16 @@ const AppContent: React.FC = () => {
         {/* MODAIS DIVERSOS */}
         <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
         {isPixModalOpen && pixPaymentData && (
-            <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
+            <PixModal 
+                isOpen={isPixModalOpen} 
+                onClose={handlePixModalClose} // USANDO A NOVA FUNÇÃO DE FECHAMENTO INTELIGENTE
+                paymentData={pixPaymentData} 
+                onPaymentSuccess={handlePaymentSuccess} 
+                isTestMode={isPixTestMode} 
+                amount={paymentAmount} 
+            />
         )}
-        {/* AQUI ESTÁ A CONEXÃO: isOpen recebe o estado e onClose fecha */}
+        
         {isMyResumesModalOpen && (
             <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
         )}
