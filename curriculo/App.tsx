@@ -327,20 +327,23 @@ const AppContent: React.FC = () => {
         trackVisitor();
     }, []);
 
-    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX ---
+    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX (CALIBRADA) ---
     useEffect(() => {
         try {
             const savedSession = localStorage.getItem(PIX_SESSION_KEY);
             if (savedSession) {
                 const parsedSession = JSON.parse(savedSession);
                 const now = Date.now();
-                // Verifica se ainda está dentro da janela de 10 minutos (600000ms)
-                if (now - parsedSession.timestamp < 600000) {
+                
+                // INTELEGÊNCIA: Aumentamos a janela de tolerância para 15 minutos (900000ms).
+                // Motivo: Se o PIX expirou há 1 minuto, o usuário pode ter pago no último segundo.
+                // Deixamos o App abrir o modal, e o PixModal decide se já expirou ou valida um pagamento tardio.
+                if (now - parsedSession.timestamp < 900000) { 
                      setPixPaymentData(parsedSession.data);
                      setIsPixModalOpen(true);
-                     console.log("Sessão PIX restaurada automaticamente.");
+                     console.log("Sessão PIX restaurada automaticamente (com tolerância).");
                 } else {
-                    // Limpa se expirou para não manter lixo
+                    // Se passou de 15 minutos, consideramos 'velho demais' e limpamos.
                     localStorage.removeItem(PIX_SESSION_KEY);
                 }
             }
