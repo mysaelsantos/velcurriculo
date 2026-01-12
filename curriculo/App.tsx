@@ -901,6 +901,15 @@ const AppContent: React.FC = () => {
     }, [triggerFeedback]);
 
     const handlePaymentRequest = async () => {
+        // 1. VALIDAÇÃO DE E-MAIL (CORREÇÃO DE "Missing Required Fields")
+        // O Mercado Pago exige e-mail. Se estiver vazio, avisamos o usuário e paramos aqui.
+        if (!resumeData.personalInfo.email || !resumeData.personalInfo.email.includes('@')) {
+            alert("Por favor, preencha um e-mail válido na seção 'Informações Pessoais' antes de prosseguir com o pagamento.");
+            // Opcional: Você pode querer redirecionar o usuário para o passo 1 (Informações Pessoais)
+            // setCurrentStep(1); 
+            return;
+        }
+
         if(hasPaidInSession) {
             exportToPdf(resumeData);
             return;
@@ -927,17 +936,20 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
-            // PAYLOAD CORRIGIDO (Removido campos opcionais que quebravam e coupon inacabado)
+            // PAYLOAD RESTAURADO (Como estava antes, mas com e-mail garantido)
+            // Removemos apenas o CUPOM que você disse que estava causando problemas
             const payload = {
                 transaction_amount: currentAmount,
                 payer: {
-                    // Se o usuário não preencheu e-mail, usamos um genérico para não travar o pagamento
-                    email: resumeData.personalInfo.email || 'cliente@velcurriculo.com.br',
-                    first_name: resumeData.personalInfo.name.split(' ')[0] || 'Cliente',
-                    last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'VelCurrículo'
-                    // REMOVIDO: identification (estava enviando vazio e causando erro)
+                    email: resumeData.personalInfo.email,
+                    first_name: resumeData.personalInfo.name.split(' ')[0],
+                    last_name: resumeData.personalInfo.name.split(' ').slice(1).join(' ') || 'Cliente',
+                    identification: {
+                        type: 'CPF', 
+                        number: '' // Mantemos como estava (string vazia), já que o problema era e-mail ou cupom
+                    }
                 }
-                // REMOVIDO: coupon (evita conflitos com função inacabada)
+                // REMOVIDO: coupon (Causa do erro de limitação segundo seu relato)
             };
 
             const response = await fetch(backendUrl, {
@@ -958,8 +970,7 @@ const AppContent: React.FC = () => {
             setIsPixModalOpen(true);
         } catch (error) {
             console.error("Erro ao solicitar pagamento Pix:", error);
-            // Mensagem mais amigável
-            alert("Erro ao iniciar pagamento. Verifique sua conexão ou tente novamente mais tarde.");
+            alert("Erro ao iniciar pagamento. Verifique se o e-mail está preenchido corretamente.");
         } finally {
             setIsPaymentProcessing(false);
         }
