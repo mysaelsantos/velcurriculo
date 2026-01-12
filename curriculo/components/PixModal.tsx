@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// Necessário para gerar o QR Code com nível de correção 'H' (Alto) para suportar o logo
+declare const QRCode: any;
+
 interface PixPaymentData {
   qrCodeUrl: string;
   copyPasteCode: string;
@@ -21,6 +24,7 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
   const [status, setStatus] = useState<PaymentStatus>('pending');
   const [isCopied, setIsCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutos em segundos
+  const [localQrCodeUrl, setLocalQrCodeUrl] = useState<string | null>(null); // Estado para o QR gerado localmente
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkPaymentStatus = async () => {
@@ -38,6 +42,29 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
       setStatus('error');
     }
   };
+
+  // Gera o QR Code localmente com correção de erro alta para suportar o logo
+  useEffect(() => {
+    const generateHighResQR = async () => {
+        if (!paymentData.copyPasteCode || typeof QRCode === 'undefined') {
+             setLocalQrCodeUrl(null);
+             return;
+        }
+        try {
+            const url = await QRCode.toDataURL(paymentData.copyPasteCode, {
+                errorCorrectionLevel: 'H', // Nível Alto permite o logo no centro
+                margin: 0,
+                width: 300,
+                color: { dark: "#000000", light: "#ffffff" }
+            });
+            setLocalQrCodeUrl(url);
+        } catch (error) {
+            console.error("Failed to generate client-side QR:", error);
+            setLocalQrCodeUrl(null);
+        }
+    };
+    if (isOpen && status === 'pending') generateHighResQR();
+  }, [paymentData.copyPasteCode, isOpen, status]);
   
   // biome-ignore lint/correctness/useExhaustiveDependencies: This effect should only run when the status changes to 'success'
   useEffect(() => {
@@ -167,7 +194,21 @@ const PixModal: React.FC<PixModalProps> = ({ isOpen, onClose, paymentData, onPay
                     </p>
 
                     <div className="p-4 border rounded-lg bg-gray-50 flex justify-center">
-                        <img src={paymentData.qrCodeUrl} alt="QR Code Pix" className="w-48 h-48" />
+                         {/* MUDANÇA AQUI: Container relativo para sobrepor o logo */}
+                        <div className="relative w-48 h-48">
+                            <img 
+                                src={localQrCodeUrl || paymentData.qrCodeUrl} 
+                                alt="QR Code Pix" 
+                                className="w-full h-full object-contain" 
+                            />
+                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 flex items-center justify-center">
+                                <img
+                                    src="/vel-qr-pix.png"
+                                    alt="Logo Pix"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                        </div>
                     </div>
                     <p className="text-center text-sm text-gray-500 mb-2 mt-4">Ou use o Pix Copia e Cola:</p>
                     <div className="relative">
