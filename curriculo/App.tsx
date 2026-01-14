@@ -5,8 +5,8 @@ import { toPng } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 import ResumeForm from './components/ResumeForm';
-// IMPORTANTE: Importamos QR_CONFIG para calcular dinamicamente a área de perigo
-import ResumePreview, { ResumePreviewRef, QR_CONFIG } from './components/ResumePreview';
+// IMPORTANTE: Importamos QR_CONFIG e usamos 'any' para o ref para evitar erros de tipagem
+import ResumePreview, { QR_CONFIG } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
@@ -318,7 +318,8 @@ const AppContent: React.FC = () => {
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
 
-    const previewRef = useRef<ResumePreviewRef>(null);
+    // CORREÇÃO: Usamos 'any' aqui pois ResumePreviewRef não é exportado no componente atualizado
+    const previewRef = useRef<any>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
     // INICIALIZAÇÃO E MONITORAMENTO
@@ -851,6 +852,7 @@ const AppContent: React.FC = () => {
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
+    // --- FUNÇÃO EXPORT TO PDF CORRIGIDA (SEM CACHE BUST) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
@@ -891,13 +893,14 @@ const AppContent: React.FC = () => {
 
                 let imgData;
                 try {
+                    // CONFIGURAÇÃO SEGURA: CacheBust removido para evitar CORS e Network Error
                     imgData = await toPng(pageEl, {
                         quality: 0.95,
-                        pixelRatio: 2, 
-                        cacheBust: true, 
+                        pixelRatio: 2,
                         backgroundColor: '#ffffff',
                         height: 1123, 
                         width: 794
+                        // REMOVIDO: cacheBust: true
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
@@ -955,7 +958,6 @@ const AppContent: React.FC = () => {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
             // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
-            // Agora enviamos o cupom e dados do pagador, não mais o flag 'isDiscounted'
             const payload = {
                 coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
                 email: resumeData.personalInfo.email,
