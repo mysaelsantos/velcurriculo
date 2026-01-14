@@ -606,6 +606,7 @@ const AdminDashboard: React.FC = () => {
 
     const handleLogin = async (e: React.FormEvent) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, email, password); } catch (err) { setError('Credenciais inválidas.'); } };
     
+    // --- CORREÇÃO APLICADA: Configuração de PDF "Limpa" ---
     const handleDownloadPDF = async () => {
         if (!previewContainerRef.current) return;
         setIsGeneratingPdf(true);
@@ -628,14 +629,16 @@ const AdminDashboard: React.FC = () => {
                 pageEl.style.margin = '0';
                 pageEl.style.marginBottom = '0'; 
 
+                // Configuração "segura": sem useCORS e cacheBust
+                // Isso evita que a biblioteca tente re-baixar coisas que já estão no DOM (como nossa imagem Base64)
                 const imgData = await toPng(pageEl, { 
                     quality: 0.95, 
                     pixelRatio: 2, 
                     backgroundColor: '#ffffff', 
                     width: 794, 
-                    height: 1123,
-                    useCORS: true, 
-                    cacheBust: true 
+                    height: 1123
+                    // REMOVIDO: useCORS: true 
+                    // REMOVIDO: cacheBust: true
                 });
 
                 pageEl.style.cssText = originalStyle;
@@ -647,13 +650,15 @@ const AdminDashboard: React.FC = () => {
             const fileName = `curriculo-${selectedResume.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
             pdf.save(fileName);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Erro no PDF:", err);
-            alert("Erro ao gerar PDF.");
+            // Mensagem detalhada para sabermos o que realmente aconteceu
+            alert(`Erro ao gerar PDF: ${err.message || err}`);
         } finally {
             setIsGeneratingPdf(false);
         }
     };
+    // --------------------------------------------------------
 
     const toggleReviewStatus = async (id: string, currentStatus: boolean) => { await updateDoc(doc(db, 'reviews', id), { approved: !currentStatus }); };
     const deleteReview = async (id: string) => { if (confirm('Tem a certeza?')) await deleteDoc(doc(db, 'reviews', id)); };
