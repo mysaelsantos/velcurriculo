@@ -50,12 +50,16 @@ interface ResumePreviewProps {
   enableProtection?: boolean;
 }
 
-const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false }, ref) => {
+const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false }, ref) => {
   const safeData = data || {};
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
   
+  // --- INÍCIO DA EDIÇÃO: Estado para imagem segura ---
+  const [safeProfilePic, setSafeProfilePic] = useState<string | null>(null);
+  // --- FIM DA EDIÇÃO ---
+
   // Estados para controle de segurança
   const [isHidingContent, setIsHidingContent] = useState(false); // Para Key Logger (PrintScreen)
   const [isBlurred, setIsBlurred] = useState(false); // Para Anti-Snipping (Perda de foco)
@@ -69,6 +73,42 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
         document.documentElement.style.setProperty('--theme-color', style.color);
     }
   }, [style?.color]);
+
+  // --- INÍCIO DA EDIÇÃO: Processamento da Imagem para Base64 (Correção CORS) ---
+  useEffect(() => {
+    const processProfilePic = async () => {
+        if (!personalInfo?.profilePicture) {
+            setSafeProfilePic(null);
+            return;
+        }
+
+        // Se já for base64 (começa com data:), usa direto
+        if (personalInfo.profilePicture.startsWith('data:')) {
+            setSafeProfilePic(personalInfo.profilePicture);
+            return;
+        }
+
+        // Tenta converter URL externa para Base64 para evitar erro de CORS no PDF
+        try {
+            const response = await fetch(personalInfo.profilePicture);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (typeof reader.result === 'string') {
+                    setSafeProfilePic(reader.result);
+                }
+            };
+            reader.readAsDataURL(blob);
+        } catch (error) {
+            console.warn("Não foi possível converter a imagem para Base64 (CORS restrito). Usando URL original.", error);
+            // Fallback: usa a URL original se der erro no fetch (pelo menos tenta mostrar na tela)
+            setSafeProfilePic(personalInfo.profilePicture);
+        }
+    };
+
+    processProfilePic();
+  }, [personalInfo?.profilePicture]);
+  // --- FIM DA EDIÇÃO ---
 
   // --- IMPLEMENTAÇÃO DAS CAMADAS DE SEGURANÇA ---
   useEffect(() => {
@@ -206,9 +246,16 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
   const hasSkills = processedSkills && processedSkills.length > 0;
 
   const isModern = style?.template === 'template-modern';
-  const headerNameWidthStyle = (personalInfo?.profilePicture && isModern) 
+
+  // --- INÍCIO DA EDIÇÃO: Uso de safeProfilePic na lógica visual ---
+  // Usamos a presença de safeProfilePic (ou personalInfo.profilePicture como fallback lógico inicial)
+  // Mas para o render da imagem, usaremos safeProfilePic
+  const hasActivePhoto = !!safeProfilePic || !!personalInfo?.profilePicture;
+  
+  const headerNameWidthStyle = (hasActivePhoto && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
+  // --- FIM DA EDIÇÃO ---
 
   const getMainStyle = () => {
       if (isFirstPage) {
@@ -274,10 +321,12 @@ const ResumePreview = forwardRef<ResumePreviewRef, ResumePreviewProps>(({ data, 
 
       {isFirstPage && personalInfo && (
         <>
-            <div id="profile-pic-container" className={personalInfo.profilePicture ? 'visible' : ''}>
-                {personalInfo.profilePicture && <img id="profile-pic-img" src={personalInfo.profilePicture} alt="Foto de Perfil" />}
+            <div id="profile-pic-container" className={hasActivePhoto ? 'visible' : ''}>
+                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src --- */}
+                {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" />}
+                {/* --- FIM DA EDIÇÃO --- */}
             </div>
-            <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && personalInfo.profilePicture ? 'has-photo' : ''}`}>
+            <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && hasActivePhoto ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
                     <div className="pr-4" style={headerNameWidthStyle}>
                         <h1 id="resume-name" className="font-bold">{personalInfo.name || (isDemoMode ? '' : 'Seu Nome')}</h1>
