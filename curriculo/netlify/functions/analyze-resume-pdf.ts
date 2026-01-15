@@ -1,8 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// ATUALIZADO: Usando sufixo '-latest' para garantir que o endpoint encontre o modelo
-const MODEL_NAME = "gemini-1.5-flash-latest"; 
+// ATUALIZADO: Usando a versão específica '001' que é a mais estável e evita erros de alias
+const MODEL_NAME = "gemini-1.5-flash-001"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção (sem barra no final)
@@ -20,8 +20,8 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
       // Tratamento específico para erros comuns
       if (!response.ok) {
         if (response.status === 404) {
-             // Se der 404, não adianta tentar de novo, o modelo não existe nessa URL
-             throw new Error(`Modelo IA não encontrado (404). Verifique o MODEL_NAME: ${MODEL_NAME}`);
+             console.error(`[FATAL] Modelo '${MODEL_NAME}' não encontrado (404). Verifique se sua API Key é do Google AI Studio.`);
+             throw new Error(`Modelo IA não encontrado (404).`);
         }
         if (response.status === 403) {
              throw new Error(`Erro de Permissão (403). Verifique a API KEY.`);
@@ -156,7 +156,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       },
     };
 
-    // Chamada à API com Retry automático e tratamento de erro
+    // Chamada à API com Retry automático
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -196,7 +196,6 @@ export const handler: Handler = async (event: HandlerEvent) => {
     // Logamos o erro no servidor, mas retornamos mensagem genérica ao usuário para não vazar detalhes
     console.error("[analyze-resume-pdf] Erro:", err.message);
     
-    // Se for erro de API KEY ou 404, retornamos 500
     return { 
         statusCode: 500, 
         headers: headers, 
