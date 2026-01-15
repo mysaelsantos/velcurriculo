@@ -48,9 +48,10 @@ interface ResumePreviewProps {
   hideEmptySections?: boolean;
   isPrint?: boolean;
   enableProtection?: boolean;
+  contentScale?: number; // Adicionado para receber a escala do App.tsx
 }
 
-const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false }, ref) => {
+const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false, contentScale = 1 }, ref) => {
   const safeData = data || {};
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
@@ -280,7 +281,20 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
   return (
-    <div id="resume-preview" ref={previewRef} className={containerClasses}>
+    <div 
+        id="resume-preview" 
+        ref={previewRef} 
+        className={containerClasses}
+        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink)
+        // O transform-origin top left garante que o encolhimento aconteça a partir do topo
+        style={{ 
+            transform: `scale(${contentScale})`, 
+            transformOrigin: 'top left',
+            // Se estiver escalando, precisamos garantir que a altura do container compense
+            // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
+            height: isPrint ? '1123px' : undefined 
+        }}
+    >
       
       {/* --- CAMADA 3: BLOQUEIO DE IMPRESSÃO (CSS) --- */}
       <style>{`
@@ -501,10 +515,29 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                 <CollapsedPlaceholder label="Habilidades e Competências" />
             )
         )}
+
+        {/* --- PHANTOM SPACER (ESPAÇADOR FANTASMA) --- */}
+        {/* Este bloco invisível garante que o texto "sinta" a presença do QR Code no fluxo do documento. */}
+        {/* Se o texto crescer demais, ele empurra este bloco para baixo, estourando a altura da página */}
+        {/* e acionando a lógica de "Smart Shrink" no App.tsx. */}
+        {isFirstPage && showQR && (
+            <div 
+                className="phantom-spacer"
+                style={{
+                    width: '100%',
+                    // Altura = Altura do QR + Posição Bottom + Padding de Segurança
+                    height: `${activeSpacer.height + (qrPosition.bottom || 0) + (qrPosition.safetyPadding || 0)}px`,
+                    clear: 'both', // Garante que fique abaixo de qualquer float
+                    visibility: 'hidden', // Invisível visualmente
+                    pointerEvents: 'none', // Não interfere em cliques
+                    display: 'block' // Ocupa espaço físico
+                }}
+            />
+        )}
         
       </main>
       
-      {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
+      {/* POSICIONAMENTO ABSOLUTO DO QR CODE (VISUAL) */}
       {isFirstPage && personalInfo && showQR && (
           <div style={{
               position: 'absolute',
