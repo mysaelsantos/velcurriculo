@@ -747,7 +747,14 @@ const AppContent: React.FC = () => {
         // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
         // Voltamos para o valor padrão (40) conforme solicitado.
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
-        const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding;
+        
+        // --- CORREÇÃO CRÍTICA: BUFFER DE CÁLCULO ---
+        // Adicionamos um buffer extra de 20px APENAS no cálculo da zona de perigo.
+        // Isso faz com que a paginação seja "pessimista", quebrando a página ANTES
+        // do conteúdo realmente tocar no QR Code. Isso resolve o problema do Drag & Drop
+        // sem precisar aumentar a margem visual real.
+        const CALCULATION_BUFFER = 20;
+        const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding - CALCULATION_BUFFER;
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
         const mainEl = previewEl.querySelector('main') as HTMLElement;
