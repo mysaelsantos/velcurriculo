@@ -744,7 +744,8 @@ const AppContent: React.FC = () => {
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
         
-        // --- CORREÇÃO CRÍTICA: ZONA DE SEGURANÇA PADRÃO ---
+        // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
+        // Voltamos para o valor padrão (40) conforme solicitado.
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
         
         // --- CORREÇÃO CRÍTICA: BUFFER DE CÁLCULO ---
