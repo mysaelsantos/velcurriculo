@@ -681,18 +681,24 @@ const AppContent: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
+    // --- CORREÇÃO CRÍTICA: RENDERIZAÇÃO DE MEDIÇÃO ---
+    // Adicionamos uma 'key' baseada nos dados para forçar o React a recriar o componente
+    // sempre que os dados mudarem (incluindo Drag & Drop). Isso garante que as alturas
+    // medidas sejam sempre frescas e não baseadas em um estado anterior do DOM.
     useEffect(() => {
         if (measurementRootRef.current) {
             const timer = setTimeout(() => {
                 measurementRootRef.current.render(
                     <ResumePreview 
+                        // A CHAVE MESTRA: Força recriação do DOM de medição
+                        key={JSON.stringify(resumeData)} 
                         data={resumeData} 
                         isDemoMode={isDemoMode} 
                         isFirstPage={true} 
                         isMeasurement={true} 
                     />
                 );
-            }, 50); 
+            }, 100); // Aumentado levemente para garantir que o Drag & Drop terminou
             return () => clearTimeout(timer);
         }
     }, [resumeData, isDemoMode]);
@@ -737,7 +743,12 @@ const AppContent: React.FC = () => {
         // @ts-ignore
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
-        const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
+        
+        // --- CORREÇÃO CRÍTICA: ZONA DE SEGURANÇA EXPANDIDA ---
+        // Aumentamos o padding de segurança para 80px (era 40px ou undefined).
+        // Isso força a paginação a "cortar" o conteúdo MUITO antes dele chegar perto do QR Code.
+        // É melhor ter um espaço em branco no final da página 1 do que uma sobreposição.
+        const qrPadding = 80; 
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding;
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
@@ -1376,12 +1387,8 @@ const AppContent: React.FC = () => {
                             </div>
                         )}
                         
-                        {/* Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                        {contentScale < 1 && (
-                            <div className="mt-2 text-center text-xs text-orange-600 bg-orange-50 py-1 rounded">
-                                Ajuste automático de layout ativo: {Math.round(contentScale * 100)}%
-                            </div>
-                        )}
+                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                        {/* O usuário pediu para remover */}
 
                     </div>
                 </div>
