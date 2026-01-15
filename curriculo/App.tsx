@@ -744,11 +744,9 @@ const AppContent: React.FC = () => {
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
         
-        // --- CORREÇÃO CRÍTICA: ZONA DE SEGURANÇA EXPANDIDA ---
-        // Aumentamos o padding de segurança para 80px (era 40px ou undefined).
-        // Isso força a paginação a "cortar" o conteúdo MUITO antes dele chegar perto do QR Code.
-        // É melhor ter um espaço em branco no final da página 1 do que uma sobreposição.
-        const qrPadding = 80; 
+        // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
+        // Voltamos para o valor padrão (40) conforme solicitado.
+        const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding;
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
@@ -1019,7 +1017,18 @@ const AppContent: React.FC = () => {
                         pixelRatio: 2,
                         backgroundColor: '#ffffff',
                         height: 1123, 
-                        width: 794
+                        width: 794,
+                        // CORREÇÃO CRÍTICA PARA MOBILE: Força o estilo do elemento capturado
+                        // para garantir que ele tenha a largura correta, ignorando o viewport do celular.
+                        style: {
+                            width: '794px',
+                            height: '1123px',
+                            minWidth: '794px',
+                            minHeight: '1123px',
+                            transform: 'none', // Remove qualquer escala responsiva
+                            margin: '0',
+                            padding: '0'
+                        }
                         // REMOVIDO: cacheBust: true
                     });
                 } catch (firstError) {
@@ -1029,7 +1038,16 @@ const AppContent: React.FC = () => {
                         pixelRatio: 1, 
                         backgroundColor: '#ffffff',
                         height: 1123,
-                        width: 794
+                        width: 794,
+                        style: {
+                            width: '794px',
+                            height: '1123px',
+                            minWidth: '794px',
+                            minHeight: '1123px',
+                            transform: 'none',
+                            margin: '0',
+                            padding: '0'
+                        }
                     });
                 }
                 if (i > 0) pdf.addPage();
@@ -1249,10 +1267,11 @@ const AppContent: React.FC = () => {
         )}
 
         {/* PRINT CONTAINER (Hidden) */}
-        <div id="print-container">
-             <div id="print-area">
+        {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
+        <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
+             <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
                 {paginatedData.map((pageData, index) => (
-                    <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px' }}>
+                    <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px', width: '794px', minWidth: '794px' }}>
                         <ResumePreview 
                             data={pageData} 
                             isDemoMode={false} 
