@@ -3,6 +3,8 @@ import type { ResumeData, Experience, Education, Course, Language } from '../typ
 import { enhanceText, suggestSkills, analyzeWorkExperiencePDF } from '../services/geminiService';
 import CharacterCounter from './CharacterCounter';
 import { TermsModal } from './TermsModal';
+// ADICIONADO: Import do ícone GripVertical para indicar área de arraste
+import { GripVertical } from 'lucide-react';
 
 interface ResumeFormProps {
   data: ResumeData;
@@ -155,22 +157,68 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false);
   const [isTutorialModalOpen, setIsTutorialModalOpen] = useState(false);
   
-  // NOVOS ESTADOS PARA TERMOS E CONDIÇÕES
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
-
-  // ESTADO PARA SUGESTÃO DE TEMPLATES NO FINAL
   const [showTemplateSuggestion, setShowTemplateSuggestion] = useState(false);
-
-  // ESTADO PARA CONTROLE DO ACORDEÃO DE SUGESTÕES DE RESUMO
   const [expandedSummaryGroup, setExpandedSummaryGroup] = useState<number | null>(null);
-
   const [currentSkillInput, setCurrentSkillInput] = useState('');
 
   const stepsContainerRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // EFEITO PARA AJUSTE DE ALTURA DO CONTAINER
+  // --- LÓGICA DE DRAG AND DROP (ARRASTAR E SOLTAR) ---
+  // Refs para armazenar os índices durante o arraste
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  // Função genérica para reordenar qualquer lista dentro de ResumeData
+  const handleSort = (section: keyof ResumeData) => {
+    // Copia a lista atual
+    const list = [...(data[section] as any[])];
+    
+    // Validação de segurança
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current === dragOverItem.current) return;
+
+    // Remove o item da posição original
+    const draggedItemContent = list.splice(dragItem.current, 1)[0];
+
+    // Insere na nova posição
+    list.splice(dragOverItem.current, 0, draggedItemContent);
+
+    // Reseta os refs
+    dragItem.current = null;
+    dragOverItem.current = null;
+
+    // Atualiza o estado
+    handleDataChange(section, list);
+  };
+
+  // Handlers de eventos de Drag
+  const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragItem.current = index;
+    // Efeito visual para indicar que está sendo arrastado
+    e.currentTarget.classList.add('opacity-50');
+    // Define o efeito de movimento
+    e.dataTransfer.effectAllowed = "move";
+    // Hack para esconder a "imagem fantasma" padrão se quiser customizar (opcional, aqui deixamos padrão)
+  };
+
+  const onDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragOverItem.current = index;
+    e.preventDefault(); // Necessário para permitir o drop
+  };
+
+  const onDragEnd = (e: React.DragEvent<HTMLDivElement>, section: keyof ResumeData) => {
+    e.currentTarget.classList.remove('opacity-50');
+    handleSort(section);
+  };
+
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // Necessário para permitir o drop
+  };
+  // ---------------------------------------------------
+
   useEffect(() => {
     if (!isFinished && stepsContainerRef.current) {
         const activeStepNode = stepRefs.current[currentStep];
@@ -180,11 +228,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup, showTemplateSuggestion]);
 
-  // EFEITO PARA EXIBIR BOTÃO DE SUGESTÃO DE TEMPLATE APÓS 3 SEGUNDOS NA ETAPA DE SKILLS
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
-    // 7 é o índice de "Habilidades e Competências" no array WIZARD_STEPS
     if (currentStep === 7) {
         timer = setTimeout(() => {
             setShowTemplateSuggestion(true);
@@ -192,7 +237,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     } else {
         setShowTemplateSuggestion(false);
     }
-
     return () => {
         if (timer) clearTimeout(timer);
     };
@@ -302,7 +346,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   const handleEducationShortcut = (degree: string) => {
      const newId = Date.now().toString();
      const newEdu: Education = { id: newId, degree, institution: '', startDate: '', endDate: '' };
-     // CORREÇÃO: Agora adiciona ao array existente ao invés de substituir
      handleDataChange('education', [...data.education, newEdu]);
      setOpenAccordion(prev => ({...prev, education: newId}));
   };
@@ -457,10 +500,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
   };
 
   const handleTryOtherTemplates = () => {
-    setCurrentStep(0); // Volta para a etapa de Estilo e Design
-    // Rola para o topo do wizard
+    setCurrentStep(0); 
     if (stepsContainerRef.current) {
-        // Encontra o elemento pai do container para rolar
         const wizardContainer = document.getElementById('form-wizard');
         if (wizardContainer) {
             wizardContainer.scrollIntoView({ behavior: 'smooth' });
@@ -468,7 +509,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
     }
   };
 
-  // --- FUNÇÃO DE PAGAMENTO COM VALIDAÇÃO DOS TERMOS ---
   const handlePaymentClick = () => {
     if (!isTermsAccepted) {
       showToast("Você precisa aceitar os Termos e Condições para continuar.", "warning");
@@ -523,8 +563,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
               </>
             );
             break;
-            // ... (Demais cases mantidos iguais, sem alteração)
-            case 1:
+          case 1:
             content = (
               <div className="space-y-4">
                 <input type="text" placeholder="Nome Completo" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900" 
@@ -689,12 +728,26 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                         </div>
                     </div>
                     <div id="experience-list" className="space-y-4">
-                        {data.experiences.map(exp => {
+                        {data.experiences.map((exp, index) => {
                             const isOpen = openAccordion.experience === exp.id;
                             return (
-                                <div key={exp.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50" onClick={() => handleAccordionToggle('experience', exp.id)}>
-                                        <h4 className="font-semibold text-gray-800">{exp.jobTitle || 'Nova Experiência'}</h4>
+                                <div 
+                                    key={exp.id} 
+                                    className="bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200"
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, index)}
+                                    onDragEnter={(e) => onDragEnter(e, index)}
+                                    onDragEnd={(e) => onDragEnd(e, 'experiences')}
+                                    onDragOver={onDragOver}
+                                >
+                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group" onClick={() => handleAccordionToggle('experience', exp.id)}>
+                                        <div className="flex items-center gap-3">
+                                            {/* Ícone de Arrastar */}
+                                            <div className="cursor-move text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                <GripVertical size={20} />
+                                            </div>
+                                            <h4 className="font-semibold text-gray-800">{exp.jobTitle || 'Nova Experiência'}</h4>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: exp.id, type: 'experience' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
                                             <svg className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
@@ -745,12 +798,26 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                         ))}
                     </div>
                     <div id="education-list" className="space-y-4">
-                        {data.education.map(edu => {
+                        {data.education.map((edu, index) => {
                             const isOpen = openAccordion.education === edu.id;
                             return (
-                                <div key={edu.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50" onClick={() => handleAccordionToggle('education', edu.id)}>
-                                        <h4 className="font-semibold text-gray-800">{edu.degree || 'Nova Formação'}</h4>
+                                <div 
+                                    key={edu.id} 
+                                    className="bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200"
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, index)}
+                                    onDragEnter={(e) => onDragEnter(e, index)}
+                                    onDragEnd={(e) => onDragEnd(e, 'education')}
+                                    onDragOver={onDragOver}
+                                >
+                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group" onClick={() => handleAccordionToggle('education', edu.id)}>
+                                        <div className="flex items-center gap-3">
+                                            {/* Ícone de Arrastar */}
+                                            <div className="cursor-move text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                <GripVertical size={20} />
+                                            </div>
+                                            <h4 className="font-semibold text-gray-800">{edu.degree || 'Nova Formação'}</h4>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: edu.id, type: 'education' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
                                             <svg className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
@@ -817,12 +884,26 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                         ))}
                     </div>
                     <div id="course-list" className="space-y-4">
-                        {data.courses.map(course => {
+                        {data.courses.map((course, index) => {
                             const isOpen = openAccordion.course === course.id;
                             return (
-                                <div key={course.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50" onClick={() => handleAccordionToggle('course', course.id)}>
-                                        <h4 className="font-semibold text-gray-800">{course.name || 'Novo Curso'}</h4>
+                                <div 
+                                    key={course.id} 
+                                    className="bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200"
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, index)}
+                                    onDragEnter={(e) => onDragEnter(e, index)}
+                                    onDragEnd={(e) => onDragEnd(e, 'courses')}
+                                    onDragOver={onDragOver}
+                                >
+                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group" onClick={() => handleAccordionToggle('course', course.id)}>
+                                        <div className="flex items-center gap-3">
+                                            {/* Ícone de Arrastar */}
+                                            <div className="cursor-move text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                <GripVertical size={20} />
+                                            </div>
+                                            <h4 className="font-semibold text-gray-800">{course.name || 'Novo Curso'}</h4>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: course.id, type: 'course' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
                                             <svg className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
@@ -860,12 +941,26 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ data, setData, isDemoMode, onSt
                         ))}
                     </div>
                     <div id="language-list" className="space-y-4">
-                        {data.languages.map(lang => {
+                        {data.languages.map((lang, index) => {
                             const isOpen = openAccordion.language === lang.id;
                             return (
-                                <div key={lang.id} className="bg-white border rounded-lg shadow-sm overflow-hidden">
-                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50" onClick={() => handleAccordionToggle('language', lang.id)}>
-                                        <h4 className="font-semibold text-gray-800">{lang.language || 'Novo Idioma'}</h4>
+                                <div 
+                                    key={lang.id} 
+                                    className="bg-white border rounded-lg shadow-sm overflow-hidden transition-all duration-200"
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, index)}
+                                    onDragEnter={(e) => onDragEnter(e, index)}
+                                    onDragEnd={(e) => onDragEnd(e, 'languages')}
+                                    onDragOver={onDragOver}
+                                >
+                                    <div className="p-4 flex justify-between items-center cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group" onClick={() => handleAccordionToggle('language', lang.id)}>
+                                        <div className="flex items-center gap-3">
+                                            {/* Ícone de Arrastar */}
+                                            <div className="cursor-move text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-200" onClick={(e) => e.stopPropagation()}>
+                                                <GripVertical size={20} />
+                                            </div>
+                                            <h4 className="font-semibold text-gray-800">{lang.language || 'Novo Idioma'}</h4>
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button type="button" onClick={(e) => { e.stopPropagation(); onRequestDelete({ id: lang.id, type: 'language' }); }} className="text-gray-400 hover:text-red-500"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
                                             <svg className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
