@@ -10,10 +10,12 @@ import ResumePreview, { QR_CONFIG } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
 import ContinueProgressModal from './components/ContinueProgressModal';
+import ImportModal from './components/ImportModal';
 import type { ResumeData, PageData } from './types';
 // SERVIÇOS DO FIREBASE E TRACKER
 import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
+import { analyzeResumePDF } from './services/geminiService';
 // IMPORTA O PAINEL ADMINISTRATIVO
 import AdminDashboard from './components/AdminDashboard';
 // IMPORTA O NOVO HEADER E CONTEXTO
@@ -33,7 +35,7 @@ const DEMO_DATA: ResumeData = {
         name: "Marcos Mj Santos",
         jobTitle: "Desenvolvedor Full Stack & Criador de Soluções",
         email: "marcos@velsites.com.br",
-        phone: "(37) 9 8411-6034", // Telefone Atualizado
+        phone: "(37) 9 8411-6034", 
         address: "Nova Serrana, Romeu Duarte",
         age: "22",
         maritalStatus: "Casado(a)",
@@ -296,6 +298,11 @@ const AppContent: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(5.00);
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
+    
+    // --- NOVO: ESTADOS DO MODAL DE IMPORTAÇÃO ---
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
+
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     // Controla o Loading Overlay
@@ -510,6 +517,8 @@ const AppContent: React.FC = () => {
         setPendingSavedData(null);
         setPixPaymentData(null); // Limpa estado visual também
         setIsPixModalOpen(false);
+        // Abre o modal de escolha ao começar novo, se desejar
+        setIsImportModalOpen(true);
     };
 
     // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
@@ -531,6 +540,8 @@ const AppContent: React.FC = () => {
         setEditingResumeId(null);
         setPixPaymentData(null); // Limpa PIX antigo
         setIsPixModalOpen(false);
+        // Fecha o modal de Importação se estiver aberto (caso venha do fluxo de Import)
+        setIsImportModalOpen(false); 
 
         try {
             localStorage.removeItem('inProgressResume');
@@ -538,6 +549,42 @@ const AppContent: React.FC = () => {
             localStorage.removeItem(PIX_SESSION_KEY);
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
+        }
+        
+        // Scroll suave para o formulário
+        document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
+    };
+    
+    // --- LÓGICA DE IMPORTAÇÃO COM IA ---
+    const handleImportResume = async (file: File) => {
+        setIsAnalyzingFile(true);
+        try {
+            // Chama o serviço inteligente que detecta PDF/DOCX/Imagem
+            const extractedData = await analyzeResumePDF(file);
+            
+            // Mescla os dados extraídos com o estado inicial para garantir estrutura
+            setResumeData(prev => ({
+                ...prev,
+                ...extractedData,
+                // Mantém o estilo atual selecionado
+                style: prev.style 
+            }));
+            
+            setIsDemoMode(false);
+            setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
+            setIsImportModalOpen(false);
+            showToast("Currículo importado com sucesso! Revise os dados.", "success");
+            
+            // Scroll para o formulário
+            setTimeout(() => {
+                document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+
+        } catch (error) {
+            console.error("Erro na importação:", error);
+            showToast("Falha ao ler o arquivo. Tente um formato diferente ou preencha manualmente.", "error");
+        } finally {
+            setIsAnalyzingFile(false);
         }
     };
 
@@ -1154,10 +1201,18 @@ const AppContent: React.FC = () => {
         {isPixModalOpen && pixPaymentData && (
             <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
         )}
-        {/* AQUI ESTÁ A CONEXÃO: isOpen recebe o estado e onClose fecha */}
-        {isMyResumesModalOpen && (
-            <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
-        )}
+        
+        <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
+        
+        {/* NOVO: MODAL DE IMPORTAÇÃO */}
+        <ImportModal 
+            isOpen={isImportModalOpen} 
+            onClose={() => setIsImportModalOpen(false)} 
+            onImport={handleImportResume} 
+            onStartFromScratch={handleStartEditing}
+            isAnalyzing={isAnalyzingFile}
+        />
+
         {deletionTarget && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
@@ -1200,9 +1255,13 @@ const AppContent: React.FC = () => {
                     <span>+{resumesGenerated} currículos gerados!</span>
                 </div>
                 <div className="mt-8 flex flex-col items-center gap-4">
-                    {/* BOTÃO ALTERADO: Apenas link âncora */}
-                    <a href="#form-wizard" className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
-                    {/* Botão removido daqui e colocado dentro do Menu do FeedbackHeader */}
+                    {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
+                    <button 
+                        onClick={() => setIsImportModalOpen(true)}
+                        className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+                    >
+                        Criar meu Currículo
+                    </button>
                 </div>
             </section>
             
@@ -1210,7 +1269,7 @@ const AppContent: React.FC = () => {
                  <div className="my-8 flex justify-center">
                     <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
                 </div>
-                <div className="flex flex-col lg:flex-row gap-8">
+                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
                     <ResumeForm 
                         data={resumeData} 
                         setData={setResumeData} 
@@ -1225,7 +1284,7 @@ const AppContent: React.FC = () => {
                         setCurrentStep={setCurrentStep}
                         isFinished={isFinished}
                         setIsFinished={setIsFinished}
-                        onRequestImport={() => {}}
+                        onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
                     <div className="w-full lg:w-2/3">
@@ -1278,8 +1337,13 @@ const AppContent: React.FC = () => {
             <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
                  <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
                  <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                 {/* BOTÃO ALTERADO: Apenas link âncora */}
-                 <a href="#form-wizard" className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300">Criar meu Currículo</a>
+                 {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
+                 <button 
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+                 >
+                    Criar meu Currículo
+                 </button>
             </section>
         </main>
         
