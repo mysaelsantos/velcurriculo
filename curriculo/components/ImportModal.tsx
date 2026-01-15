@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import type { ResumeData } from '../types';
+import { Upload, FileText, Image as ImageIcon, Sparkles, PenTool, X, ChevronLeft, FileType } from 'lucide-react';
 
 interface ImportModalProps {
   isOpen: boolean;
-  onClose: () => void; // <-- A CORREÇÃO ESTÁ AQUI
+  onClose: () => void;
   onImport: (file: File) => Promise<void>;
   onStartFromScratch: () => void;
   isAnalyzing: boolean;
@@ -11,134 +11,218 @@ interface ImportModalProps {
 
 const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport, onStartFromScratch, isAnalyzing }) => {
   const [step, setStep] = useState<'choice' | 'upload'>('choice');
-  const [resumePdf, setResumePdf] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setResumePdf(e.target.files[0]);
-    }
-  };
-
-  const handleImportClick = async () => {
-    if (resumePdf) {
-      await onImport(resumePdf);
-      // O modal será fechado pelo App.tsx em caso de sucesso
-    }
-  };
-
-  const handleStartFromScratchClick = () => {
-    onStartFromScratch();
-    // Reseta o modal para o estado inicial para a próxima vez
-    setTimeout(() => setStep('choice'), 300);
-  };
-
+  // Reseta o estado ao fechar
   const handleClose = () => {
     onClose();
-    // Reseta o modal para o estado inicial para a próxima vez
     setTimeout(() => setStep('choice'), 300);
   };
 
-  const renderContent = () => {
-    if (isAnalyzing) {
-      return (
-        <div className="text-center flex flex-col items-center justify-center h-full min-h-[300px]">
-          <svg className="animate-spin h-12 w-12 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-          <h3 className="text-2xl font-bold text-gray-800 mt-6">Analisando seu currículo...</h3>
-          <p className="text-gray-600 mt-2 max-w-xs">A IA está lendo as informações. Isso pode levar alguns segundos.</p>
-        </div>
-      );
-    }
+  const handleStartFromScratch = () => {
+    onStartFromScratch();
+    setTimeout(() => setStep('choice'), 300);
+  };
 
-    if (step === 'upload') {
-      return (
-        <>
-          <h3 className="text-xl font-semibold text-center text-gray-800">Importar Currículo</h3>
-          <p className="text-center text-gray-600 mt-2 mb-4">Anexe seu currículo em PDF para preenchimento automático.</p>
-          
-          <label 
-            htmlFor="resume-pdf-upload" 
-            className="mt-4 flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-indigo-50/50 hover:bg-indigo-100/50"
-          >
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <svg className="w-10 h-10 mb-3 text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              {resumePdf ? (
-                <p className="font-semibold text-indigo-700">{resumePdf.name}</p>
-              ) : (
-                <>
-                  <p className="mb-2 text-sm text-gray-600"><span className="font-semibold text-indigo-600">Clique para selecionar</span></p>
-                  <p className="text-xs text-gray-500">Apenas arquivos PDF</p>
-                </>
-              )}
-            </div>
-          </label>
-          <input 
-            type="file" 
-            id="resume-pdf-upload" 
-            accept="application/pdf"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-          />
-          
-          <button 
-            type="button" 
-            onClick={handleImportClick}
-            disabled={!resumePdf}
-            className="mt-6 w-full btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-scan-line"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-            Analisar PDF
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={() => { setStep('choice'); setResumePdf(null); }}
-            className="mt-3 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 transition-colors"
-          >
-            Voltar
-          </button>
-        </>
-      );
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFileUpload(e.target.files[0]);
     }
+  };
 
-    // Default: step 'choice'
-    return (
-      <>
-        <h3 className="text-xl font-semibold text-center text-gray-800">Como você prefere começar?</h3>
-        <p className="text-center text-gray-600 mt-2 mb-6">Você pode importar um currículo existente ou preencher um novo do zero.</p>
-        
-        <button 
-          type="button" 
-          onClick={() => setStep('upload')}
-          className="w-full btn-primary text-white font-semibold py-3 px-4 rounded-full transition-all flex items-center justify-center gap-3"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
-          Importar e Preencher com IA
-        </button>
-        
-        <button 
-          type="button" 
-          onClick={handleStartFromScratchClick}
-          className="mt-3 w-full bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-full hover:bg-gray-300 transition-colors"
-        >
-          Começar do Zero
-        </button>
-      </>
-    );
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    // Validação básica de tipo
+    const validTypes = [
+      'application/pdf', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'image/jpeg', 
+      'image/png'
+    ];
+    
+    // Aceita se estiver na lista ou se começar com image/ (para cobrir jpg, png, webp...)
+    if (validTypes.includes(file.type) || file.type.startsWith('image/')) {
+        await onImport(file);
+    } else {
+        alert("Formato não suportado. Por favor use PDF, Word (.docx) ou Imagem (JPG/PNG).");
+    }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md relative transition-all duration-300">
-        {!isAnalyzing && (
-          <button onClick={handleClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        )}
-        {renderContent()}
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      {/* Backdrop com Blur */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+        onClick={!isAnalyzing ? handleClose : undefined}
+      />
+
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in-scale">
+        
+        {/* Header do Modal */}
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          {step === 'upload' && !isAnalyzing ? (
+            <button 
+              onClick={() => setStep('choice')} 
+              className="text-gray-500 hover:text-blue-600 flex items-center text-sm font-medium transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
+            </button>
+          ) : (
+            <span className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+               {isAnalyzing ? 'Processando' : 'Novo Currículo'}
+            </span>
+          )}
+          
+          {!isAnalyzing && (
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+
+        {/* Conteúdo Principal */}
+        <div className="p-8">
+            
+          {isAnalyzing ? (
+            // ESTADO: ANALISANDO
+            <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-blue-600 animate-pulse" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800">A IA está trabalhando...</h3>
+                <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                  Estamos lendo seu arquivo e organizando suas informações. Isso leva apenas alguns segundos.
+                </p>
+              </div>
+              <div className="flex gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full animate-pulse">
+                 <FileType className="w-4 h-4" />
+                 <span>Extraindo Textos & Imagens</span>
+              </div>
+            </div>
+          ) : step === 'choice' ? (
+            // ESTADO: ESCOLHA INICIAL
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Como você prefere começar?</h2>
+                <p className="text-gray-500">Escolha a melhor forma de preencher o seu currículo profissional.</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Opção 1: Importar (Destaque) */}
+                <button 
+                  onClick={() => setStep('upload')}
+                  className="group relative flex flex-col items-center p-6 border-2 border-blue-100 bg-blue-50/50 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 text-center"
+                >
+                  <div className="absolute top-3 right-3">
+                     <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">Recomendado</span>
+                  </div>
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-blue-600">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Importar com IA</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Envie seu currículo em <b>PDF, Word ou Foto</b>. Nossa IA extrai e preenche tudo para você.
+                  </p>
+                </button>
+
+                {/* Opção 2: Manual */}
+                <button 
+                  onClick={handleStartFromScratch}
+                  className="group flex flex-col items-center p-6 border-2 border-transparent bg-gray-50 rounded-xl hover:border-gray-300 hover:bg-white hover:shadow-md transition-all duration-300 text-center"
+                >
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 group-hover:scale-110 transition-transform text-gray-600">
+                    <PenTool className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Começar do Zero</h3>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Prefiro preencher meus dados manualmente passo a passo nos formulários.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+          ) : (
+            // ESTADO: UPLOAD (Drag & Drop)
+            <div className="space-y-6 animate-fade-in-scale">
+               <div className="text-center">
+                <h2 className="text-2xl font-bold text-gray-800">Envie seu arquivo</h2>
+                <p className="text-gray-500 mt-1">Nossa IA aceita PDF, DOCX (Word) ou Fotos legíveis.</p>
+              </div>
+
+              <div 
+                className={`relative w-full h-64 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all duration-300 cursor-pointer overflow-hidden
+                  ${dragActive 
+                    ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+                    : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'
+                  }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    className="hidden" 
+                    onChange={handleFileChange}
+                    accept=".pdf,.docx,.doc,image/*"
+                />
+
+                <div className="flex flex-col items-center space-y-4 p-6 pointer-events-none">
+                    <div className={`p-4 rounded-full bg-white shadow-sm transition-transform ${dragActive ? 'scale-110' : ''}`}>
+                        {dragActive ? <Upload className="w-8 h-8 text-blue-600 animate-bounce" /> : <Upload className="w-8 h-8 text-gray-400" />}
+                    </div>
+                    <div className="text-center">
+                        <p className="text-lg font-semibold text-gray-700">
+                            {dragActive ? "Solte o arquivo aqui" : "Clique ou arraste seu arquivo"}
+                        </p>
+                        <p className="text-sm text-gray-400 mt-1">
+                            PDF, Word ou Imagem (Máx 10MB)
+                        </p>
+                    </div>
+                    <div className="flex gap-3 mt-2 opacity-60">
+                         <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                            <FileText className="w-3 h-3" /> PDF / DOCX
+                         </div>
+                         <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                            <ImageIcon className="w-3 h-3" /> JPG / PNG
+                         </div>
+                    </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-center text-gray-400">
+                Seus dados estão seguros e são processados apenas para gerar o currículo.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
