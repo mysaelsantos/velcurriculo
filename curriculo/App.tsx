@@ -329,6 +329,63 @@ const AppContent: React.FC = () => {
     const previewRef = useRef<any>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
+    // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
+    const [contentScale, setContentScale] = useState(1);
+
+    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
+    // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
+    const checkOverflow = useCallback(() => {
+        // Tenta obter o elemento via método imperativo (se exposto) ou direto
+        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
+        const element = getTarget();
+        
+        if (!element) return;
+
+        const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
+        
+        // Verifica overflow com uma pequena tolerância de segurança (2px)
+        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
+        const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
+
+        if (hasOverflow) {
+            // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
+            setContentScale(prev => Math.max(0.65, prev - 0.01));
+        } else {
+            // Lógica de recuperação suave (Histerese)
+            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
+            if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
+                setContentScale(prev => Math.min(1, prev + 0.01));
+            }
+        }
+    }, [contentScale]);
+
+    // --- RESIZE OBSERVER PARA O PREVIEW ---
+    // Monitora mudanças físicas no DOM do PREVIEW para acionar o ajuste de escala
+    useEffect(() => {
+        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
+        const element = getTarget();
+
+        if (!element) return;
+
+        const resizeObserver = new ResizeObserver(() => {
+            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Debounce nativo)
+            window.requestAnimationFrame(checkOverflow);
+        });
+
+        // Observa o container principal
+        resizeObserver.observe(element);
+        
+        // Observa também o primeiro filho para garantir detecção de mudanças internas de layout
+        if (element.firstElementChild) {
+            resizeObserver.observe(element.firstElementChild);
+        }
+
+        // Trigger inicial
+        checkOverflow();
+
+        return () => resizeObserver.disconnect();
+    }, [checkOverflow, resumeData, currentPage]); // Recalcula se dados ou página mudarem
+
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
         runAutoSetup();
@@ -495,6 +552,8 @@ const AppContent: React.FC = () => {
             setCurrentStep(savedStep);
             setIsFinished(savedIsFinished);
             setIsDemoMode(false);
+            // Ao recarregar, reseta a escala
+            setContentScale(1);
             
             // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
             if (pixPaymentData) {
@@ -517,6 +576,7 @@ const AppContent: React.FC = () => {
         setPendingSavedData(null);
         setPixPaymentData(null); // Limpa estado visual também
         setIsPixModalOpen(false);
+        setContentScale(1); // Reseta escala
         // Abre o modal de escolha ao começar novo, se desejar
         setIsImportModalOpen(true);
     };
@@ -540,6 +600,7 @@ const AppContent: React.FC = () => {
         setEditingResumeId(null);
         setPixPaymentData(null); // Limpa PIX antigo
         setIsPixModalOpen(false);
+        setContentScale(1); // Reseta escala
         // Fecha o modal de Importação se estiver aberto (caso venha do fluxo de Import)
         setIsImportModalOpen(false); 
 
@@ -573,6 +634,7 @@ const AppContent: React.FC = () => {
             setIsDemoMode(false);
             setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
             setIsImportModalOpen(false);
+            setContentScale(1); // Reseta escala
             showToast("Currículo importado com sucesso! Revise os dados.", "success");
             
             // Scroll para o formulário
@@ -1080,6 +1142,7 @@ const AppContent: React.FC = () => {
             setIsMyResumesModalOpen(false);
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
+            setContentScale(1); // Reseta a escala ao editar
         }
     };
 
@@ -1106,6 +1169,7 @@ const AppContent: React.FC = () => {
         setIsDemoMode(false); 
         setHasPaidInSession(false); 
         setEditingResumeId(null);
+        setContentScale(1); // Reseta a escala
         showToast("Dados de DEMO preenchidos com sucesso!", "success");
     };
 
@@ -1185,6 +1249,8 @@ const AppContent: React.FC = () => {
                             isMeasurement={false} 
                             isPrint={true} 
                             hideEmptySections={true} 
+                            enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
+                            contentScale={contentScale} // APLICA A ESCALA NO PDF TAMBÉM
                         />
                     </div>
                 ))}
@@ -1298,6 +1364,7 @@ const AppContent: React.FC = () => {
                                 hideEmptySections={paginatedData.length > 1}
                                 // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
                                 enableProtection={!hasPaidInSession}
+                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
                              />
                            )}
                         </div>
@@ -1308,6 +1375,14 @@ const AppContent: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                        
+                        {/* Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                        {contentScale < 1 && (
+                            <div className="mt-2 text-center text-xs text-orange-600 bg-orange-50 py-1 rounded">
+                                Ajuste automático de layout ativo: {Math.round(contentScale * 100)}%
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </section>
