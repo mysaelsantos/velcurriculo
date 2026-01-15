@@ -13,19 +13,19 @@ export const QR_CONFIG = {
             safetyPadding: 15,
             // CONTROLE MANUAL DE ALTURA PARA O TEMPLATE MODERNO
             // Altere o 'height' aqui para ajustar o raio da área protegida (Ex: 80, 100, 120)
-            overrideSpacer: { width: 230, height: 140 } // Ajustado para segurança do Phantom
+            overrideSpacer: { width: 230, height: 100 }
         },
         'template-classic': { 
             bottom: 35, 
             right: 25,
             safetyPadding: 29, 
-            overrideSpacer: { width: 230, height: 140 }
+            overrideSpacer: { width: 230, height: 100 }
         },
         'template-minimalist': { 
             bottom: 30, 
             right: 25,
             safetyPadding: 40, 
-            overrideSpacer: { width: 230, height: 140 }
+            overrideSpacer: { width: 230, height: 100 }
         },
     }
 };
@@ -39,7 +39,7 @@ const CollapsedPlaceholder = ({ label }: { label: string }) => (
     </div>
 );
 
-// Interface atualizada com enableProtection e contentScale
+// Interface atualizada com enableProtection
 interface ResumePreviewProps {
   data: PageData;
   isDemoMode?: boolean;
@@ -48,26 +48,17 @@ interface ResumePreviewProps {
   hideEmptySections?: boolean;
   isPrint?: boolean;
   enableProtection?: boolean;
-  contentScale?: number; // NOVA PROP: Controle de Escala Inteligente
 }
 
-const ResumePreview = forwardRef<any, ResumePreviewProps>(({ 
-    data, 
-    isDemoMode, 
-    isFirstPage, 
-    isMeasurement, 
-    hideEmptySections, 
-    isPrint, 
-    enableProtection = false, 
-    contentScale = 1 // Padrão 1 (Tamanho normal)
-}, ref) => {
+const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false }, ref) => {
   const safeData = data || {};
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
   
-  // Estado para imagem segura
+  // --- INÍCIO DA EDIÇÃO: Estado para imagem segura ---
   const [safeProfilePic, setSafeProfilePic] = useState<string | null>(null);
+  // --- FIM DA EDIÇÃO ---
 
   // Estados para controle de segurança
   const [isHidingContent, setIsHidingContent] = useState(false); // Para Key Logger (PrintScreen)
@@ -83,7 +74,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
     }
   }, [style?.color]);
 
-  // Processamento da Imagem para Base64 (Correção CORS)
+  // --- INÍCIO DA EDIÇÃO: Processamento da Imagem para Base64 (Correção CORS) ---
   useEffect(() => {
     const processProfilePic = async () => {
         if (!personalInfo?.profilePicture) {
@@ -110,13 +101,14 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
             reader.readAsDataURL(blob);
         } catch (error) {
             console.warn("Não foi possível converter a imagem para Base64 (CORS restrito). Usando URL original.", error);
-            // Fallback: usa a URL original se der erro no fetch
+            // Fallback: usa a URL original se der erro no fetch (pelo menos tenta mostrar na tela)
             setSafeProfilePic(personalInfo.profilePicture);
         }
     };
 
     processProfilePic();
   }, [personalInfo?.profilePicture]);
+  // --- FIM DA EDIÇÃO ---
 
   // --- IMPLEMENTAÇÃO DAS CAMADAS DE SEGURANÇA ---
   useEffect(() => {
@@ -124,8 +116,10 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
 
     // 1. Camada de Teclado (Key Logger para PrintScreen)
     const handleKeyDown = (e: KeyboardEvent) => {
+        // Detecta PrintScreen e combinações comuns de captura (Win+Shift+S, Cmd+Shift+3/4)
         if (e.key === 'PrintScreen' || (e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4'))) {
             setIsHidingContent(true);
+            // Mantém escondido por um tempo suficiente para frustrar o print e mostra o alerta
             setTimeout(() => {
                 alert("A captura de tela está desabilitada nesta versão.");
                 setIsHidingContent(false);
@@ -134,6 +128,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
     };
 
     // 2. Camada de Foco (Anti-Snipping Tool)
+    // Se a janela perder o foco (ex: usuário clicou na ferramenta de recorte), borra a tela.
     const handleBlur = () => {
         setIsBlurred(true);
     };
@@ -142,7 +137,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
         setIsBlurred(false);
     };
 
-    // Bloqueia menu de contexto
+    // Bloqueia menu de contexto (botão direito) para dificultar "Salvar Imagem"
     const handleContextMenu = (e: MouseEvent) => {
         e.preventDefault();
         return false;
@@ -151,6 +146,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    // Adiciona listener no documento para garantir captura do context menu
     document.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
@@ -165,28 +161,33 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
   // @ts-ignore
   const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
   
-  // --- LÓGICA DINÂMICA DE LARGURA DO QR ---
+  // --- INÍCIO DA LÓGICA DINÂMICA (OPÇÃO 1) ---
   
-  // 1. Recupera as dimensões base do template
+  // 1. Recupera as dimensões base do template (altura é a prioridade aqui)
   // @ts-ignore
   const configSpacer = qrPosition.overrideSpacer || QR_CONFIG.spacer;
 
-  // 2. Verifica quantos QR Codes estão realmente ativos
+  // 2. Verifica quantos QR Codes estão realmente ativos (têm dados E estão habilitados)
   const hasWhatsapp = !!personalInfo?.phone && !!style?.showQRCode;
+  // LinkedIn é opcional no type, então assumimos true se undefined para manter compatibilidade, mas checamos se existe link
   const hasLinkedin = !!personalInfo?.linkedin && (style?.showLinkedinQr ?? true);
   
   const activeQrCount = (hasWhatsapp ? 1 : 0) + (hasLinkedin ? 1 : 0);
 
-  // 3. Define a largura dinâmica: Se tiver APENAS 1 QR Code, reduzimos para 130px.
+  // 3. Define a largura dinâmica:
+  // Se tiver APENAS 1 QR Code, reduzimos para 130px.
+  // Caso contrário (2 códigos ou nenhum), mantemos a largura original do template (230px).
   const dynamicWidth = activeQrCount === 1 ? 130 : configSpacer.width;
 
-  // 4. Cria o objeto final de dimensões
+  // 4. Cria o objeto final de dimensões que será usado nos espaçadores
   const activeSpacer = {
       width: dynamicWidth,
       height: configSpacer.height
   };
   
-  // Espaçador "Float" (Wrap de Texto)
+  // --- FIM DA LÓGICA DINÂMICA ---
+
+  // Espaçador que empurra o texto para o lado
   const getLocalSpacer = (itemId: string) => {
       if (qrCodeOffsets && qrCodeOffsets[itemId] !== undefined) {
           const marginTop = qrCodeOffsets[itemId];
@@ -196,6 +197,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
                 style={{ 
                     float: 'right', 
                     clear: 'right',
+                    // Usa as dimensões dinâmicas calculadas acima
                     width: `${activeSpacer.width}px`, 
                     height: `${activeSpacer.height}px`, 
                     marginTop: `${marginTop}px`,
@@ -205,29 +207,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
           );
       }
       return null;
-  };
-
-  // --- NOVO: COMPONENTE PHANTOM SPACER ---
-  const PhantomSpacer = () => {
-      // Só renderiza se for a primeira página e houver algum QR Code ativo
-      if (!isFirstPage || (!style?.showQRCode && !style?.showLinkedinQr)) return null;
-
-      return (
-          <div 
-              className="phantom-spacer-guard"
-              style={{
-                  display: 'block',
-                  // Usa a mesma altura configurada para o QR Code + Margem
-                  height: `${activeSpacer.height}px`, 
-                  width: '100%',
-                  marginTop: '10px',
-                  visibility: 'hidden', // Invisível
-                  clear: 'both', // Força ficar abaixo de tudo
-                  pointerEvents: 'none'
-              }}
-              aria-hidden="true"
-          />
-      );
   };
 
   const processedSkills = useMemo(() => {
@@ -258,6 +237,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
       return true; 
   };
 
+  // Verificadores de conteúdo para decidir entre Renderizar Full vs Placeholder
   const hasSummary = summary && summary.trim().length > 0;
   const hasExperiences = experiences && experiences.length > 0;
   const hasEducation = education && education.length > 0;
@@ -267,32 +247,25 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
 
   const isModern = style?.template === 'template-modern';
 
-  // Lógica de foto segura
+  // --- INÍCIO DA EDIÇÃO: Uso de safeProfilePic na lógica visual ---
+  // Usamos a presença de safeProfilePic (ou personalInfo.profilePicture como fallback lógico inicial)
+  // Mas para o render da imagem, usaremos safeProfilePic
   const hasActivePhoto = !!safeProfilePic || !!personalInfo?.profilePicture;
   
   const headerNameWidthStyle = (hasActivePhoto && isModern) 
       ? { maxWidth: 'calc(100% - 170px)' } 
       : { maxWidth: '100%' };
+  // --- FIM DA EDIÇÃO ---
 
-  // --- ATUALIZADO: LOGICA DE ESTILO COM ESCALA INTELIGENTE ---
   const getMainStyle = () => {
-      // Aplica a transformação de escala no container do conteúdo
-      const baseStyle: React.CSSProperties = {
-          // Se contentScale for menor que 1, encolhe o conteúdo
-          transform: contentScale < 1 ? `scale(${contentScale})` : 'none',
-          transformOrigin: 'top center',
-          // Compensa a largura: Se encolher para 0.9 (90%), a largura precisa ser 111% para continuar preenchendo a página
-          width: contentScale < 1 ? `${100 / contentScale}%` : '100%',
-      };
-
       if (isFirstPage) {
           if (style?.template === 'template-minimalist') {
-              return { ...baseStyle, marginTop: '28px' };
+              return { marginTop: '28px' };
           }
-          return { ...baseStyle, marginTop: isModern ? '0' : '4px' };
+          return { marginTop: isModern ? '0' : '4px' };
       }
-      if (isModern) return { ...baseStyle, paddingTop: '60px' };
-      return { ...baseStyle, marginTop: '0px', paddingTop: '30px' };
+      if (isModern) return { paddingTop: '60px' };
+      return { marginTop: '0px', paddingTop: '30px' };
   };
 
   const containerClasses = [
@@ -300,6 +273,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
       style?.template,
       (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
+      // Aplica o filtro blur se a proteção estiver ativa e a janela perder o foco
       (isBlurred && enableProtection) ? 'blur-xl transition-all duration-300' : 'transition-all duration-300',
   ].filter(Boolean).join(' ');
 
@@ -308,7 +282,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
   return (
     <div id="resume-preview" ref={previewRef} className={containerClasses}>
       
-      {/* BLOQUEIO DE IMPRESSÃO (CSS) */}
+      {/* --- CAMADA 3: BLOQUEIO DE IMPRESSÃO (CSS) --- */}
       <style>{`
         @media print {
             ${enableProtection ? `
@@ -336,7 +310,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
         }
       `}</style>
 
-      {/* BLOQUEIO VISUAL (KEY LOGGER) */}
+      {/* --- CAMADA 1: BLOQUEIO VISUAL (KEY LOGGER) --- */}
       {isHidingContent && enableProtection && (
           <div className="absolute inset-0 z-[100] bg-gray-100 flex flex-col items-center justify-center text-center p-8">
               <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
@@ -348,7 +322,9 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={hasActivePhoto ? 'visible' : ''}>
+                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src --- */}
                 {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" />}
+                {/* --- FIM DA EDIÇÃO --- */}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && hasActivePhoto ? 'has-photo' : ''}`}>
                 <div className="flex justify-between items-start">
@@ -526,9 +502,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
             )
         )}
         
-        {/* --- NOVO: O GUARDA-COSTAS INVISÍVEL (PhantomSpacer) --- */}
-        <PhantomSpacer />
-
       </main>
       
       {/* POSICIONAMENTO ABSOLUTO DO QR CODE */}
