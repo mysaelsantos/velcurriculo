@@ -1,9 +1,9 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// ATUALIZADO: Usando o nome oficial estável 'gemini-1.5-flash'
-// (Se seus outros arquivos usam 'gemini-flash-latest', você pode tentar usar esse também, mas o '1.5-flash' é o padrão recomendado)
-const MODEL_NAME = "gemini-1.5-flash"; 
+
+// ATUALIZADO: Usando o mesmo nome de modelo que funciona no seu 'enhance-text.ts'
+const MODEL_NAME = "gemini-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção (sem barra no final)
@@ -20,21 +20,20 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
       
       // Tratamento específico para erros comuns
       if (!response.ok) {
-        // Se for 404, logamos erro crítico
         if (response.status === 404) {
-             console.error(`[FATAL] Modelo '${MODEL_NAME}' não encontrado (404). Verifique API KEY ou Região.`);
-             throw new Error(`Modelo IA indisponível (404).`);
+             console.error(`[FATAL] Modelo '${MODEL_NAME}' não encontrado (404). Verifique se sua API Key suporta este modelo.`);
+             throw new Error(`Modelo IA não encontrado (404): ${MODEL_NAME}`);
         }
         if (response.status === 403) {
              throw new Error(`Erro de Permissão (403). Verifique a API KEY.`);
         }
         if (response.status === 429 && i < maxTries - 1) {
-           // Backoff exponencial para erro de limite
+           // Backoff exponencial para erro de limite (Rate Limit)
            await sleep(Math.pow(2, i + 1) * 1000); 
            continue;
         }
         
-        // Tenta ler a mensagem de erro da API
+        // Tenta capturar mensagem de erro detalhada da API
         const errorBody = await response.json().catch(() => ({}));
         // @ts-ignore
         const msg = errorBody.message || errorBody.error?.message || response.statusText;
@@ -44,7 +43,7 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
       return response;
     } catch (error) {
       lastError = error as Error;
-      // Se for 404 ou 403, interrompe o loop de retry imediatamente
+      // Se for 404 ou 403, interrompe o loop de retry imediatamente (erros fatais)
       if (lastError.message.includes("404") || lastError.message.includes("403")) break;
       if (i < maxTries - 1) await sleep(1000);
     }
@@ -138,34 +137,28 @@ export const handler: Handler = async (event: HandlerEvent) => {
     Retorne APENAS o JSON puro, sem blocos de código markdown (sem \`\`\`json).
     `;
 
-    // Monta o objeto de conteúdo para a API do Google Gemini
-    // NOTA: Para Gemini 1.5, o ideal é usar o campo 'systemInstruction', mas vamos manter 
-    // a estrutura que insere no contexto do usuário se for texto, ou adapta para imagem.
-    
-    let parts: any[] = [];
-    let systemPart = { text: systemInstruction };
+    // --- MONTAGEM DO PAYLOAD (MULTIMODAL) ---
+    // Usamos a estrutura padrão 'contents' para garantir compatibilidade com versões mais antigas da API se necessário
+    let contentsPart;
 
-    // Construção do Payload baseada no tipo de arquivo
     if (mimeType === 'text/plain') {
         // Modo Texto (PDF extraído ou DOCX)
         const safeText = payload.substring(0, 30000).replace(/[\x00-\x1F\x7F-\x9F]/g, "");
-        // Inserimos a instrução junto com o texto para garantir contexto forte
-        parts = [
-            { text: `${systemInstruction}\n\nCURRÍCULO PARA ANÁLISE:\n"""\n${safeText}\n"""` }
-        ];
+        // Concatenamos a instrução com o texto do usuário para forçar o contexto
+        contentsPart = { text: `${systemInstruction}\n\nCURRÍCULO PARA ANÁLISE:\n"""\n${safeText}\n"""` };
     } else {
         // Modo Visão (Imagem Base64)
-        // Separa instrução da imagem
-        parts = [
+        // Enviamos a instrução como texto e a imagem como inlineData
+        contentsPart = [
             { text: systemInstruction },
             { inlineData: { mimeType: mimeType, data: payload } }
         ];
     }
     
     const apiPayload = {
-      contents: [{ parts: parts }],
+      contents: [{ parts: Array.isArray(contentsPart) ? contentsPart : [contentsPart] }],
       generationConfig: { 
-          temperature: 0.2, // Baixa criatividade para evitar alucinações
+          temperature: 0.1, // Baixa criatividade para evitar alucinações e garantir JSON estrito
           responseMimeType: "application/json" 
       },
     };
@@ -182,7 +175,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     if (!jsonString) throw new Error("A IA retornou uma resposta vazia.");
 
-    // Tratamento robusto para extrair apenas o JSON
+    // Tratamento robusto para extrair apenas o JSON (caso venha markdown)
     const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         jsonString = jsonMatch[0];
@@ -191,7 +184,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
     }
     
-    // Validação final: garante que é um JSON válido
+    // Validação final de JSON
     try {
       JSON.parse(jsonString);
     } catch (e) {
