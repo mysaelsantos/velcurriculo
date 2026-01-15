@@ -1,8 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// Atualizado para 1.5-flash para melhor performance com imagens e texto
-const MODEL_NAME = "gemini-1.5-flash"; 
+// ATUALIZADO: Usando sufixo '-latest' para garantir que o endpoint encontre o modelo
+const MODEL_NAME = "gemini-1.5-flash-latest"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção (sem barra no final)
@@ -16,15 +16,29 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
   for (let i = 0; i < maxTries; i++) {
     try {
       const response = await fetch(url, options);
-      if (response.ok) return response;
-      // Se for erro de "Muitas requisições" (429), espera um pouco mais (backoff exponencial)
-      if (response.status === 429 && i < maxTries - 1) {
-         await sleep(Math.pow(2, i + 1) * 1000); 
-         continue;
+      
+      // Tratamento específico para erros comuns
+      if (!response.ok) {
+        if (response.status === 404) {
+             // Se der 404, não adianta tentar de novo, o modelo não existe nessa URL
+             throw new Error(`Modelo IA não encontrado (404). Verifique o MODEL_NAME: ${MODEL_NAME}`);
+        }
+        if (response.status === 403) {
+             throw new Error(`Erro de Permissão (403). Verifique a API KEY.`);
+        }
+        if (response.status === 429 && i < maxTries - 1) {
+           // Backoff exponencial para erro de limite
+           await sleep(Math.pow(2, i + 1) * 1000); 
+           continue;
+        }
+        throw new Error(`Status ${response.status} - ${response.statusText}`);
       }
-      throw new Error(`Status ${response.status} - ${response.statusText}`);
+      
+      return response;
     } catch (error) {
       lastError = error as Error;
+      // Se for 404 ou 403, interrompe o loop de retry imediatamente
+      if (lastError.message.includes("404") || lastError.message.includes("403")) break;
       if (i < maxTries - 1) await sleep(1000);
     }
   }
@@ -55,7 +69,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
   // Apenas aceita POST
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method Not Allowed' };
 
-  if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave de API não configurada." }) };
+  if (!API_KEY) return { statusCode: 500, headers, body: JSON.stringify({ message: "Chave de API não configurada no servidor." }) };
 
   try {
     // 🔒 ETAPA 2: PARSE E SANITIZAÇÃO
@@ -142,7 +156,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       },
     };
 
-    // Chamada à API com Retry automático
+    // Chamada à API com Retry automático e tratamento de erro
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -179,8 +193,14 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (error) {
     const err = error as Error;
-    // Logamos o erro no servidor, mas retornamos mensagem genérica ao usuário
+    // Logamos o erro no servidor, mas retornamos mensagem genérica ao usuário para não vazar detalhes
     console.error("[analyze-resume-pdf] Erro:", err.message);
-    return { statusCode: 500, headers: headers, body: JSON.stringify({ message: "Erro ao processar o currículo." }) };
+    
+    // Se for erro de API KEY ou 404, retornamos 500
+    return { 
+        statusCode: 500, 
+        headers: headers, 
+        body: JSON.stringify({ message: "Erro ao processar o currículo com a IA. Tente novamente mais tarde." }) 
+    };
   }
 };
