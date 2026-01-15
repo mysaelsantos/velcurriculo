@@ -1,8 +1,8 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// REVERTIDO: Mantendo a versão original conforme solicitado
-const MODEL_NAME = "gemini-flash-latest"; 
+// Atualizado para 1.5-flash para melhor performance com imagens e texto
+const MODEL_NAME = "gemini-1.5-flash"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção (sem barra no final)
@@ -11,7 +11,7 @@ const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br"
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Função auxiliar de retry completa para lidar com instabilidades da API
-const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) => {
+const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) => {
   let lastError: Error | null = new Error("Falha API.");
   for (let i = 0; i < maxTries; i++) {
     try {
@@ -22,7 +22,7 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 4) =
          await sleep(Math.pow(2, i + 1) * 1000); 
          continue;
       }
-      throw new Error(`Status ${response.status}`);
+      throw new Error(`Status ${response.status} - ${response.statusText}`);
     } catch (error) {
       lastError = error as Error;
       if (i < maxTries - 1) await sleep(1000);
@@ -46,7 +46,6 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   // Verificação de origem para produção (Segurança extra ATIVADA)
   if (process.env.NODE_ENV !== 'development' && !isAllowed) {
-     console.warn(`[Bloqueio de Segurança] Tentativa de acesso não autorizado da origem: ${origin}`);
      return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso Negado." }) };
   }
 
@@ -67,36 +66,87 @@ export const handler: Handler = async (event: HandlerEvent) => {
         return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
     }
 
-    const { fullText } = body;
-    if (!fullText) return { statusCode: 400, headers, body: JSON.stringify({ message: "Texto do currículo vazio." }) };
+    // Agora recebemos 'payload' (dado) e 'mimeType' (tipo)
+    const { payload, mimeType } = body;
 
-    // Limpeza de segurança: remove caracteres estranhos e evita injeção de prompt
-    const safeText = fullText
-      .substring(0, 30000) // Limita tamanho para não estourar tokens
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove caracteres de controle
-      .replace(/"""/g, "'''"); // Substitui aspas triplas para não quebrar o prompt
+    if (!payload) return { statusCode: 400, headers, body: JSON.stringify({ message: "Conteúdo para análise vazio." }) };
 
-    // 🔒 ETAPA 3: CONSTRUÇÃO DO PROMPT
-    const prompt = `
-    Analise o currículo delimitado por três aspas abaixo.
-    Texto do Currículo:
-    """
-    ${safeText}
-    """
-    Extraia os dados em JSON estrito seguindo esta estrutura exata: { "personalInfo": {...}, "summary": "...", "experiences": [...], "education": [...], "courses": [...], "languages": [...], "skills": [...] }.
-    Não inclua blocos de código markdown (como \`\`\`json), retorne apenas o JSON cru.
-    `;
+    // 🔒 ETAPA 3: CONSTRUÇÃO DO PROMPT E PAYLOAD
     
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
+    const systemInstruction = `
+    Você é um especialista em extração de dados de currículos (Parsing). 
+    Sua tarefa é analisar o conteúdo fornecido (que pode ser Texto de PDF/Word ou uma Imagem de currículo) e extrair os dados para um JSON estrito.
+    
+    REGRAS DE OURO (Siga rigorosamente):
+    1. DATAS: Normalize SEMPRE para o formato "AAAA" (ex: "2023") ou "MM/AAAA" (ex: "01/2023"). Se encontrar termos como "Atualmente", "Presente", "Agora", converta para a string "Atual".
+    2. TELEFONE: Extraia apenas números válidos. Se houver fixo e celular, priorize o celular/WhatsApp. Remova rótulos como "Tel:", "Cel:".
+    3. SKILLS: Liste apenas competências técnicas explicitas ou inferidas com alta certeza (ex: Ferramentas, Linguagens, Softwares). Não invente soft skills genéricas se não estiverem claras.
+    4. RESUMO: Se não houver resumo claro, crie um texto profissional e breve (max 3 linhas) em primeira pessoa baseado nas experiências listadas.
+    5. CAMPOS VAZIOS: Se não encontrar a informação, use string vazia "" ou array vazio []. NÃO use null ou undefined.
+
+    ESTRUTURA JSON ALVO (Respeite as chaves):
+    {
+      "personalInfo": {
+        "name": "Nome Completo",
+        "jobTitle": "Cargo Principal ou Área de Atuação",
+        "email": "email@exemplo.com",
+        "phone": "(XX) XXXXX-XXXX",
+        "address": "Cidade, Estado",
+        "age": "",
+        "maritalStatus": "",
+        "cnh": "",
+        "linkedin": "url completa ou vazio",
+        "profilePicture": "" 
+      },
+      "summary": "Texto do resumo profissional...",
+      "experiences": [
+        { "id": "gerar_timestamp_unico_aqui", "jobTitle": "", "company": "", "location": "", "startDate": "", "endDate": "", "description": "" }
+      ],
+      "education": [
+        { "id": "gerar_timestamp_unico_aqui", "degree": "", "institution": "", "startDate": "", "endDate": "" }
+      ],
+      "courses": [
+        { "id": "gerar_timestamp_unico_aqui", "name": "", "institution": "", "completionDate": "" }
+      ],
+      "languages": [
+        { "id": "gerar_timestamp_unico_aqui", "language": "", "proficiency": "Básico | Intermediário | Avançado | Fluente" }
+      ],
+      "skills": ["Skill 1", "Skill 2", "Skill 3"]
+    }
+    
+    Retorne APENAS o JSON puro, sem blocos de código markdown (sem \`\`\`json).
+    `;
+
+    // Monta o objeto de conteúdo para a API do Google Gemini
+    let contentsPart;
+
+    if (mimeType === 'text/plain') {
+        // Modo Texto (PDF extraído ou DOCX)
+        // Limpeza de segurança básica no texto
+        const safeText = payload.substring(0, 30000).replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+        contentsPart = { text: `${systemInstruction}\n\nCURRÍCULO PARA ANÁLISE:\n"""\n${safeText}\n"""` };
+    } else {
+        // Modo Visão (Imagem Base64)
+        // Enviamos a instrução como texto e a imagem como inlineData
+        contentsPart = [
+            { text: systemInstruction },
+            { inlineData: { mimeType: mimeType, data: payload } }
+        ];
+    }
+    
+    const apiPayload = {
+      contents: [{ parts: Array.isArray(contentsPart) ? contentsPart : [contentsPart] }],
+      generationConfig: { 
+          temperature: 0.2, // Baixa criatividade para evitar alucinações
+          responseMimeType: "application/json" 
+      },
     };
 
     // Chamada à API com Retry automático
     const apiResponse = await fetchWithRetry(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(apiPayload)
     });
 
     const result: any = await apiResponse.json();
@@ -104,7 +154,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     if (!jsonString) throw new Error("A IA retornou uma resposta vazia.");
 
-    // Tratamento robusto para extrair apenas o JSON, caso a IA adicione texto extra
+    // Tratamento robusto para extrair apenas o JSON
     const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
         jsonString = jsonMatch[0];
@@ -113,13 +163,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
         jsonString = jsonString.replace(/```json/g, '').replace(/```/g, '').trim();
     }
     
-    // Validação final: garante que é um JSON válido antes de enviar ao front
+    // Validação final: garante que é um JSON válido
     try {
       JSON.parse(jsonString);
     } catch (e) {
-      // 🔒 SEGURANÇA: Logamos apenas uma amostra segura, não o texto completo com dados pessoais
-      console.error("JSON inválido retornado pela IA (amostra inicial):", jsonString.substring(0, 50) + "...");
-      throw new Error("A IA não gerou um JSON válido.");
+      console.error("JSON inválido retornado pela IA (amostra):", jsonString.substring(0, 50) + "...");
+      throw new Error("A IA não gerou um JSON estruturado corretamente.");
     }
 
     return {
