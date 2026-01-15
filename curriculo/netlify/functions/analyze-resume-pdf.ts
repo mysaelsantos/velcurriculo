@@ -1,8 +1,9 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 
 const API_KEY = process.env.GEMINI_API_KEY;
-// ATUALIZADO: Usando a versão específica '001' que é a mais estável e evita erros de alias
-const MODEL_NAME = "gemini-1.5-flash-001"; 
+// ATUALIZADO: Usando o nome oficial estável 'gemini-1.5-flash'
+// (Se seus outros arquivos usam 'gemini-flash-latest', você pode tentar usar esse também, mas o '1.5-flash' é o padrão recomendado)
+const MODEL_NAME = "gemini-1.5-flash"; 
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
 
 // Defina a URL do seu frontend em produção (sem barra no final)
@@ -19,9 +20,10 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
       
       // Tratamento específico para erros comuns
       if (!response.ok) {
+        // Se for 404, logamos erro crítico
         if (response.status === 404) {
-             console.error(`[FATAL] Modelo '${MODEL_NAME}' não encontrado (404). Verifique se sua API Key é do Google AI Studio.`);
-             throw new Error(`Modelo IA não encontrado (404).`);
+             console.error(`[FATAL] Modelo '${MODEL_NAME}' não encontrado (404). Verifique API KEY ou Região.`);
+             throw new Error(`Modelo IA indisponível (404).`);
         }
         if (response.status === 403) {
              throw new Error(`Erro de Permissão (403). Verifique a API KEY.`);
@@ -31,7 +33,12 @@ const fetchWithRetry = async (url: string, options: any, maxTries: number = 3) =
            await sleep(Math.pow(2, i + 1) * 1000); 
            continue;
         }
-        throw new Error(`Status ${response.status} - ${response.statusText}`);
+        
+        // Tenta ler a mensagem de erro da API
+        const errorBody = await response.json().catch(() => ({}));
+        // @ts-ignore
+        const msg = errorBody.message || errorBody.error?.message || response.statusText;
+        throw new Error(`Status ${response.status} - ${msg}`);
       }
       
       return response;
@@ -86,7 +93,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     if (!payload) return { statusCode: 400, headers, body: JSON.stringify({ message: "Conteúdo para análise vazio." }) };
 
     // 🔒 ETAPA 3: CONSTRUÇÃO DO PROMPT E PAYLOAD
-    
+    // Prompt restaurado COMPLETO com as Regras de Ouro
     const systemInstruction = `
     Você é um especialista em extração de dados de currículos (Parsing). 
     Sua tarefa é analisar o conteúdo fornecido (que pode ser Texto de PDF/Word ou uma Imagem de currículo) e extrair os dados para um JSON estrito.
@@ -132,24 +139,31 @@ export const handler: Handler = async (event: HandlerEvent) => {
     `;
 
     // Monta o objeto de conteúdo para a API do Google Gemini
-    let contentsPart;
+    // NOTA: Para Gemini 1.5, o ideal é usar o campo 'systemInstruction', mas vamos manter 
+    // a estrutura que insere no contexto do usuário se for texto, ou adapta para imagem.
+    
+    let parts: any[] = [];
+    let systemPart = { text: systemInstruction };
 
+    // Construção do Payload baseada no tipo de arquivo
     if (mimeType === 'text/plain') {
         // Modo Texto (PDF extraído ou DOCX)
-        // Limpeza de segurança básica no texto
         const safeText = payload.substring(0, 30000).replace(/[\x00-\x1F\x7F-\x9F]/g, "");
-        contentsPart = { text: `${systemInstruction}\n\nCURRÍCULO PARA ANÁLISE:\n"""\n${safeText}\n"""` };
+        // Inserimos a instrução junto com o texto para garantir contexto forte
+        parts = [
+            { text: `${systemInstruction}\n\nCURRÍCULO PARA ANÁLISE:\n"""\n${safeText}\n"""` }
+        ];
     } else {
         // Modo Visão (Imagem Base64)
-        // Enviamos a instrução como texto e a imagem como inlineData
-        contentsPart = [
+        // Separa instrução da imagem
+        parts = [
             { text: systemInstruction },
             { inlineData: { mimeType: mimeType, data: payload } }
         ];
     }
     
     const apiPayload = {
-      contents: [{ parts: Array.isArray(contentsPart) ? contentsPart : [contentsPart] }],
+      contents: [{ parts: parts }],
       generationConfig: { 
           temperature: 0.2, // Baixa criatividade para evitar alucinações
           responseMimeType: "application/json" 
