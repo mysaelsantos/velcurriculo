@@ -744,16 +744,15 @@ const AppContent: React.FC = () => {
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
         
-        // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
-        // Voltamos para o valor padrão (40) conforme solicitado.
+        // --- CORREÇÃO CRÍTICA: ZONA DE SEGURANÇA PADRÃO ---
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
         
         // --- CORREÇÃO CRÍTICA: BUFFER DE CÁLCULO ---
-        // Adicionamos um buffer extra de 20px APENAS no cálculo da zona de perigo.
+        // Adicionamos um buffer extra de 50px APENAS no cálculo da zona de perigo.
         // Isso faz com que a paginação seja "pessimista", quebrando a página ANTES
         // do conteúdo realmente tocar no QR Code. Isso resolve o problema do Drag & Drop
         // sem precisar aumentar a margem visual real.
-        const CALCULATION_BUFFER = 20;
+        const CALCULATION_BUFFER = 50;
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding - CALCULATION_BUFFER;
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
@@ -1035,7 +1034,10 @@ const AppContent: React.FC = () => {
                             transform: 'none', // Remove qualquer escala responsiva
                             margin: '0',
                             padding: '0'
-                        }
+                        },
+                        // FORÇA DIMENSÕES DO CANVAS
+                        canvasWidth: 794 * 2, // Multiplicado pelo pixelRatio
+                        canvasHeight: 1123 * 2
                         // REMOVIDO: cacheBust: true
                     });
                 } catch (firstError) {
@@ -1054,7 +1056,9 @@ const AppContent: React.FC = () => {
                             transform: 'none',
                             margin: '0',
                             padding: '0'
-                        }
+                        },
+                        canvasWidth: 794,
+                        canvasHeight: 1123
                     });
                 }
                 if (i > 0) pdf.addPage();
