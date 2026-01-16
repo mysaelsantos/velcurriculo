@@ -29,7 +29,7 @@ interface SavedResume extends ResumeData {
 // Chave para persistência da sessão PIX (Mesma usada no PixModal)
 const PIX_SESSION_KEY = '@velcurriculo:pix_session_v1';
 
-// --- NOVO: Função de Cálculo de Escala OTIMIZADA ---
+// --- NOVO: Função de Cálculo de Escala (Centralizado e Maior) ---
 const getInitialScreenScale = () => {
     if (typeof window === 'undefined') return 1;
     
@@ -38,20 +38,17 @@ const getInitialScreenScale = () => {
     
     // Lógica para Mobile (< 1024px)
     if (screenWidth < 1024) {
-        // AJUSTE: Reduzimos a margem de segurança de 40px para 24px (12px de cada lado)
-        // Isso faz o currículo ficar MAIOR no mobile
-        const padding = 24; 
+        // AJUSTE: Reduzimos a margem para 20px (10px cada lado) para MAXIMIZAR o tamanho
+        const padding = 20; 
         const availableWidth = screenWidth - padding; 
         return Math.min(availableWidth / A4_WIDTH, 1);
     } 
-    // Lógica para Tablets/Laptops Pequenos (>= 1024px)
+    // Lógica para Desktop/Tablet
     else {
         // Estima a largura da coluna da direita (aprox 66% da tela - paddings)
-        // Isso evita que o currículo seja cortado em telas de laptop menores (1280px, 1366px)
+        // Isso evita cortes em laptops menores
         const estimatedColumnWidth = (screenWidth - 64) * 0.66;
-        
         if (estimatedColumnWidth < A4_WIDTH) {
-             // Se a coluna for menor que o A4, escala para caber
              return (estimatedColumnWidth - 20) / A4_WIDTH;
         }
         return 1;
@@ -178,6 +175,7 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true, showLinkedinQr: true }
 };
 
+// Traduções e Testemunhos
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está começando a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -277,7 +275,7 @@ const TestimonialsSection = React.memo(() => {
     );
 });
 
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL DO APP
 const AppContent: React.FC = () => {
     // --- LÓGICA DE ROTEAMENTO ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
@@ -291,6 +289,7 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
+    // Se a rota for admin, mostra o Dashboard
     if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
         return <AdminDashboard />;
     }
@@ -299,6 +298,7 @@ const AppContent: React.FC = () => {
     const isPixTestMode = false;
 
     // --- ESTADO DE ESCALA DA TELA (Wrapper Pattern) ---
+    // Inicializa JÁ com o valor correto para evitar CLS
     const [screenScale, setScreenScale] = useState(getInitialScreenScale);
 
     useEffect(() => {
@@ -331,6 +331,7 @@ const AppContent: React.FC = () => {
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     
+    // Estados do Modal de Importação
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
 
@@ -409,6 +410,7 @@ const AppContent: React.FC = () => {
         trackVisitor();
     }, []);
 
+    // Restauração PIX
     useEffect(() => {
         try {
             const savedProgress = localStorage.getItem('inProgressResume');
@@ -666,6 +668,7 @@ const AppContent: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
+    // RENDERIZAÇÃO DE MEDIÇÃO
     useEffect(() => {
         if (measurementRootRef.current) {
             const timer = setTimeout(() => {
@@ -913,6 +916,7 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
+    // --- FUNÇÃO EXPORT TO PDF ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
