@@ -49,20 +49,9 @@ interface ResumePreviewProps {
   isPrint?: boolean;
   enableProtection?: boolean;
   contentScale?: number; // Adicionado para receber a escala do App.tsx
-  scale?: number; // NOVA PROP: Escala da tela (responsividade)
 }
 
-const ResumePreview = forwardRef<any, ResumePreviewProps>(({ 
-    data, 
-    isDemoMode, 
-    isFirstPage, 
-    isMeasurement, 
-    hideEmptySections, 
-    isPrint, 
-    enableProtection = false, 
-    contentScale = 1,
-    scale = 1 // Valor padrão 1 (tamanho real)
-}, ref) => {
+const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false, contentScale = 1 }, ref) => {
   const safeData = data || {};
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
@@ -291,10 +280,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
 
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
-  // CÁLCULO DA ESCALA FINAL COMBINADA
-  // Multiplicamos a escala da tela (responsividade) pela escala do conteúdo (smart shrink)
-  const finalScale = scale * contentScale;
-
   return (
     <div 
         id="resume-preview" 
@@ -304,13 +289,10 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({
         // O transform-origin top left garante que o encolhimento aconteça a partir do topo
         style={{ 
             // CORREÇÃO: Só aplica transform se a escala for diferente de 1
-            transform: finalScale !== 1 ? `scale(${finalScale})` : undefined, 
-            transformOrigin: finalScale !== 1 ? 'top left' : undefined,
+            transform: contentScale !== 1 ? `scale(${contentScale})` : undefined, 
+            transformOrigin: contentScale !== 1 ? 'top left' : undefined,
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
-            // Força largura fixa para garantir que o layout interno (A4) não quebre
-            width: '794px',
-            minWidth: '794px',
             height: isPrint ? '1123px' : undefined 
         }}
     >
