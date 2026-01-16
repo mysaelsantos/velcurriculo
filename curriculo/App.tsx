@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toJpeg } from 'html-to-image';
@@ -332,52 +332,29 @@ const AppContent: React.FC = () => {
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
 
-    // --- FIX: ESTADO DE VISIBILIDADE DO PREVIEW ---
-    // Controla se o preview já foi escalado corretamente para evitar o "flash" de conteúdo gigante
-    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
-
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
-        // Tenta obter a instância do componente via ref
-        const instance = previewRef.current;
+        // Tenta obter o elemento via método imperativo (se exposto) ou direto
+        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
+        const element = getTarget();
         
-        // Se não tiver a função getContentHeight, aborta (evita erro na inicialização)
-        if (!instance || !instance.getContentHeight) return;
+        if (!element) return;
 
         const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
         
-        // --- CORREÇÃO CRÍTICA 1: Altura Real ---
-        // Obtém a altura REAL do conteúdo (texto), ignorando a altura fixa do container A4.
-        const contentHeight = instance.getContentHeight();
-        
-        // --- CORREÇÃO CRÍTICA 3: O DISJUNTOR (Circuit Breaker) ---
-        // Se a altura física do conteúdo JÁ CABE na página (com uma folga segura),
-        // não faz sentido aplicar escala menor que 1. Força 1.0 imediatamente.
-        // Aumentei a tolerância para 20px para garantir.
-        if (contentHeight <= A4_HEIGHT + 20) {
-            if (contentScale !== 1) setContentScale(1);
-            return;
-        }
-
-        // --- CORREÇÃO CRÍTICA 2: Projeção Visual ---
-        // Multiplicamos a altura física pela escala atual para saber a altura VISUAL.
-        const visualHeight = contentHeight * contentScale;
-        
-        // Verifica overflow com uma pequena tolerância de segurança (10px)
-        const hasOverflow = visualHeight > A4_HEIGHT + 10;
+        // Verifica overflow com uma pequena tolerância de segurança (2px)
+        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
+        const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
 
         if (hasOverflow) {
             // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
             setContentScale(prev => Math.max(0.65, prev - 0.01));
         } else {
             // Lógica de recuperação suave (Histerese)
-            // Verifica se, ao aumentar a escala, ainda caberia na página.
-            // Aumentei o passo para 0.05 para recuperação mais rápida.
-            const projectedHeightIfGrow = contentHeight * (contentScale + 0.05);
-            
-            if (contentScale < 1 && projectedHeightIfGrow < A4_HEIGHT - 5) {
-                setContentScale(prev => Math.min(1, prev + 0.05));
+            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
+            if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
+                setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
     }, [contentScale]);
@@ -484,18 +461,13 @@ const AppContent: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
-    // --- FIX: NÓ DE MEDIÇÃO SEGURO ---
-    // Adicionado overflow: hidden, width: 0, height: 0 para evitar scrollbars fantasmas
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '0px'; // FIX
-        measurementNode.style.height = '0px'; // FIX
-        measurementNode.style.overflow = 'hidden'; // FIX
-        measurementNode.style.visibility = 'hidden'; // FIX
+        measurementNode.style.width = '794px'; 
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
@@ -995,20 +967,15 @@ const AppContent: React.FC = () => {
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
-
-        // FIX: Marca o preview como visível após o cálculo bem-sucedido
-        setIsPreviewVisible(true);
     }, [isDemoMode]);
 
-    // FIX: Usa useLayoutEffect para garantir que a escala ocorra ANTES da pintura da tela
-    // Isso evita o "flash" do conteúdo gigante
-    useLayoutEffect(() => {
-        if(fontsLoaded && !isLoading){ 
+    useEffect(() => {
+        if(fontsLoaded){ 
             scalePreview();
             window.addEventListener('resize', scalePreview);
             return () => window.removeEventListener('resize', scalePreview);
         }
-    }, [scalePreview, paginatedData, fontsLoaded, isLoading]);
+    }, [scalePreview, paginatedData, fontsLoaded]);
     
     // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
@@ -1336,9 +1303,7 @@ const AppContent: React.FC = () => {
                             isPrint={true} 
                             hideEmptySections={true} 
                             enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
-                            // CORREÇÃO CRÍTICA 2: Passamos a escala também para o PDF!
-                            // Se o usuário viu o texto encolhido na tela, ele quer que saia encolhido no PDF para caber.
-                            contentScale={contentScale} 
+                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
                         />
                     </div>
                 ))}
@@ -1441,14 +1406,8 @@ const AppContent: React.FC = () => {
                         onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
-                    
-                    {/* FIX: CONTAINER COM OVERFLOW HIDDEN E OPACITY CONTROL */}
-                    <div className="w-full lg:w-2/3 overflow-hidden relative">
-                        <div 
-                            ref={previewWrapperRef} 
-                            className={`w-full transition-opacity duration-500 ${isPreviewVisible ? 'opacity-100' : 'opacity-0'}`}
-                            style={{ transformOrigin: 'top left' }}
-                        >
+                    <div className="w-full lg:w-2/3">
+                        <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
                                 ref={previewRef}
@@ -1469,6 +1428,10 @@ const AppContent: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                        
+                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                        {/* O usuário pediu para remover */}
+
                     </div>
                 </div>
             </section>
