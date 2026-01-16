@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toJpeg } from 'html-to-image';
@@ -332,6 +332,10 @@ const AppContent: React.FC = () => {
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
 
+    // --- FIX: ESTADO DE VISIBILIDADE DO PREVIEW ---
+    // Controla se o preview já foi escalado corretamente para evitar o "flash" de conteúdo gigante
+    const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
@@ -461,13 +465,18 @@ const AppContent: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // --- FIX: NÓ DE MEDIÇÃO SEGURO ---
+    // Adicionado overflow: hidden, width: 0, height: 0 para evitar scrollbars fantasmas
     useEffect(() => {
         const measurementNode = document.createElement('div');
         measurementNode.style.position = 'absolute';
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '794px'; 
+        measurementNode.style.width = '0px'; // FIX
+        measurementNode.style.height = '0px'; // FIX
+        measurementNode.style.overflow = 'hidden'; // FIX
+        measurementNode.style.visibility = 'hidden'; // FIX
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
         
@@ -967,15 +976,20 @@ const AppContent: React.FC = () => {
         if (previewWrapperRef.current) {
           previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
+
+        // FIX: Marca o preview como visível após o cálculo bem-sucedido
+        setIsPreviewVisible(true);
     }, [isDemoMode]);
 
-    useEffect(() => {
-        if(fontsLoaded){ 
+    // FIX: Usa useLayoutEffect para garantir que a escala ocorra ANTES da pintura da tela
+    // Isso evita o "flash" do conteúdo gigante
+    useLayoutEffect(() => {
+        if(fontsLoaded && !isLoading){ 
             scalePreview();
             window.addEventListener('resize', scalePreview);
             return () => window.removeEventListener('resize', scalePreview);
         }
-    }, [scalePreview, paginatedData, fontsLoaded]);
+    }, [scalePreview, paginatedData, fontsLoaded, isLoading]);
     
     // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
@@ -1406,8 +1420,14 @@ const AppContent: React.FC = () => {
                         onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
-                    <div className="w-full lg:w-2/3">
-                        <div ref={previewWrapperRef} className="w-full">
+                    
+                    {/* FIX: CONTAINER COM OVERFLOW HIDDEN E OPACITY CONTROL */}
+                    <div className="w-full lg:w-2/3 overflow-hidden relative">
+                        <div 
+                            ref={previewWrapperRef} 
+                            className={`w-full transition-opacity duration-500 ${isPreviewVisible ? 'opacity-100' : 'opacity-0'}`}
+                            style={{ transformOrigin: 'top left' }}
+                        >
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
                                 ref={previewRef}
@@ -1428,10 +1448,6 @@ const AppContent: React.FC = () => {
                                 ))}
                             </div>
                         )}
-                        
-                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                        {/* O usuário pediu para remover */}
-
                     </div>
                 </div>
             </section>
