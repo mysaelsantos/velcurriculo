@@ -298,7 +298,8 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
             minWidth: '794px',
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
-            height: isPrint ? '1123px' : undefined 
+            height: isPrint ? '1123px' : 'auto', // Alterado para auto para evitar travamento em 0px
+            minHeight: '1123px' // Garante altura mínima
         }}
     >
       
@@ -352,15 +353,16 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
             // ignorando a altura mínima do pai. 'overflow: hidden' evita margin collapsing.
             display: 'inline-block',
             overflow: 'hidden',
-            verticalAlign: 'top'
+            verticalAlign: 'top',
+            minHeight: '100%' // Garante que o wrapper acompanhe a altura do pai
         }}
       >
 
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={hasActivePhoto ? 'visible' : ''}>
-                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src --- */}
-                {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" />}
+                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src + onError para evitar crash --- */}
+                {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" onError={(e) => e.currentTarget.style.display = 'none'} />}
                 {/* --- FIM DA EDIÇÃO --- */}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && hasActivePhoto ? 'has-photo' : ''}`}>
