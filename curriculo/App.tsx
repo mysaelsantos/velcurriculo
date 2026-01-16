@@ -351,13 +351,21 @@ const AppContent: React.FC = () => {
         // Obtém a altura REAL do conteúdo (texto), ignorando a altura fixa do container A4.
         const contentHeight = instance.getContentHeight();
         
+        // --- CORREÇÃO CRÍTICA 3: O DISJUNTOR (Circuit Breaker) ---
+        // Se a altura física do conteúdo JÁ CABE na página (com uma folga segura),
+        // não faz sentido aplicar escala menor que 1. Força 1.0 imediatamente.
+        // Isso resolve o problema de currículos curtos ficarem pequenos.
+        if (contentHeight <= A4_HEIGHT + 10) {
+            if (contentScale !== 1) setContentScale(1);
+            return;
+        }
+
         // --- CORREÇÃO CRÍTICA 2: Projeção Visual ---
         // Multiplicamos a altura física pela escala atual para saber a altura VISUAL.
-        // Sem isso, o código entra em loop infinito porque o transform: scale não muda a altura física.
         const visualHeight = contentHeight * contentScale;
         
-        // Verifica overflow com uma pequena tolerância de segurança (2px)
-        const hasOverflow = visualHeight > A4_HEIGHT + 2;
+        // Verifica overflow com uma pequena tolerância de segurança (10px)
+        const hasOverflow = visualHeight > A4_HEIGHT + 10;
 
         if (hasOverflow) {
             // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
@@ -365,10 +373,10 @@ const AppContent: React.FC = () => {
         } else {
             // Lógica de recuperação suave (Histerese)
             // Verifica se, ao aumentar a escala, ainda caberia na página.
-            // (contentHeight * (contentScale + 0.01)) < A4_HEIGHT - buffer
+            // Relaxamos o buffer para 5px para permitir que ele cresça mais perto do limite.
             const projectedHeightIfGrow = contentHeight * (contentScale + 0.01);
             
-            if (contentScale < 1 && projectedHeightIfGrow < A4_HEIGHT - 20) {
+            if (contentScale < 1 && projectedHeightIfGrow < A4_HEIGHT - 5) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
