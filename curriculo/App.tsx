@@ -29,32 +29,6 @@ interface SavedResume extends ResumeData {
 // Chave para persistência da sessão PIX (Mesma usada no PixModal)
 const PIX_SESSION_KEY = '@velcurriculo:pix_session_v1';
 
-// --- NOVO: Função de Cálculo de Escala (Centralizado e Maior) ---
-const getInitialScreenScale = () => {
-    if (typeof window === 'undefined') return 1;
-    
-    const screenWidth = window.innerWidth;
-    const A4_WIDTH = 794; 
-    
-    // Lógica para Mobile (< 1024px)
-    if (screenWidth < 1024) {
-        // AJUSTE: Reduzimos a margem para 20px (10px cada lado) para MAXIMIZAR o tamanho
-        const padding = 20; 
-        const availableWidth = screenWidth - padding; 
-        return Math.min(availableWidth / A4_WIDTH, 1);
-    } 
-    // Lógica para Desktop/Tablet
-    else {
-        // Estima a largura da coluna da direita (aprox 66% da tela - paddings)
-        // Isso evita cortes em laptops menores
-        const estimatedColumnWidth = (screenWidth - 64) * 0.66;
-        if (estimatedColumnWidth < A4_WIDTH) {
-             return (estimatedColumnWidth - 20) / A4_WIDTH;
-        }
-        return 1;
-    }
-};
-
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -175,7 +149,7 @@ const INITIAL_DATA: ResumeData = {
     style: { template: 'template-modern', color: '#002e9e', showQRCode: true, showLinkedinQr: true }
 };
 
-// Traduções e Testemunhos
+// ATUALIZADO: Traduções PT-PT para PT-BR nos depoimentos
 const ALL_TESTIMONIALS = [
     { text: '"Ferramenta incrível! Consegui criar um currículo super profissional em 10 minutos. A ajuda da IA para o resumo foi a cereja no topo do bolo."', author: '- Mariana S. - Marketing Digital' },
     { text: '"Para quem está começando a carreira, como eu, este site é uma mão na roda. Templates limpos e muito fáceis de usar. 10/10!"', author: '- João P. - Estudante' },
@@ -275,39 +249,33 @@ const TestimonialsSection = React.memo(() => {
     );
 });
 
-// COMPONENTE PRINCIPAL DO APP
+// COMPONENTE PRINCIPAL
 const AppContent: React.FC = () => {
-    // --- LÓGICA DE ROTEAMENTO ---
+    // --- LÓGICA DE ROTEAMENTO (ATUALIZADA) ---
     const [currentRoute, setCurrentRoute] = useState(window.location.hash);
+
+    // --- HOOK DE FEEDBACK ---
     const { status, triggerFeedback } = useFeedback();
 
     useEffect(() => {
         const handleHashChange = () => {
+            console.log("Navegação detectada para:", window.location.hash);
             setCurrentRoute(window.location.hash);
         }
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
-    // Se a rota for admin, mostra o Dashboard
+    // DEBUG: Mostra no console qual rota está ativa
+    console.log("Rota Atual do App:", currentRoute);
+
+    // Se a rota for admin (aceita #/admin, #admin ou #/admin/), mostra o Dashboard
     if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
         return <AdminDashboard />;
     }
 
-    // --- CÓDIGO DO SITE NORMAL ---
+    // --- CÓDIGO DO SITE NORMAL ABAIXO ---
     const isPixTestMode = false;
-
-    // --- ESTADO DE ESCALA DA TELA (Wrapper Pattern) ---
-    // Inicializa JÁ com o valor correto para evitar CLS
-    const [screenScale, setScreenScale] = useState(getInitialScreenScale);
-
-    useEffect(() => {
-        const handleResize = () => {
-            setScreenScale(getInitialScreenScale());
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     
@@ -331,23 +299,24 @@ const AppContent: React.FC = () => {
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
     
-    // Estados do Modal de Importação
+    // --- NOVO: ESTADOS DO MODAL DE IMPORTAÇÃO ---
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
 
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
+    // Controla o Loading Overlay
     const [isLoading, setIsLoading] = useState(true);
     const [fontsLoaded, setFontsLoaded] = useState(false); 
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
     
-    // ESTADOS DE DESENVOLVEDOR
+    // --- ESTADOS DE DESENVOLVEDOR ---
     const [isDevModeActive, setIsDevModeActive] = useState(false); 
     const [devClickCount, setDevClickCount] = useState(0); 
     const [showDevModal, setShowDevModal] = useState(false); 
     const [devPassword, setDevPassword] = useState(''); 
 
-    // ESTADO PARA O GREETING DO HEADER
+    // --- ESTADO PARA O GREETING DO HEADER ---
     const [showLogo, setShowLogo] = useState(true); 
     const [headerMessage, setHeaderMessage] = useState('');
     const [hasGreeted, setHasGreeted] = useState(false); 
@@ -356,34 +325,42 @@ const AppContent: React.FC = () => {
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
 
+    // CORREÇÃO: Usamos 'any' aqui pois ResumePreviewRef não é exportado no componente atualizado
     const previewRef = useRef<any>(null);
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
 
-    // LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink)
+    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
+    // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
+        // Tenta obter o elemento via método imperativo (se exposto) ou direto
         const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
         const element = getTarget();
         
         if (!element) return;
 
-        const A4_HEIGHT = 1123; 
+        const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
         
-        // Verifica overflow com uma pequena tolerância
+        // Verifica overflow com uma pequena tolerância de segurança (2px)
+        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
         const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
 
         if (hasOverflow) {
+            // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
             setContentScale(prev => Math.max(0.65, prev - 0.01));
         } else {
+            // Lógica de recuperação suave (Histerese)
+            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
             if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
     }, [contentScale]);
 
-    // RESIZE OBSERVER PARA O PREVIEW
+    // --- RESIZE OBSERVER PARA O PREVIEW ---
+    // Monitora mudanças físicas no DOM do PREVIEW para acionar o ajuste de escala
     useEffect(() => {
         const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
         const element = getTarget();
@@ -391,28 +368,34 @@ const AppContent: React.FC = () => {
         if (!element) return;
 
         const resizeObserver = new ResizeObserver(() => {
+            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Debounce nativo)
             window.requestAnimationFrame(checkOverflow);
         });
 
+        // Observa o container principal
         resizeObserver.observe(element);
+        
+        // Observa também o primeiro filho para garantir detecção de mudanças internas de layout
         if (element.firstElementChild) {
             resizeObserver.observe(element.firstElementChild);
         }
 
+        // Trigger inicial
         checkOverflow();
 
         return () => resizeObserver.disconnect();
-    }, [checkOverflow, resumeData, currentPage]); 
+    }, [checkOverflow, resumeData, currentPage]); // Recalcula se dados ou página mudarem
 
-    // INICIALIZAÇÃO
+    // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
         runAutoSetup();
         trackVisitor();
     }, []);
 
-    // Restauração PIX
+    // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX (COM HIERARQUIA) ---
     useEffect(() => {
         try {
+            // VERIFICA SE EXISTE PROGRESSO PENDENTE (Hierarquia 1)
             const savedProgress = localStorage.getItem('inProgressResume');
             const hasPendingProgress = !!savedProgress;
 
@@ -421,11 +404,18 @@ const AppContent: React.FC = () => {
                 const parsedSession = JSON.parse(savedSession);
                 const now = Date.now();
                 
+                // Janela de 15 minutos para tolerância
                 if (now - parsedSession.timestamp < 900000) { 
                      setPixPaymentData(parsedSession.data);
+                     
+                     // INTELIGÊNCIA AQUI:
+                     // Se existe um progresso pendente (modal de "Continuar"), NÃO abrimos o PIX agora.
+                     // Deixamos ele carregado, mas invisível.
                      if (!hasPendingProgress) {
                          setIsPixModalOpen(true);
+                         console.log("Sessão PIX restaurada automaticamente.");
                      } else {
+                         console.log("Sessão PIX carregada em background (Aguardando decisão do usuário).");
                          setIsPixModalOpen(false);
                      }
                 } else {
@@ -444,15 +434,18 @@ const AppContent: React.FC = () => {
         }, 5000);
     };
     
+    const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
+    // --- LÓGICA DE CARREGAMENTO INICIAL COM SOBREPOSIÇÃO ---
     useEffect(() => {
         const loadResources = async () => {
             try {
                 await document.fonts.ready;
                 setFontsLoaded(true); 
             } catch (error) {
+                console.error("Failed to load fonts:", error);
                 setFontsLoaded(true); 
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -559,8 +552,10 @@ const AppContent: React.FC = () => {
             setCurrentStep(savedStep);
             setIsFinished(savedIsFinished);
             setIsDemoMode(false);
+            // Ao recarregar, reseta a escala
             setContentScale(1);
             
+            // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
             if (pixPaymentData) {
                 setIsPixModalOpen(true);
             }
@@ -572,59 +567,77 @@ const AppContent: React.FC = () => {
     const handleStartNew = () => {
         try {
             localStorage.removeItem('inProgressResume');
+            // INTELIGÊNCIA: Se o usuário quer começar do zero, o PIX antigo NÃO serve mais.
             localStorage.removeItem(PIX_SESSION_KEY);
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
-        setPixPaymentData(null); 
+        setPixPaymentData(null); // Limpa estado visual também
         setIsPixModalOpen(false);
-        setContentScale(1); 
+        setContentScale(1); // Reseta escala
+        // Abre o modal de escolha ao começar novo, se desejar
         setIsImportModalOpen(true);
     };
 
+    // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
     const handleStartEditing = () => {
+        // 1. Capturamos o estilo (template e cor) que o usuário escolheu visualmente na etapa 0
         const currentStyle = resumeData.style;
+
         setIsDemoMode(false);
+        
+        // 2. Ao resetar os dados, preservamos o 'style' capturado
         setResumeData({
             ...INITIAL_DATA,
             style: currentStyle
         });
+
         setCurrentStep(0);
         setIsFinished(false);
         setHasPaidInSession(false);
         setEditingResumeId(null);
-        setPixPaymentData(null); 
+        setPixPaymentData(null); // Limpa PIX antigo
         setIsPixModalOpen(false);
-        setContentScale(1); 
+        setContentScale(1); // Reseta escala
+        // Fecha o modal de Importação se estiver aberto (caso venha do fluxo de Import)
         setIsImportModalOpen(false); 
 
         try {
             localStorage.removeItem('inProgressResume');
+            // INTELIGÊNCIA: Limpa PIX antigo também ao reiniciar no meio do processo
             localStorage.removeItem(PIX_SESSION_KEY);
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
+        
+        // Scroll suave para o formulário
         document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
     };
     
+    // --- LÓGICA DE IMPORTAÇÃO COM IA ---
     const handleImportResume = async (file: File) => {
         setIsAnalyzingFile(true);
         try {
+            // Chama o serviço inteligente que detecta PDF/DOCX/Imagem
             const extractedData = await analyzeResumePDF(file);
+            
+            // Mescla os dados extraídos com o estado inicial para garantir estrutura
             setResumeData(prev => ({
                 ...prev,
                 ...extractedData,
+                // Mantém o estilo atual selecionado
                 style: prev.style 
             }));
             
             setIsDemoMode(false);
-            setCurrentStep(0);
+            setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
             setIsImportModalOpen(false);
-            setContentScale(1); 
+            setContentScale(1); // Reseta escala
             showToast("Currículo importado com sucesso! Revise os dados.", "success");
             
+            // Scroll para o formulário
             setTimeout(() => {
                 document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
             }, 500);
@@ -668,12 +681,16 @@ const AppContent: React.FC = () => {
         }
     }, [paginatedData, currentPage]);
     
-    // RENDERIZAÇÃO DE MEDIÇÃO
+    // --- CORREÇÃO CRÍTICA: RENDERIZAÇÃO DE MEDIÇÃO ---
+    // Adicionamos uma 'key' baseada nos dados para forçar o React a recriar o componente
+    // sempre que os dados mudarem (incluindo Drag & Drop). Isso garante que as alturas
+    // medidas sejam sempre frescas e não baseadas em um estado anterior do DOM.
     useEffect(() => {
         if (measurementRootRef.current) {
             const timer = setTimeout(() => {
                 measurementRootRef.current.render(
                     <ResumePreview 
+                        // A CHAVE MESTRA: Força recriação do DOM de medição
                         key={JSON.stringify(resumeData)} 
                         data={resumeData} 
                         isDemoMode={isDemoMode} 
@@ -681,7 +698,7 @@ const AppContent: React.FC = () => {
                         isMeasurement={true} 
                     />
                 );
-            }, 100); 
+            }, 100); // Aumentado levemente para garantir que o Drag & Drop terminou
             return () => clearTimeout(timer);
         }
     }, [resumeData, isDemoMode]);
@@ -726,8 +743,16 @@ const AppContent: React.FC = () => {
         // @ts-ignore
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
+        
+        // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
+        // Voltamos para o valor padrão (40) conforme solicitado.
         const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
         
+        // --- CORREÇÃO CRÍTICA: BUFFER DE CÁLCULO ---
+        // Adicionamos um buffer extra de 50px APENAS no cálculo da zona de perigo.
+        // Isso faz com que a paginação seja "pessimista", quebrando a página ANTES
+        // do conteúdo realmente tocar no QR Code. Isso resolve o problema do Drag & Drop
+        // sem precisar aumentar a margem visual real.
         const CALCULATION_BUFFER = 50;
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding - CALCULATION_BUFFER;
 
@@ -916,12 +941,49 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
-    // --- FUNÇÃO EXPORT TO PDF ---
+    const scalePreview = useCallback(() => {
+        const previewColumn = previewWrapperRef.current?.parentElement;
+        const previewElement = previewRef.current?.getElement();
+        
+        if (!previewColumn || !previewElement) return;
+
+        let columnWidth = previewColumn.offsetWidth;
+        const baseWidth = 794;
+        const baseHeight = 1123;
+
+        if (isDemoMode) {
+             const screenWidth = window.innerWidth;
+             if (columnWidth < 300) {
+                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
+             }
+        }
+        
+        if (columnWidth <= 0) return;
+        
+        const scale = columnWidth / baseWidth;
+        
+        previewElement.style.transform = `scale(${scale})`;
+        
+        if (previewWrapperRef.current) {
+          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
+        }
+    }, [isDemoMode]);
+
+    useEffect(() => {
+        if(fontsLoaded){ 
+            scalePreview();
+            window.addEventListener('resize', scalePreview);
+            return () => window.removeEventListener('resize', scalePreview);
+        }
+    }, [scalePreview, paginatedData, fontsLoaded]);
+    
+    // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
         trackResumeGenerated(dataToExport);
 
+        // Garante que as fontes estão carregadas para evitar layout shift
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -933,6 +995,7 @@ const AppContent: React.FC = () => {
             return;
         }
 
+        // Pequeno delay para garantir renderização do DOM (especialmente QR Codes e Imagens)
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
@@ -941,11 +1004,12 @@ const AppContent: React.FC = () => {
             
             if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
 
+            // 1. Configuração do jsPDF com compressão ativada
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
                 format: 'a4',
-                compress: true 
+                compress: true // ATIVADO: Comprime a estrutura interna do PDF
             });
 
             const pdfWidth = 210;
@@ -954,16 +1018,20 @@ const AppContent: React.FC = () => {
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
                 
+                // Força dimensões exatas antes da captura
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
                 pageEl.style.width = '794px';
 
                 let imgData;
                 try {
+                    // 2. MUDANÇA CRÍTICA: Usar toJpeg com qualidade controlada
+                    // quality: 0.85 -> Excelente equilíbrio (quase indistinguível de 1.0, mas muito menor)
+                    // pixelRatio: 2 -> Mantém a nitidez do texto (Retina quality)
                     imgData = await toJpeg(pageEl, {
                         quality: 0.85, 
                         pixelRatio: 2,
-                        backgroundColor: '#ffffff', 
+                        backgroundColor: '#ffffff', // OBRIGATÓRIO: JPEG não tem transparência
                         width: 794,
                         height: 1123,
                         style: {
@@ -974,11 +1042,14 @@ const AppContent: React.FC = () => {
                             transform: 'none',
                             margin: '0',
                             padding: '0',
-                            backgroundColor: '#ffffff' 
+                            backgroundColor: '#ffffff' // Reforço de segurança
                         },
+                        // CacheBust removido para evitar problemas de CORS com imagens de perfil externas
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando fallback...", firstError);
+                    
+                    // Fallback: Reduz pixelRatio se falhar (ex: falta de memória no mobile)
                     imgData = await toJpeg(pageEl, {
                         quality: 0.75,
                         pixelRatio: 1.5, 
@@ -999,6 +1070,9 @@ const AppContent: React.FC = () => {
                 }
 
                 if (i > 0) pdf.addPage();
+
+                // 3. Adiciona como JPEG (Fast & Small)
+                // O último parâmetro 'FAST' ou 'MEDIUM' pode otimizar ainda mais a renderização no visualizador
                 pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             }
 
@@ -1044,6 +1118,7 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
             
+            // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
             const payload = {
                 coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
                 email: resumeData.personalInfo.email,
@@ -1119,7 +1194,7 @@ const AppContent: React.FC = () => {
             setIsMyResumesModalOpen(false);
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
-            setContentScale(1); 
+            setContentScale(1); // Reseta a escala ao editar
         }
     };
 
@@ -1146,7 +1221,7 @@ const AppContent: React.FC = () => {
         setIsDemoMode(false); 
         setHasPaidInSession(false); 
         setEditingResumeId(null);
-        setContentScale(1); 
+        setContentScale(1); // Reseta a escala
         showToast("Dados de DEMO preenchidos com sucesso!", "success");
     };
 
@@ -1174,6 +1249,7 @@ const AppContent: React.FC = () => {
 
     return (
         <>
+        {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
         {isLoading && (
             <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
@@ -1193,6 +1269,7 @@ const AppContent: React.FC = () => {
             </div>
         )}
 
+        {/* MODAL DEV */}
         {showDevModal && (
             <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
                 <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
@@ -1212,6 +1289,8 @@ const AppContent: React.FC = () => {
             </div>
         )}
 
+        {/* PRINT CONTAINER (Hidden) */}
+        {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
         <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
              <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
                 {paginatedData.map((pageData, index) => (
@@ -1223,18 +1302,20 @@ const AppContent: React.FC = () => {
                             isMeasurement={false} 
                             isPrint={true} 
                             hideEmptySections={true} 
-                            enableProtection={!hasPaidInSession} 
-                            contentScale={1} 
+                            enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
+                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
                         />
                     </div>
                 ))}
              </div>
         </div>
 
+        {/* TOASTS */}
         {toast && (
             <div role="alert" className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${{success: 'bg-green-500', error: 'bg-red-600', warning: 'bg-yellow-500 text-gray-900'}[toast.type]}`}>{toast.message}</div>
         )}
         
+        {/* MODAIS DIVERSOS */}
         <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
         {isPixModalOpen && pixPaymentData && (
             <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
@@ -1242,6 +1323,7 @@ const AppContent: React.FC = () => {
         
         <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
         
+        {/* NOVO: MODAL DE IMPORTAÇÃO */}
         <ImportModal 
             isOpen={isImportModalOpen} 
             onClose={() => setIsImportModalOpen(false)} 
@@ -1263,6 +1345,7 @@ const AppContent: React.FC = () => {
             </div>
         )}
         
+        {/* BOTÕES FLUTUANTES DEV */}
         {isDevModeActive && (
             <>
                 <button type="button" onClick={handleExportJson} className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105" title="Exportar JSON"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button>
@@ -1271,10 +1354,12 @@ const AppContent: React.FC = () => {
             </>
         )}
 
+        {/* --- HEADER NOVO --- */}
         <FeedbackHeader 
             userData={userData} 
             headerMessage={headerMessage}
             showLogo={showLogo}
+            // Passamos a função para abrir o modal de currículos
             onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
         />
 
@@ -1289,6 +1374,7 @@ const AppContent: React.FC = () => {
                     <span>+{resumesGenerated} currículos gerados!</span>
                 </div>
                 <div className="mt-8 flex flex-col items-center gap-4">
+                    {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
                     <button 
                         onClick={() => setIsImportModalOpen(true)}
                         className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
@@ -1317,34 +1403,25 @@ const AppContent: React.FC = () => {
                         setCurrentStep={setCurrentStep}
                         isFinished={isFinished}
                         setIsFinished={setIsFinished}
-                        onRequestImport={() => setIsImportModalOpen(true)} 
+                        onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
                     <div className="w-full lg:w-2/3">
-                        {/* --- WRAPPER PATTERN OTIMIZADO --- */}
-                        <div className="w-full overflow-x-hidden flex justify-center"> {/* Adicionado flex e justify-center */}
-                            <div 
-                                className="origin-top transition-transform duration-75 ease-out will-change-transform mx-auto" // Alterado para origin-top e adicionado mx-auto
-                                style={{ 
-                                    transform: `scale(${screenScale})`,
-                                    width: '794px', 
-                                    height: `${1123 * screenScale}px`
-                                }}
-                            >
-                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                    <ResumePreview
-                                        ref={previewRef}
-                                        data={paginatedData[currentPage - 1]}
-                                        isDemoMode={isDemoMode}
-                                        isFirstPage={currentPage === 1}
-                                        hideEmptySections={paginatedData.length > 1}
-                                        enableProtection={!hasPaidInSession}
-                                        contentScale={contentScale} 
-                                    />
-                                )}
-                            </div>
+                        {/* WRAPPER ATUALIZADO: 'flex justify-center' garante que o conteúdo escalado fique centralizado */}
+                        <div ref={previewWrapperRef} className="w-full flex justify-center items-start">
+                           {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                             <ResumePreview
+                                ref={previewRef}
+                                data={paginatedData[currentPage - 1]}
+                                isDemoMode={isDemoMode}
+                                isFirstPage={currentPage === 1}
+                                hideEmptySections={paginatedData.length > 1}
+                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                enableProtection={!hasPaidInSession}
+                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                             />
+                           )}
                         </div>
-                        
                         {paginatedData.length > 1 && (
                             <div className="pagination-controls">
                                 {paginatedData.map((_, index) => (
@@ -1352,6 +1429,10 @@ const AppContent: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                        
+                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                        {/* O usuário pediu para remover */}
+
                     </div>
                 </div>
             </section>
@@ -1381,6 +1462,7 @@ const AppContent: React.FC = () => {
             <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
                  <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
                  <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
+                 {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
                  <button 
                     onClick={() => setIsImportModalOpen(true)}
                     className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
@@ -1390,6 +1472,7 @@ const AppContent: React.FC = () => {
             </section>
         </main>
         
+        {/* FOOTER ATUALIZADO: padding extra para home indicator (pb-12 -> pb-16 no mobile) */}
         <footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12">
             <div className="container mx-auto px-4 max-w-7xl">
                 <div className="flex flex-col md:flex-row justify-between items-center">
@@ -1401,8 +1484,10 @@ const AppContent: React.FC = () => {
                     </div>
                     <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
                         <div>
+                            {/* ATUALIZADO: "Contacto" -> "Contato" */}
                             <h4 className="font-bold text-lg mb-4">Contato</h4>
                             <ul className="space-y-2">
+                                {/* ATUALIZADO: Telefone atualizado */}
                                 <li className="text-gray-400">(37) 98411-6034</li>
                                 <li className="text-gray-400">contato@velsites.com.br</li>
                             </ul>
