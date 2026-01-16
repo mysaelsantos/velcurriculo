@@ -354,8 +354,8 @@ const AppContent: React.FC = () => {
         // --- CORREÇÃO CRÍTICA 3: O DISJUNTOR (Circuit Breaker) ---
         // Se a altura física do conteúdo JÁ CABE na página (com uma folga segura),
         // não faz sentido aplicar escala menor que 1. Força 1.0 imediatamente.
-        // Isso resolve o problema de currículos curtos ficarem pequenos.
-        if (contentHeight <= A4_HEIGHT + 10) {
+        // Aumentei a tolerância para 20px para garantir.
+        if (contentHeight <= A4_HEIGHT + 20) {
             if (contentScale !== 1) setContentScale(1);
             return;
         }
@@ -373,11 +373,11 @@ const AppContent: React.FC = () => {
         } else {
             // Lógica de recuperação suave (Histerese)
             // Verifica se, ao aumentar a escala, ainda caberia na página.
-            // Relaxamos o buffer para 5px para permitir que ele cresça mais perto do limite.
-            const projectedHeightIfGrow = contentHeight * (contentScale + 0.01);
+            // Aumentei o passo para 0.05 para recuperação mais rápida.
+            const projectedHeightIfGrow = contentHeight * (contentScale + 0.05);
             
             if (contentScale < 1 && projectedHeightIfGrow < A4_HEIGHT - 5) {
-                setContentScale(prev => Math.min(1, prev + 0.01));
+                setContentScale(prev => Math.min(1, prev + 0.05));
             }
         }
     }, [contentScale]);
