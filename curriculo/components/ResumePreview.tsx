@@ -56,6 +56,8 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
+  // REF para o wrapper interno (Smart Shrink)
+  const smartShrinkWrapperRef = useRef<HTMLDivElement>(null);
   
   // --- INÍCIO DA EDIÇÃO: Estado para imagem segura ---
   const [safeProfilePic, setSafeProfilePic] = useState<string | null>(null);
@@ -67,6 +69,8 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
 
   useImperativeHandle(ref, () => ({
     getElement: () => previewRef.current,
+    // NOVA FUNÇÃO: Retorna a altura real do conteúdo (texto), sem a altura fixa da página A4
+    getContentHeight: () => smartShrinkWrapperRef.current?.scrollHeight || 0
   }));
 
   useEffect(() => {
@@ -339,11 +343,14 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
       {/* Este div recebe a escala de conteúdo (0.9x, 0.8x) sem brigar com a escala da tela do App.tsx */}
       <div 
         id="smart-shrink-wrapper"
+        ref={smartShrinkWrapperRef}
         style={{
             transform: contentScale !== 1 ? `scale(${contentScale})` : undefined,
             transformOrigin: 'top left',
             width: '100%',
-            height: '100%'
+            // FIX CRÍTICO: height 'auto' permite medir a altura real do conteúdo.
+            // Se fosse 100%, ele herdaria os 1123px do pai e o cálculo de overflow falharia.
+            height: 'auto' 
         }}
       >
 
