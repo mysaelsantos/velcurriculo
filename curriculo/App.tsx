@@ -29,6 +29,25 @@ interface SavedResume extends ResumeData {
 // Chave para persistência da sessão PIX (Mesma usada no PixModal)
 const PIX_SESSION_KEY = '@velcurriculo:pix_session_v1';
 
+// --- NOVO: Função de Cálculo de Escala Antecipado (Lazy Initialization) ---
+const getInitialScreenScale = () => {
+    if (typeof window === 'undefined') return 1;
+    
+    const screenWidth = window.innerWidth;
+    const A4_WIDTH = 794; 
+    
+    // Lógica para Mobile (< 1024px)
+    if (screenWidth < 1024) {
+        // Subtrai padding lateral (aprox 32px a 40px) para segurança
+        const availableWidth = screenWidth - 40; 
+        return Math.min(availableWidth / A4_WIDTH, 1);
+    }
+    
+    // Para Desktop, assumimos 1 inicial ou ajustamos conforme o layout
+    // Retornar 1 no desktop geralmente é seguro pois o layout é fluido
+    return 1;
+};
+
 // DADOS DE DEMONSTRAÇÃO COMPLETOS
 const DEMO_DATA: ResumeData = {
     personalInfo: {
@@ -277,6 +296,19 @@ const AppContent: React.FC = () => {
     // --- CÓDIGO DO SITE NORMAL ABAIXO ---
     const isPixTestMode = false;
 
+    // --- NOVO: ESTADO DE ESCALA DA TELA (Wrapper Pattern) ---
+    // Inicializa JÁ com o valor correto para evitar CLS (Cumulative Layout Shift)
+    const [screenScale, setScreenScale] = useState(getInitialScreenScale);
+
+    // Listener para redimensionamento da janela
+    useEffect(() => {
+        const handleResize = () => {
+            setScreenScale(getInitialScreenScale());
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
     
     // Dados para o Header
@@ -434,7 +466,8 @@ const AppContent: React.FC = () => {
         }, 5000);
     };
     
-    const previewWrapperRef = useRef<HTMLDivElement>(null);
+    // Removido useRef desnecessário, agora usamos o screenScale
+    // const previewWrapperRef = useRef<HTMLDivElement>(null); 
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
     
@@ -941,42 +974,6 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
-    const scalePreview = useCallback(() => {
-        const previewColumn = previewWrapperRef.current?.parentElement;
-        const previewElement = previewRef.current?.getElement();
-        
-        if (!previewColumn || !previewElement) return;
-
-        let columnWidth = previewColumn.offsetWidth;
-        const baseWidth = 794;
-        const baseHeight = 1123;
-
-        if (isDemoMode) {
-             const screenWidth = window.innerWidth;
-             if (columnWidth < 300) {
-                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
-             }
-        }
-        
-        if (columnWidth <= 0) return;
-        
-        const scale = columnWidth / baseWidth;
-        
-        previewElement.style.transform = `scale(${scale})`;
-        
-        if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
-        }
-    }, [isDemoMode]);
-
-    useEffect(() => {
-        if(fontsLoaded){ 
-            scalePreview();
-            window.addEventListener('resize', scalePreview);
-            return () => window.removeEventListener('resize', scalePreview);
-        }
-    }, [scalePreview, paginatedData, fontsLoaded]);
-    
     // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
@@ -1407,20 +1404,35 @@ const AppContent: React.FC = () => {
                         showToast={showToast}
                     />
                     <div className="w-full lg:w-2/3">
-                        <div ref={previewWrapperRef} className="w-full">
-                           {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                             <ResumePreview
-                                ref={previewRef}
-                                data={paginatedData[currentPage - 1]}
-                                isDemoMode={isDemoMode}
-                                isFirstPage={currentPage === 1}
-                                hideEmptySections={paginatedData.length > 1}
-                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                enableProtection={!hasPaidInSession}
-                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                             />
-                           )}
+                        {/* --- WRAPPER PATTERN PARA ESCALA MOBILE --- */}
+                        {/* Este container controla a escala visual para caber na tela */}
+                        <div className="w-full overflow-x-hidden">
+                            <div 
+                                className="origin-top-left transition-transform duration-75 ease-out will-change-transform"
+                                style={{ 
+                                    // APLICA A ESCALA NO PAI
+                                    transform: `scale(${screenScale})`,
+                                    // Força a largura A4 no fluxo interno
+                                    width: '794px', 
+                                    // Reserva a altura exata que o elemento terá após encolher
+                                    height: `${1123 * screenScale}px`
+                                }}
+                            >
+                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                    <ResumePreview
+                                        ref={previewRef}
+                                        data={paginatedData[currentPage - 1]}
+                                        isDemoMode={isDemoMode}
+                                        isFirstPage={currentPage === 1}
+                                        hideEmptySections={paginatedData.length > 1}
+                                        // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                        enableProtection={!hasPaidInSession}
+                                        contentScale={contentScale} // APLICA O SMART SHRINK (INTERNO)
+                                    />
+                                )}
+                            </div>
                         </div>
+                        
                         {paginatedData.length > 1 && (
                             <div className="pagination-controls">
                                 {paginatedData.map((_, index) => (
@@ -1428,10 +1440,6 @@ const AppContent: React.FC = () => {
                                 ))}
                             </div>
                         )}
-                        
-                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                        {/* O usuário pediu para remover */}
-
                     </div>
                 </div>
             </section>
