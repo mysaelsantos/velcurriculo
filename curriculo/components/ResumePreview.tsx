@@ -269,10 +269,12 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
       return { marginTop: '0px', paddingTop: '30px' };
   };
 
+  // --- CORREÇÃO DE LAYOUT E CENTRALIZAÇÃO ---
+  // Adicionamos 'w-[210mm] min-w-[210mm] mx-auto' para garantir tamanho A4 e centralização
   const containerClasses = [
       'resume-preview bg-white text-gray-900',
       style?.template,
-      (!isMeasurement || isPrint) ? 'h-[1123px] min-h-[1123px] overflow-hidden relative' : '',
+      (!isMeasurement || isPrint) ? 'w-[210mm] min-w-[210mm] h-[1123px] min-h-[1123px] overflow-hidden relative mx-auto box-border' : '',
       (!isMeasurement && !isPrint) ? 'rounded-lg shadow-xl' : '',
       // Aplica o filtro blur se a proteção estiver ativa e a janela perder o foco
       (isBlurred && enableProtection) ? 'blur-xl transition-all duration-300' : 'transition-all duration-300',
@@ -285,14 +287,13 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
         id="resume-preview" 
         ref={previewRef} 
         className={containerClasses}
-        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink) + PERFORMANCE FIX
+        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink)
         // O transform-origin top left garante que o encolhimento aconteça a partir do topo
         style={{ 
             // CORREÇÃO: Só aplica transform se a escala for diferente de 1
             transform: contentScale !== 1 ? `scale(${contentScale})` : undefined, 
-            transformOrigin: contentScale !== 1 ? 'top left' : undefined,
-            // PERFORMANCE: Avisa a GPU que isso vai mudar (evita flicker no mobile)
-            willChange: 'transform',
+            // CORREÇÃO: Transform origin deve ser 'top center' para manter centralizado ao encolher
+            transformOrigin: contentScale !== 1 ? 'top center' : undefined,
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
             height: isPrint ? '1123px' : undefined 
