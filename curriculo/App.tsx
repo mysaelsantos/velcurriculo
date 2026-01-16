@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
 import { toJpeg } from 'html-to-image';
@@ -331,8 +331,6 @@ const AppContent: React.FC = () => {
 
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
-    // --- NOVO STATE: Controle de Escala da Tela (Responsividade) ---
-    const [screenScale, setScreenScale] = useState(1);
 
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
@@ -943,40 +941,41 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
-    // --- NOVA LÓGICA DE ESCALA RESPONSIVA (IMEDIATA) ---
-    // Substitui a antiga scalePreview que dependia de fontsLoaded
-    useLayoutEffect(() => {
-        const handleResize = () => {
-            const previewColumn = previewWrapperRef.current?.parentElement;
-            if (!previewColumn) return;
+    const scalePreview = useCallback(() => {
+        const previewColumn = previewWrapperRef.current?.parentElement;
+        const previewElement = previewRef.current?.getElement();
+        
+        if (!previewColumn || !previewElement) return;
 
-            let columnWidth = previewColumn.offsetWidth;
-            const baseWidth = 794;
+        let columnWidth = previewColumn.offsetWidth;
+        const baseWidth = 794;
+        const baseHeight = 1123;
 
-            if (isDemoMode) {
-                 const screenWidth = window.innerWidth;
-                 if (columnWidth < 300) {
-                     columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
-                 }
-            }
-            
-            if (columnWidth <= 0) return;
-            
-            const newScale = columnWidth / baseWidth;
-            setScreenScale(newScale);
-            
-            // Ajusta a altura do wrapper para evitar espaço em branco excessivo
-            if (previewWrapperRef.current) {
-              previewWrapperRef.current.style.height = `${1123 * newScale}px`;
-            }
-        };
+        if (isDemoMode) {
+             const screenWidth = window.innerWidth;
+             if (columnWidth < 300) {
+                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
+             }
+        }
+        
+        if (columnWidth <= 0) return;
+        
+        const scale = columnWidth / baseWidth;
+        
+        previewElement.style.transform = `scale(${scale})`;
+        
+        if (previewWrapperRef.current) {
+          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
+        }
+    }, [isDemoMode]);
 
-        // Executa imediatamente para evitar o "pulo" de layout
-        handleResize();
-
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, [isDemoMode, paginatedData]); // Removemos fontsLoaded da dependência
+    useEffect(() => {
+        if(fontsLoaded){ 
+            scalePreview();
+            window.addEventListener('resize', scalePreview);
+            return () => window.removeEventListener('resize', scalePreview);
+        }
+    }, [scalePreview, paginatedData, fontsLoaded]);
     
     // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
@@ -1305,7 +1304,6 @@ const AppContent: React.FC = () => {
                             hideEmptySections={true} 
                             enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
                             contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
-                            scale={1} // Força escala de tela 100% para o PDF
                         />
                     </div>
                 ))}
@@ -1409,8 +1407,7 @@ const AppContent: React.FC = () => {
                         showToast={showToast}
                     />
                     <div className="w-full lg:w-2/3">
-                        {/* ADICIONADO: overflow-hidden e origin-top-left para evitar estouro horizontal */}
-                        <div ref={previewWrapperRef} className="w-full overflow-hidden origin-top-left">
+                        <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
                                 ref={previewRef}
@@ -1421,7 +1418,6 @@ const AppContent: React.FC = () => {
                                 // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
                                 enableProtection={!hasPaidInSession}
                                 contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                scale={screenScale} // APLICA A ESCALA DE TELA AQUI
                              />
                            )}
                         </div>
