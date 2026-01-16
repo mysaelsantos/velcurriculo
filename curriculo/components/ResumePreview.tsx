@@ -56,8 +56,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
   const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
   
   const previewRef = useRef<HTMLDivElement>(null);
-  // REF para o wrapper interno (Smart Shrink)
-  const smartShrinkWrapperRef = useRef<HTMLDivElement>(null);
   
   // --- INÍCIO DA EDIÇÃO: Estado para imagem segura ---
   const [safeProfilePic, setSafeProfilePic] = useState<string | null>(null);
@@ -69,8 +67,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
 
   useImperativeHandle(ref, () => ({
     getElement: () => previewRef.current,
-    // NOVA FUNÇÃO: Retorna a altura real do conteúdo (texto), sem a altura fixa da página A4
-    getContentHeight: () => smartShrinkWrapperRef.current?.scrollHeight || 0
   }));
 
   useEffect(() => {
@@ -289,17 +285,15 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
         id="resume-preview" 
         ref={previewRef} 
         className={containerClasses}
-        // FIX: REMOVIDO O TRANSFORM DAQUI.
-        // O App.tsx controla a escala deste elemento raiz para caber na tela (Responsividade).
-        // O ResumePreview controla a escala do CONTEÚDO interno (Smart Shrink).
+        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink)
+        // O transform-origin top left garante que o encolhimento aconteça a partir do topo
         style={{ 
-            // FIX: Dimensões explícitas para evitar colapso antes do JS carregar
-            width: '794px',
-            minWidth: '794px',
+            // CORREÇÃO: Só aplica transform se a escala for diferente de 1
+            transform: contentScale !== 1 ? `scale(${contentScale})` : undefined, 
+            transformOrigin: contentScale !== 1 ? 'top left' : undefined,
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
-            height: isPrint ? '1123px' : 'auto', // Alterado para auto para evitar travamento em 0px
-            minHeight: '1123px' // Garante altura mínima
+            height: isPrint ? '1123px' : undefined 
         }}
     >
       
@@ -340,29 +334,11 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
           </div>
       )}
 
-      {/* --- FIX: WRAPPER INTERNO PARA SMART SHRINK --- */}
-      {/* Este div recebe a escala de conteúdo (0.9x, 0.8x) sem brigar com a escala da tela do App.tsx */}
-      <div 
-        id="smart-shrink-wrapper"
-        ref={smartShrinkWrapperRef}
-        style={{
-            transform: contentScale !== 1 ? `scale(${contentScale})` : undefined,
-            transformOrigin: 'top left',
-            width: '100%',
-            // FIX CRÍTICO: 'inline-block' força o container a ter apenas a altura do conteúdo,
-            // ignorando a altura mínima do pai. 'overflow: hidden' evita margin collapsing.
-            display: 'inline-block',
-            overflow: 'hidden',
-            verticalAlign: 'top',
-            minHeight: '100%' // Garante que o wrapper acompanhe a altura do pai
-        }}
-      >
-
       {isFirstPage && personalInfo && (
         <>
             <div id="profile-pic-container" className={hasActivePhoto ? 'visible' : ''}>
-                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src + onError para evitar crash --- */}
-                {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" onError={(e) => e.currentTarget.style.display = 'none'} />}
+                {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src --- */}
+                {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" />}
                 {/* --- FIM DA EDIÇÃO --- */}
             </div>
             <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && hasActivePhoto ? 'has-photo' : ''}`}>
@@ -582,7 +558,6 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
       )}
-      </div> {/* FIM DO SMART SHRINK WRAPPER */}
     </div>
   );
 });
