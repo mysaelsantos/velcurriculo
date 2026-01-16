@@ -339,25 +339,30 @@ const AppContent: React.FC = () => {
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
-        // Tenta obter o elemento via método imperativo (se exposto) ou direto
-        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
-        const element = getTarget();
+        // Tenta obter a instância do componente via ref
+        const instance = previewRef.current;
         
-        if (!element) return;
+        // Se não tiver a função getContentHeight, aborta (evita erro na inicialização)
+        if (!instance || !instance.getContentHeight) return;
 
         const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
         
+        // --- CORREÇÃO CRÍTICA ---
+        // Obtém a altura REAL do conteúdo (texto), ignorando a altura fixa do container A4.
+        // Isso permite saber se a página está "vazia" ou "cheia".
+        const contentHeight = instance.getContentHeight();
+        
         // Verifica overflow com uma pequena tolerância de segurança (2px)
-        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
-        const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
+        const hasOverflow = contentHeight > A4_HEIGHT + 2;
 
         if (hasOverflow) {
             // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
             setContentScale(prev => Math.max(0.65, prev - 0.01));
         } else {
             // Lógica de recuperação suave (Histerese)
-            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
-            if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
+            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px)
+            // Agora funciona porque contentHeight diminui quando a escala diminui!
+            if (contentScale < 1 && contentHeight < A4_HEIGHT - 20) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
