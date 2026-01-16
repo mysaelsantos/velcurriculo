@@ -14,6 +14,20 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      
+      // --- INÍCIO DA CORREÇÃO PDF.JS ---
+      // Configuração necessária para versão 4.x funcionar com Vite
+      optimizeDeps: {
+        esbuildOptions: {
+          target: 'esnext',
+        },
+        exclude: ['pdfjs-dist'] // Impede otimização incorreta da lib
+      },
+      build: {
+        target: 'esnext', // Garante suporte a recursos modernos (Top-Level Await)
+      },
+      // --- FIM DA CORREÇÃO ---
+
       // O 'define' que injetava a API_KEY foi removido.
       resolve: {
         alias: {
