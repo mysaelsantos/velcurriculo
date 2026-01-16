@@ -285,12 +285,13 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
         id="resume-preview" 
         ref={previewRef} 
         className={containerClasses}
-        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink)
-        // O transform-origin top left garante que o encolhimento aconteça a partir do topo
+        // FIX: REMOVIDO O TRANSFORM DAQUI.
+        // O App.tsx controla a escala deste elemento raiz para caber na tela (Responsividade).
+        // O ResumePreview controla a escala do CONTEÚDO interno (Smart Shrink).
         style={{ 
-            // CORREÇÃO: Só aplica transform se a escala for diferente de 1
-            transform: contentScale !== 1 ? `scale(${contentScale})` : undefined, 
-            transformOrigin: contentScale !== 1 ? 'top left' : undefined,
+            // FIX: Dimensões explícitas para evitar colapso antes do JS carregar
+            width: '794px',
+            minWidth: '794px',
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
             height: isPrint ? '1123px' : undefined 
@@ -333,6 +334,18 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
               <p className="text-gray-600 mt-2">O recurso de captura de tela está desabilitado na versão de demonstração.</p>
           </div>
       )}
+
+      {/* --- FIX: WRAPPER INTERNO PARA SMART SHRINK --- */}
+      {/* Este div recebe a escala de conteúdo (0.9x, 0.8x) sem brigar com a escala da tela do App.tsx */}
+      <div 
+        id="smart-shrink-wrapper"
+        style={{
+            transform: contentScale !== 1 ? `scale(${contentScale})` : undefined,
+            transformOrigin: 'top left',
+            width: '100%',
+            height: '100%'
+        }}
+      >
 
       {isFirstPage && personalInfo && (
         <>
@@ -558,6 +571,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
               <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
           </div>
       )}
+      </div> {/* FIM DO SMART SHRINK WRAPPER */}
     </div>
   );
 });
