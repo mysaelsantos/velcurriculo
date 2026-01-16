@@ -7,9 +7,9 @@ import * as pdfjsLib from 'pdfjs-dist';
 // @ts-ignore
 import mammoth from 'mammoth';
 
-// Configuração do Worker usando CDN para garantir compatibilidade exata de versão (4.4.168)
+// Configuração do Worker usando CDN para garantir compatibilidade exata de versão
 // Isso evita o erro de "Version Mismatch" ou "Fake Worker" sem precisar de arquivos locais na pasta public.
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
 
 // Função segura para lidar com respostas
 async function handleResponse(response: Response, context: string) {
