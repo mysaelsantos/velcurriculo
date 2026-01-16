@@ -348,9 +348,11 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
             transform: contentScale !== 1 ? `scale(${contentScale})` : undefined,
             transformOrigin: 'top left',
             width: '100%',
-            // FIX CRÍTICO: height 'auto' permite medir a altura real do conteúdo.
-            // Se fosse 100%, ele herdaria os 1123px do pai e o cálculo de overflow falharia.
-            height: 'auto' 
+            // FIX CRÍTICO: 'inline-block' força o container a ter apenas a altura do conteúdo,
+            // ignorando a altura mínima do pai. 'overflow: hidden' evita margin collapsing.
+            display: 'inline-block',
+            overflow: 'hidden',
+            verticalAlign: 'top'
         }}
       >
 
