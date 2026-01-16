@@ -347,22 +347,28 @@ const AppContent: React.FC = () => {
 
         const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
         
-        // --- CORREÇÃO CRÍTICA ---
+        // --- CORREÇÃO CRÍTICA 1: Altura Real ---
         // Obtém a altura REAL do conteúdo (texto), ignorando a altura fixa do container A4.
-        // Isso permite saber se a página está "vazia" ou "cheia".
         const contentHeight = instance.getContentHeight();
         
+        // --- CORREÇÃO CRÍTICA 2: Projeção Visual ---
+        // Multiplicamos a altura física pela escala atual para saber a altura VISUAL.
+        // Sem isso, o código entra em loop infinito porque o transform: scale não muda a altura física.
+        const visualHeight = contentHeight * contentScale;
+        
         // Verifica overflow com uma pequena tolerância de segurança (2px)
-        const hasOverflow = contentHeight > A4_HEIGHT + 2;
+        const hasOverflow = visualHeight > A4_HEIGHT + 2;
 
         if (hasOverflow) {
             // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
             setContentScale(prev => Math.max(0.65, prev - 0.01));
         } else {
             // Lógica de recuperação suave (Histerese)
-            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px)
-            // Agora funciona porque contentHeight diminui quando a escala diminui!
-            if (contentScale < 1 && contentHeight < A4_HEIGHT - 20) {
+            // Verifica se, ao aumentar a escala, ainda caberia na página.
+            // (contentHeight * (contentScale + 0.01)) < A4_HEIGHT - buffer
+            const projectedHeightIfGrow = contentHeight * (contentScale + 0.01);
+            
+            if (contentScale < 1 && projectedHeightIfGrow < A4_HEIGHT - 20) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
@@ -1322,7 +1328,9 @@ const AppContent: React.FC = () => {
                             isPrint={true} 
                             hideEmptySections={true} 
                             enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
-                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
+                            // CORREÇÃO CRÍTICA 2: Passamos a escala também para o PDF!
+                            // Se o usuário viu o texto encolhido na tela, ele quer que saia encolhido no PDF para caber.
+                            contentScale={contentScale} 
                         />
                     </div>
                 ))}
