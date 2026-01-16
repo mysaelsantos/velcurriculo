@@ -285,12 +285,14 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
         id="resume-preview" 
         ref={previewRef} 
         className={containerClasses}
-        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink)
+        // APLICAÇÃO DA ESCALA INTELIGENTE (Smart Shrink) + PERFORMANCE FIX
         // O transform-origin top left garante que o encolhimento aconteça a partir do topo
         style={{ 
             // CORREÇÃO: Só aplica transform se a escala for diferente de 1
             transform: contentScale !== 1 ? `scale(${contentScale})` : undefined, 
             transformOrigin: contentScale !== 1 ? 'top left' : undefined,
+            // PERFORMANCE: Avisa a GPU que isso vai mudar (evita flicker no mobile)
+            willChange: 'transform',
             // Se estiver escalando, precisamos garantir que a altura do container compense
             // para não ficar espaço branco excessivo embaixo, embora o overflow hidden corte.
             height: isPrint ? '1123px' : undefined 
