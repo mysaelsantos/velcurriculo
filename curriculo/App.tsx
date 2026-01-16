@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 // @ts-ignore
-import { toPng } from 'html-to-image';
+import { toJpeg } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 import ResumeForm from './components/ResumeForm';
@@ -977,12 +977,13 @@ const AppContent: React.FC = () => {
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
     
-    // --- FUNÇÃO EXPORT TO PDF CORRIGIDA (SEM CACHE BUST) ---
+    // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
         setGeneratingStatus('Preparando documento...');
         trackResumeGenerated(dataToExport);
 
+        // Garante que as fontes estão carregadas para evitar layout shift
         if (document.fonts) {
             await document.fonts.ready;
         }
@@ -994,18 +995,21 @@ const AppContent: React.FC = () => {
             return;
         }
 
+        // Pequeno delay para garantir renderização do DOM (especialmente QR Codes e Imagens)
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         try {
-            setGeneratingStatus('Gerando imagens...');
+            setGeneratingStatus('Gerando imagens otimizadas...');
             const pages = Array.from(printArea.querySelectorAll('.resume-page')) as HTMLElement[];
             
             if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
 
+            // 1. Configuração do jsPDF com compressão ativada
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
                 format: 'a4',
+                compress: true // ATIVADO: Comprime a estrutura interna do PDF
             });
 
             const pdfWidth = 210;
@@ -1013,42 +1017,23 @@ const AppContent: React.FC = () => {
 
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
+                
+                // Força dimensões exatas antes da captura
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
+                pageEl.style.width = '794px';
 
                 let imgData;
                 try {
-                    // CONFIGURAÇÃO SEGURA: CacheBust removido para evitar CORS e Network Error
-                    imgData = await toPng(pageEl, {
-                        quality: 0.95,
+                    // 2. MUDANÇA CRÍTICA: Usar toJpeg com qualidade controlada
+                    // quality: 0.85 -> Excelente equilíbrio (quase indistinguível de 1.0, mas muito menor)
+                    // pixelRatio: 2 -> Mantém a nitidez do texto (Retina quality)
+                    imgData = await toJpeg(pageEl, {
+                        quality: 0.85, 
                         pixelRatio: 2,
-                        backgroundColor: '#ffffff',
-                        height: 1123, 
+                        backgroundColor: '#ffffff', // OBRIGATÓRIO: JPEG não tem transparência
                         width: 794,
-                        // CORREÇÃO CRÍTICA PARA MOBILE: Força o estilo do elemento capturado
-                        // para garantir que ele tenha a largura correta, ignorando o viewport do celular.
-                        style: {
-                            width: '794px',
-                            height: '1123px',
-                            minWidth: '794px',
-                            minHeight: '1123px',
-                            transform: 'none', // Remove qualquer escala responsiva
-                            margin: '0',
-                            padding: '0'
-                        },
-                        // FORÇA DIMENSÕES DO CANVAS
-                        canvasWidth: 794 * 2, // Multiplicado pelo pixelRatio
-                        canvasHeight: 1123 * 2
-                        // REMOVIDO: cacheBust: true
-                    });
-                } catch (firstError) {
-                    console.warn("Falha na alta qualidade, tentando qualidade padrão (Mobile Fallback)...");
-                    imgData = await toPng(pageEl, {
-                        quality: 0.9,
-                        pixelRatio: 1, 
-                        backgroundColor: '#ffffff',
                         height: 1123,
-                        width: 794,
                         style: {
                             width: '794px',
                             height: '1123px',
@@ -1056,18 +1041,44 @@ const AppContent: React.FC = () => {
                             minHeight: '1123px',
                             transform: 'none',
                             margin: '0',
-                            padding: '0'
+                            padding: '0',
+                            backgroundColor: '#ffffff' // Reforço de segurança
                         },
-                        canvasWidth: 794,
-                        canvasHeight: 1123
+                        // CacheBust removido para evitar problemas de CORS com imagens de perfil externas
+                    });
+                } catch (firstError) {
+                    console.warn("Falha na alta qualidade, tentando fallback...", firstError);
+                    
+                    // Fallback: Reduz pixelRatio se falhar (ex: falta de memória no mobile)
+                    imgData = await toJpeg(pageEl, {
+                        quality: 0.75,
+                        pixelRatio: 1.5, 
+                        backgroundColor: '#ffffff',
+                        width: 794,
+                        height: 1123,
+                        style: {
+                            width: '794px',
+                            height: '1123px',
+                            minWidth: '794px',
+                            minHeight: '1123px',
+                            transform: 'none',
+                            margin: '0',
+                            padding: '0',
+                            backgroundColor: '#ffffff'
+                        }
                     });
                 }
+
                 if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                // 3. Adiciona como JPEG (Fast & Small)
+                // O último parâmetro 'FAST' ou 'MEDIUM' pode otimizar ainda mais a renderização no visualizador
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
             }
 
             setGeneratingStatus('Finalizando PDF...');
             const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
+            
             pdf.save(fileName);
             triggerFeedback();
 
