@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFeedback } from '../contexts/FeedbackContext';
 
-// --- ÍCONES ---
+// --- ÍCONES (Restaurados Completamente) ---
 const Icons = {
     ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
     StarFilled: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
@@ -162,11 +162,15 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 onClick={closeAll}
             />
 
-            {/* BARRA FLUTUANTE */}
+            {/* BARRA FLUTUANTE - CÁPSULA */}
             <header 
                 ref={headerRef}
                 className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
-                style={{ height: headerHeight, transformOrigin: 'top' }}
+                style={{ 
+                    height: headerHeight, 
+                    transformOrigin: 'top',
+                    willChange: 'height, background-color' // Otimização para Mobile
+                }}
             >
                 {/* LINHA SUPERIOR */}
                 <div className="flex items-center justify-between px-6 h-14 shrink-0 border-b border-white/5 relative z-10">
@@ -186,7 +190,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive && !isMenuOpen ? 'opacity-100 z-10' : 'opacity-0 z-0'}`} 
                                 />
 
-                                {/* TEXTO SAUDAÇÃO */}
+                                {/* TEXTO SAUDAÇÃO / MOTIVAÇÃO */}
                                 {!isFeedbackActive && !isMenuOpen && headerMessage && (
                                     <span className={`absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
@@ -200,7 +204,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     </span>
                                 )}
 
-                                {/* TEXTO DO FEEDBACK */}
+                                {/* TEXTO DO FEEDBACK (Typewriter) */}
                                 {isFeedbackActive && (
                                     <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         {displayText}
@@ -211,7 +215,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         )}
                     </div>
 
-                    {/* DIREITA: Navegação (Adicionado -mr-2 para ajustar a posição) */}
+                    {/* DIREITA: Navegação */}
                     <nav className="relative flex items-center gap-3 -mr-2">
                         {isFeedbackActive && status !== 'thank_you' && (
                             <button 
@@ -275,9 +279,8 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
 
                     <div className="w-full max-w-md border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais (ATUALIZADO) */}
+                    {/* Links Sociais */}
                     <div className="flex flex-col gap-4 w-full max-w-md mt-6">
-                        {/* LINK WHATSAPP ATUALIZADO */}
                         <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
                             <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
