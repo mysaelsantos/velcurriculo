@@ -330,45 +330,15 @@ const AppContent: React.FC = () => {
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
+    // CORREÇÃO: Iniciamos e mantemos em 1 para evitar que o conteúdo encolha e deixe espaços em branco
     const [contentScale, setContentScale] = useState(1);
 
-    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) - BLINDADA E ESTÁVEL ---
+    // --- LÓGICA DE OVERFLOW (DESATIVADA/SIMPLIFICADA) ---
+    // O usuário relatou que o conteúdo estava ficando pequeno/incompleto.
+    // Desativamos a redução automática para garantir que o currículo preencha a folha.
     const checkOverflow = useCallback(() => {
-        // 1. Obtém o container principal do Preview (A Folha A4)
-        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
-        const container = getTarget();
-        
-        if (!container) return;
-
-        // 2. Busca o elemento interno que criamos (O Conteúdo Escalável)
-        const scaler = container.querySelector('#content-scaler');
-        
-        // Se o scaler ainda não existe (render inicial), aborta com segurança
-        if (!scaler) return;
-
-        // 3. MEDIÇÃO RELATIVA (CORREÇÃO CRÍTICA PARA MOBILE)
-        // Em vez de usar um valor fixo (1123px), medimos a altura visual do container pai.
-        // Isso garante que funcione mesmo se o usuário estiver no celular (onde o currículo aparece pequeno devido ao zoom).
-        const pageHeight = container.getBoundingClientRect().height;
-        const contentHeight = scaler.getBoundingClientRect().height;
-
-        // Tolerância de segurança de 1px para arredondamentos de sub-pixel
-        const hasOverflow = contentHeight > pageHeight + 1;
-
-        if (hasOverflow) {
-            // Se o conteúdo está visualmente maior que a página, reduz a escala
-            // O Math.max impede que fique ilegível (trava em 65%)
-            setContentScale(prev => Math.max(0.65, prev - 0.01));
-        } else {
-            // Lógica de recuperação (Histerese)
-            // Só tenta aumentar se sobrar um espaço seguro (ex: 15px visualmente)
-            // Isso evita que ele fique crescendo e diminuindo infinitamente (efeito flicker)
-            const safeBuffer = 15; 
-            if (contentScale < 1 && contentHeight < pageHeight - safeBuffer) {
-                setContentScale(prev => Math.min(1, prev + 0.01));
-            }
-        }
-    }, [contentScale]);
+        setContentScale(1); // Força escala 1 (Tamanho original)
+    }, []);
 
     // --- RESIZE OBSERVER PARA O PREVIEW ---
     // Monitora mudanças físicas no DOM do PREVIEW para acionar o ajuste de escala
@@ -974,8 +944,8 @@ const AppContent: React.FC = () => {
         if (columnWidth <= 0) return;
         
         // Calcula a escala necessária
-        // CORREÇÃO: Removemos o padding excessivo (-32) para maximizar o tamanho
-        const scale = (columnWidth) / baseWidth;
+        // CORREÇÃO: Usamos a largura total sem descontos para maximizar o tamanho
+        const scale = columnWidth / baseWidth; 
         
         // Clamp de segurança para evitar escalas negativas ou absurdas
         const safeScale = Math.min(Math.max(scale, 0.1), 1);
