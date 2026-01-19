@@ -3,30 +3,38 @@ import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
+// EDITEI AQUI: Adicionei configurações de 'top' e 'photo' para corrigir o posicionamento
 export const QR_CONFIG = {
     spacer: { width: 230, height: 160 }, 
     
     positions: {
         'template-modern': { 
-            bottom: 15, 
-            right: 0,
+            top: 35,  // Mudei de bottom para top para fixar no cabeçalho
+            right: 35,
             safetyPadding: 15,
-            // CONTROLE MANUAL DE ALTURA PARA O TEMPLATE MODERNO
-            // Altere o 'height' aqui para ajustar o raio da área protegida (Ex: 80, 100, 120)
-            overrideSpacer: { width: 230, height: 100 }
+            overrideSpacer: { width: 230, height: 100 },
+            photo: { size: 128 } // Configuração de tamanho da foto
         },
         'template-classic': { 
-            bottom: 35, 
-            right: 25,
+            top: 40, 
+            right: 40,
             safetyPadding: 29, 
-            overrideSpacer: { width: 230, height: 100 }
+            overrideSpacer: { width: 230, height: 100 },
+            photo: { size: 120 }
         },
         'template-minimalist': { 
-            bottom: 30, 
-            right: 25,
+            top: 30, 
+            right: 30,
             safetyPadding: 40, 
-            overrideSpacer: { width: 230, height: 100 }
+            overrideSpacer: { width: 230, height: 100 },
+            photo: { size: 110 }
         },
+        // Fallback para evitar erros se o template não existir
+        'default': {
+            top: 30,
+            right: 30,
+            photo: { size: 128 }
+        }
     }
 };
 
@@ -160,7 +168,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
 
   const templateKey = style?.template || 'template-modern';
   // @ts-ignore
-  const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
+  const qrPosition = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'] || QR_CONFIG.positions['default'];
   
   // --- INÍCIO DA LÓGICA DINÂMICA (OPÇÃO 1) ---
   
@@ -282,6 +290,11 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
 
   const showQR = style?.showQRCode || style?.showLinkedinQr;
 
+  // CONFIGURAÇÃO DINÂMICA DA FOTO
+  // EDITEI AQUI: Tamanho da foto vindo do config
+  // @ts-ignore
+  const photoSize = qrPosition.photo?.size || 128;
+
   return (
     <div 
         id="resume-preview" 
@@ -348,9 +361,25 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
 
         {isFirstPage && personalInfo && (
             <>
-                <div id="profile-pic-container" className={hasActivePhoto ? 'visible' : ''}>
+                {/* EDITEI AQUI: Apliquei estilos fixos na div da foto para evitar distorção (shrink-0) e tamanho correto */}
+                <div 
+                    id="profile-pic-container" 
+                    className={`${hasActivePhoto ? 'visible' : ''} shrink-0 overflow-hidden rounded-full border-4 border-white shadow-lg`}
+                    style={{
+                         width: `${photoSize}px`,
+                         height: `${photoSize}px`,
+                         // Mantém posicionamento se já tiver classes de layout, mas garante o tamanho
+                    }}
+                >
                     {/* --- INÍCIO DA EDIÇÃO: Uso do safeProfilePic no src --- */}
-                    {hasActivePhoto && <img id="profile-pic-img" src={safeProfilePic || personalInfo.profilePicture || ''} alt="Foto de Perfil" />}
+                    {hasActivePhoto && (
+                        <img 
+                            id="profile-pic-img" 
+                            src={safeProfilePic || personalInfo.profilePicture || ''} 
+                            alt="Foto de Perfil" 
+                            className="w-full h-full object-cover"
+                        />
+                    )}
                     {/* --- FIM DA EDIÇÃO --- */}
                 </div>
                 <header className={`pb-4 ${(style?.template === 'template-minimalist' || style?.template === 'template-modern' || style?.template === 'template-classic') && hasActivePhoto ? 'has-photo' : ''}`}>
@@ -538,7 +567,8 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                     className="phantom-spacer"
                     style={{
                         width: '100%',
-                        // Altura = Altura do QR + Posição Bottom + Padding de Segurança
+                        // Altura = Altura do QR + Posição Bottom (se houver) + Padding de Segurança
+                        // Se estiver no topo (bottom undefined), o spacer apenas ocupa a altura do QR para segurança
                         height: `${activeSpacer.height + (qrPosition.bottom || 0) + (qrPosition.safetyPadding || 0)}px`,
                         clear: 'both', // Garante que fique abaixo de qualquer float
                         visibility: 'hidden', // Invisível visualmente
@@ -552,10 +582,13 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
         
         {/* POSICIONAMENTO ABSOLUTO DO QR CODE (VISUAL) */}
         {/* Agora está dentro do Scaler, então ele acompanha o zoom do conteúdo */}
+        {/* EDITEI AQUI: Suporte a 'top' para corrigir bug de layout */}
         {isFirstPage && personalInfo && showQR && (
             <div style={{
                 position: 'absolute',
-                bottom: `${qrPosition.bottom}px`,
+                // Verifica se deve usar top (novo padrão) ou bottom (legado/fallback)
+                top: qrPosition.top !== undefined ? `${qrPosition.top}px` : undefined,
+                bottom: qrPosition.bottom !== undefined ? `${qrPosition.bottom}px` : undefined,
                 right: `${qrPosition.right}px`,
                 // USO DA LARGURA DINÂMICA
                 width: `${activeSpacer.width}px`, 
@@ -564,7 +597,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                 display: 'flex',
                 justifyContent: 'flex-end', 
                 alignItems: 'flex-end',
-                backgroundColor: 'white', 
+                backgroundColor: 'transparent', // Fundo transparente para ficar melhor sobre o header
                 padding: '10px 0 0 10px', 
                 borderTopLeftRadius: '8px'
             }}>
