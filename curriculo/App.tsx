@@ -951,16 +951,19 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
+    // --- NOVA LÓGICA DE ESCALA EXTERNA (FIX ALINHAMENTO) ---
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
         
         if (!previewColumn || !previewElement) return;
 
+        // Mede a largura disponível na coluna (ex: 360px no mobile)
         let columnWidth = previewColumn.offsetWidth;
-        const baseWidth = 794;
-        const baseHeight = 1123;
+        const baseWidth = 794; // Largura do A4 em pixels
+        const baseHeight = 1123; // Altura do A4 em pixels
 
+        // Lógica de Demo para simular mobile em desktop (mantida)
         if (isDemoMode) {
              const screenWidth = window.innerWidth;
              if (columnWidth < 300) {
@@ -970,12 +973,27 @@ const AppContent: React.FC = () => {
         
         if (columnWidth <= 0) return;
         
-        const scale = columnWidth / baseWidth;
+        // Calcula a escala necessária
+        // Adicionamos um pequeno padding (-32px) para garantir que não toque nas bordas
+        const scale = (columnWidth - 32) / baseWidth;
         
-        previewElement.style.transform = `scale(${scale})`;
+        // Clamp de segurança para evitar escalas negativas ou absurdas
+        const safeScale = Math.min(Math.max(scale, 0.1), 1);
         
+        // 1. APLICA A ESCALA
+        previewElement.style.transform = `scale(${safeScale})`;
+        
+        // 2. CORREÇÃO CRÍTICA DE ALINHAMENTO:
+        // Define a origem da transformação para o canto superior esquerdo (0,0)
+        // Isso impede que o elemento flutue para o centro/direita quando encolhe.
+        previewElement.style.transformOrigin = 'top left';
+        
+        // 3. TÉCNICA "TIGHT WRAPPER" (CAIXA JUSTA):
+        // Força o container wrapper a ter exatamente o tamanho VISUAL do currículo.
+        // Isso remove as "margens fantasmas" criadas pelo espaço original de 794px.
         if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
+          previewWrapperRef.current.style.width = `${baseWidth * safeScale}px`;
+          previewWrapperRef.current.style.height = `${baseHeight * safeScale}px`;
         }
     }, [isDemoMode]);
 
@@ -1417,7 +1435,8 @@ const AppContent: React.FC = () => {
                         onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
-                    <div className="w-full lg:w-2/3">
+                    {/* CORREÇÃO DO LAYOUT: Adicionado overflow-hidden aqui para o flex não vazar */}
+                    <div className="w-full lg:w-2/3 overflow-hidden">
                         {/* WRAPPER ATUALIZADO: 'flex justify-center' garante que o conteúdo escalado fique centralizado */}
                         <div ref={previewWrapperRef} className="w-full flex justify-center items-start">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
