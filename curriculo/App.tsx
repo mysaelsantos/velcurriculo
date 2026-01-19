@@ -984,16 +984,16 @@ const AppContent: React.FC = () => {
         previewElement.style.transform = `scale(${safeScale})`;
         
         // 2. CORREÇÃO CRÍTICA DE ALINHAMENTO:
-        // Define a origem da transformação para o canto superior esquerdo (0,0)
-        // Isso impede que o elemento flutue para o centro/direita quando encolhe.
-        previewElement.style.transformOrigin = 'top left';
+        // Usamos 'top center' para garantir que o elemento fique centralizado horizontalmente
+        // quando encolher. Isso evita que ele "cole" na esquerda.
+        previewElement.style.transformOrigin = 'top center';
         
-        // 3. TÉCNICA "TIGHT WRAPPER" (CAIXA JUSTA):
-        // Força o container wrapper a ter exatamente o tamanho VISUAL do currículo.
-        // Isso remove as "margens fantasmas" criadas pelo espaço original de 794px.
+        // 3. TÉCNICA "TIGHT WRAPPER" (CAIXA JUSTA) - APENAS ALTURA:
+        // Ajustamos APENAS a altura do wrapper para remover o espaço vertical fantasma.
+        // Deixamos a largura em 100% para que o Flexbox do pai (justify-center) cuide do alinhamento.
         if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.width = `${baseWidth * safeScale}px`;
           previewWrapperRef.current.style.height = `${baseHeight * safeScale}px`;
+          previewWrapperRef.current.style.width = '100%';
         }
     }, [isDemoMode]);
 
