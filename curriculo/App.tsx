@@ -330,15 +330,34 @@ const AppContent: React.FC = () => {
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' } | null>(null);
 
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
-    // CORREÇÃO: Iniciamos e mantemos em 1 para evitar que o conteúdo encolha e deixe espaços em branco
     const [contentScale, setContentScale] = useState(1);
 
-    // --- LÓGICA DE OVERFLOW (DESATIVADA/SIMPLIFICADA) ---
-    // O usuário relatou que o conteúdo estava ficando pequeno/incompleto.
-    // Desativamos a redução automática para garantir que o currículo preencha a folha.
+    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
+    // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
-        setContentScale(1); // Força escala 1 (Tamanho original)
-    }, []);
+        // Tenta obter o elemento via método imperativo (se exposto) ou direto
+        const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
+        const element = getTarget();
+        
+        if (!element) return;
+
+        const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
+        
+        // Verifica overflow com uma pequena tolerância de segurança (2px)
+        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
+        const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
+
+        if (hasOverflow) {
+            // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
+            setContentScale(prev => Math.max(0.65, prev - 0.01));
+        } else {
+            // Lógica de recuperação suave (Histerese)
+            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
+            if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
+                setContentScale(prev => Math.min(1, prev + 0.01));
+            }
+        }
+    }, [contentScale]);
 
     // --- RESIZE OBSERVER PARA O PREVIEW ---
     // Monitora mudanças físicas no DOM do PREVIEW para acionar o ajuste de escala
@@ -349,13 +368,14 @@ const AppContent: React.FC = () => {
         if (!element) return;
 
         const resizeObserver = new ResizeObserver(() => {
-            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Performance)
+            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Debounce nativo)
             window.requestAnimationFrame(checkOverflow);
         });
 
         // Observa o container principal
         resizeObserver.observe(element);
-        // Observa também o filho (scaler) para garantir detecção de mudanças internas
+        
+        // Observa também o primeiro filho para garantir detecção de mudanças internas de layout
         if (element.firstElementChild) {
             resizeObserver.observe(element.firstElementChild);
         }
@@ -921,19 +941,16 @@ const AppContent: React.FC = () => {
         setPaginatedData(finalPages);
     }, [isDemoMode]);
 
-    // --- NOVA LÓGICA DE ESCALA EXTERNA (FIX ALINHAMENTO) ---
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
         const previewElement = previewRef.current?.getElement();
         
         if (!previewColumn || !previewElement) return;
 
-        // Mede a largura disponível na coluna (ex: 360px no mobile)
         let columnWidth = previewColumn.offsetWidth;
-        const baseWidth = 794; // Largura do A4 em pixels
-        const baseHeight = 1123; // Altura do A4 em pixels
+        const baseWidth = 794;
+        const baseHeight = 1123;
 
-        // Lógica de Demo para simular mobile em desktop (mantida)
         if (isDemoMode) {
              const screenWidth = window.innerWidth;
              if (columnWidth < 300) {
@@ -943,28 +960,12 @@ const AppContent: React.FC = () => {
         
         if (columnWidth <= 0) return;
         
-        // Calcula a escala necessária
-        // CORREÇÃO: Usamos a largura total sem descontos para maximizar o tamanho
-        const scale = columnWidth / baseWidth; 
+        const scale = columnWidth / baseWidth;
         
-        // Clamp de segurança para evitar escalas negativas ou absurdas
-        const safeScale = Math.min(Math.max(scale, 0.1), 1);
+        previewElement.style.transform = `scale(${scale})`;
         
-        // 1. APLICA A ESCALA
-        previewElement.style.transform = `scale(${safeScale})`;
-        
-        // 2. CORREÇÃO CRÍTICA DE ALINHAMENTO:
-        // Usamos 'top center' para garantir que o elemento fique centralizado horizontalmente
-        // quando encolher. Isso evita que ele "cole" na esquerda.
-        previewElement.style.transformOrigin = 'top center';
-        
-        // 3. TÉCNICA "TIGHT WRAPPER" (CAIXA JUSTA) - APENAS ALTURA:
-        // Ajustamos APENAS a altura do wrapper para remover o espaço vertical fantasma.
-        // Deixamos a largura em 100% para que o Flexbox do pai (justify-center) cuide do alinhamento.
         if (previewWrapperRef.current) {
-          // CORREÇÃO: Adicionamos +20px de margem de segurança para não cortar a sombra da folha
-          previewWrapperRef.current.style.height = `${(baseHeight * safeScale) + 20}px`;
-          previewWrapperRef.current.style.width = '100%';
+          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
         }
     }, [isDemoMode]);
 
@@ -1289,7 +1290,7 @@ const AppContent: React.FC = () => {
         )}
 
         {/* PRINT CONTAINER (Hidden) */}
-        {/* CORREÇÃO CRÍTICA DO PDF: Agora aplicamos 'contentScale' aqui também */}
+        {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
         <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
              <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
                 {paginatedData.map((pageData, index) => (
@@ -1302,8 +1303,7 @@ const AppContent: React.FC = () => {
                             isPrint={true} 
                             hideEmptySections={true} 
                             enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
-                            // A CORREÇÃO: Usamos o contentScale do estado, não fixo em 1
-                            contentScale={contentScale} 
+                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
                         />
                     </div>
                 ))}
@@ -1388,8 +1388,7 @@ const AppContent: React.FC = () => {
                  <div className="my-8 flex justify-center">
                     <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
                 </div>
-                {/* CORREÇÃO: Adicionado 'items-start' para o Sticky funcionar bem */}
-                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8 items-start">
+                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
                     <ResumeForm 
                         data={resumeData} 
                         setData={setResumeData} 
@@ -1407,11 +1406,8 @@ const AppContent: React.FC = () => {
                         onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
-                    
-                    {/* CORREÇÃO: 'sticky top-32' adicionado. 'overflow-hidden' removido para não cortar sombras */}
-                    <div className="w-full lg:w-2/3 lg:sticky lg:top-32">
-                        {/* WRAPPER ATUALIZADO: 'flex justify-center' garante que o conteúdo escalado fique centralizado */}
-                        <div ref={previewWrapperRef} className="w-full flex justify-center items-start">
+                    <div className="w-full lg:w-2/3">
+                        <div ref={previewWrapperRef} className="w-full">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                              <ResumePreview
                                 ref={previewRef}
