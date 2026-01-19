@@ -974,8 +974,8 @@ const AppContent: React.FC = () => {
         if (columnWidth <= 0) return;
         
         // Calcula a escala necessária
-        // Adicionamos um pequeno padding (-32px) para garantir que não toque nas bordas
-        const scale = (columnWidth - 32) / baseWidth;
+        // CORREÇÃO: Removemos o padding excessivo (-32) para maximizar o tamanho
+        const scale = (columnWidth) / baseWidth;
         
         // Clamp de segurança para evitar escalas negativas ou absurdas
         const safeScale = Math.min(Math.max(scale, 0.1), 1);
@@ -992,7 +992,8 @@ const AppContent: React.FC = () => {
         // Ajustamos APENAS a altura do wrapper para remover o espaço vertical fantasma.
         // Deixamos a largura em 100% para que o Flexbox do pai (justify-center) cuide do alinhamento.
         if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.height = `${baseHeight * safeScale}px`;
+          // CORREÇÃO: Adicionamos +20px de margem de segurança para não cortar a sombra da folha
+          previewWrapperRef.current.style.height = `${(baseHeight * safeScale) + 20}px`;
           previewWrapperRef.current.style.width = '100%';
         }
     }, [isDemoMode]);
@@ -1417,7 +1418,8 @@ const AppContent: React.FC = () => {
                  <div className="my-8 flex justify-center">
                     <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
                 </div>
-                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
+                {/* CORREÇÃO: Adicionado 'items-start' para o Sticky funcionar bem */}
+                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8 items-start">
                     <ResumeForm 
                         data={resumeData} 
                         setData={setResumeData} 
@@ -1435,8 +1437,9 @@ const AppContent: React.FC = () => {
                         onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
                         showToast={showToast}
                     />
-                    {/* CORREÇÃO DO LAYOUT: Adicionado overflow-hidden aqui para o flex não vazar */}
-                    <div className="w-full lg:w-2/3 overflow-hidden">
+                    
+                    {/* CORREÇÃO: 'sticky top-32' adicionado. 'overflow-hidden' removido para não cortar sombras */}
+                    <div className="w-full lg:w-2/3 lg:sticky lg:top-32">
                         {/* WRAPPER ATUALIZADO: 'flex justify-center' garante que o conteúdo escalado fique centralizado */}
                         <div ref={previewWrapperRef} className="w-full flex justify-center items-start">
                            {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
