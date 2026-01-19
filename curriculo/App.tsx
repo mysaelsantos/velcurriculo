@@ -332,28 +332,39 @@ const AppContent: React.FC = () => {
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
 
-    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
-    // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
+    // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) - BLINDADA E ESTÁVEL ---
     const checkOverflow = useCallback(() => {
-        // Tenta obter o elemento via método imperativo (se exposto) ou direto
+        // 1. Obtém o container principal do Preview (A Folha A4)
         const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
-        const element = getTarget();
+        const container = getTarget();
         
-        if (!element) return;
+        if (!container) return;
 
-        const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
+        // 2. Busca o elemento interno que criamos (O Conteúdo Escalável)
+        const scaler = container.querySelector('#content-scaler');
         
-        // Verifica overflow com uma pequena tolerância de segurança (2px)
-        // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
-        const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
+        // Se o scaler ainda não existe (render inicial), aborta com segurança
+        if (!scaler) return;
+
+        // 3. MEDIÇÃO RELATIVA (CORREÇÃO CRÍTICA PARA MOBILE)
+        // Em vez de usar um valor fixo (1123px), medimos a altura visual do container pai.
+        // Isso garante que funcione mesmo se o usuário estiver no celular (onde o currículo aparece pequeno devido ao zoom).
+        const pageHeight = container.getBoundingClientRect().height;
+        const contentHeight = scaler.getBoundingClientRect().height;
+
+        // Tolerância de segurança de 1px para arredondamentos de sub-pixel
+        const hasOverflow = contentHeight > pageHeight + 1;
 
         if (hasOverflow) {
-            // Reduz a escala suavemente (passos de 1%) até um limite mínimo de segurança (0.65)
+            // Se o conteúdo está visualmente maior que a página, reduz a escala
+            // O Math.max impede que fique ilegível (trava em 65%)
             setContentScale(prev => Math.max(0.65, prev - 0.01));
         } else {
-            // Lógica de recuperação suave (Histerese)
-            // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
-            if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
+            // Lógica de recuperação (Histerese)
+            // Só tenta aumentar se sobrar um espaço seguro (ex: 15px visualmente)
+            // Isso evita que ele fique crescendo e diminuindo infinitamente (efeito flicker)
+            const safeBuffer = 15; 
+            if (contentScale < 1 && contentHeight < pageHeight - safeBuffer) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
         }
@@ -368,14 +379,13 @@ const AppContent: React.FC = () => {
         if (!element) return;
 
         const resizeObserver = new ResizeObserver(() => {
-            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Debounce nativo)
+            // Usa requestAnimationFrame para sincronizar com a renderização do browser (Performance)
             window.requestAnimationFrame(checkOverflow);
         });
 
         // Observa o container principal
         resizeObserver.observe(element);
-        
-        // Observa também o primeiro filho para garantir detecção de mudanças internas de layout
+        // Observa também o filho (scaler) para garantir detecção de mudanças internas
         if (element.firstElementChild) {
             resizeObserver.observe(element.firstElementChild);
         }
@@ -1290,7 +1300,7 @@ const AppContent: React.FC = () => {
         )}
 
         {/* PRINT CONTAINER (Hidden) */}
-        {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
+        {/* CORREÇÃO CRÍTICA DO PDF: Agora aplicamos 'contentScale' aqui também */}
         <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
              <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
                 {paginatedData.map((pageData, index) => (
@@ -1303,7 +1313,8 @@ const AppContent: React.FC = () => {
                             isPrint={true} 
                             hideEmptySections={true} 
                             enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
-                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
+                            // A CORREÇÃO: Usamos o contentScale do estado, não fixo em 1
+                            contentScale={contentScale} 
                         />
                     </div>
                 ))}
