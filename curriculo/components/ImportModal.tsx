@@ -138,7 +138,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport, on
                   onClick={() => setStep('upload')}
                   className="group relative flex md:flex-col items-center md:justify-center p-4 md:p-6 border-2 border-blue-100 bg-blue-50/50 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-300 text-left md:text-center w-full"
                 >
-                  <div className="absolute top-2 right-2 md:top-3 md:right-3">
+                  <div className="hidden md:block absolute md:top-3 md:right-3">
                     <span className="bg-blue-600 text-white text-[9px] md:text-[10px] font-bold px-1.5 py-0.5 md:px-2 md:py-0.5 rounded-full uppercase tracking-wide">Recomendado</span>
                   </div>
 
@@ -149,6 +149,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport, on
 
                   {/* Texto: Flex grow para ocupar espaço */}
                   <div className="flex-1">
+                    <div className="md:hidden mb-1">
+                      <span className="bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Recomendado</span>
+                    </div>
                     <h3 className="text-base md:text-lg font-bold text-gray-800 mb-0.5 md:mb-2 leading-tight">Importar com IA</h3>
                     <p className="text-xs md:text-sm text-gray-600 leading-snug md:leading-relaxed">
                       Envie seu currículo em <b>PDF, Word ou Foto</b>.
