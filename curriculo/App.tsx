@@ -981,7 +981,7 @@ const AppContent: React.FC = () => {
             previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
             // Also constraint the wrapper width to avoid horizontal scroll on the parent if needed
             previewWrapperRef.current.style.width = `${availableWidth}px`;
-            previewWrapperRef.current.style.overflow = 'hidden';
+            previewWrapperRef.current.style.overflow = 'visible';
         }
     }, [isDemoMode]);
 
