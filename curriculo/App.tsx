@@ -23,7 +23,7 @@ import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
 import FeedbackHeader from './components/FeedbackHeader';
 
 interface SavedResume extends ResumeData {
-  savedAt: string;
+    savedAt: string;
 }
 
 // Chave para persistência da sessão PIX (Mesma usada no PixModal)
@@ -35,13 +35,13 @@ const DEMO_DATA: ResumeData = {
         name: "Marcos Mj Santos",
         jobTitle: "Desenvolvedor Full Stack & Criador de Soluções",
         email: "marcos@velsites.com.br",
-        phone: "(37) 9 8411-6034", 
+        phone: "(37) 9 8411-6034",
         address: "Nova Serrana, Romeu Duarte",
         age: "22",
         maritalStatus: "Casado(a)",
         cnh: "A+B",
         linkedin: "https://www.linkedin.com/in/marcos-mj-santos-aa696a233",
-        profilePicture: "/perfil.png" 
+        profilePicture: "/perfil.png"
     },
     summary: "Desenvolvedor Full Stack. Transformo ideias em projetos que comunicam de verdade. Especialista no ecossistema React, TypeScript e arquitetura Serverless. Aos 22 anos, uno agilidade técnica e visão de produto, com foco em criar experiências de usuário fluidas, sistemas escaláveis e soluções que geram valor real para o usuário final.",
     experiences: [
@@ -166,12 +166,12 @@ const ALL_TESTIMONIALS = [
 ];
 
 const shuffleArray = <T,>(array: T[]) => {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
 };
 
 const shuffledTestimonials = shuffleArray(ALL_TESTIMONIALS);
@@ -180,34 +180,34 @@ const TESTIMONIALS_1 = shuffledTestimonials.slice(0, halfLength);
 const TESTIMONIALS_2 = shuffledTestimonials.slice(halfLength);
 
 const calculateTodaysBase = () => {
-  const date = new Date();
-  const start = new Date(date.getFullYear(), 0, 0);
-  const diff = (date as any) - (start as any);
-  const oneDay = 1000 * 60 * 60 * 24;
-  const dayOfYear = Math.floor(diff / oneDay);
-  return 250 + (dayOfYear * 37 % 100);
+    const date = new Date();
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = (date as any) - (start as any);
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    return 250 + (dayOfYear * 37 % 100);
 };
 
 const calculateCurrentGenerated = (base: number) => {
-  const now = new Date();
-  const hour = now.getHours();
-  
-  if (hour < 0) return base; 
-  
-  const startOfDayCount = new Date();
-  startOfDayCount.setHours(9, 0, 0, 0);
-  
-  const endOfDayCount = new Date();
-  endOfDayCount.setHours(19, 0, 0, 0);
-  
-  if (hour < 9) return base;
-  if (now > endOfDayCount) {
-      const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
-      return base + Math.floor(totalSecondsInWorkDay / 20);
-  }
-  
-  const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
-  return base + Math.floor(secondsElapsed / 20);
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (hour < 0) return base;
+
+    const startOfDayCount = new Date();
+    startOfDayCount.setHours(9, 0, 0, 0);
+
+    const endOfDayCount = new Date();
+    endOfDayCount.setHours(19, 0, 0, 0);
+
+    if (hour < 9) return base;
+    if (now > endOfDayCount) {
+        const totalSecondsInWorkDay = (endOfDayCount.getTime() - startOfDayCount.getTime()) / 1000;
+        return base + Math.floor(totalSecondsInWorkDay / 20);
+    }
+
+    const secondsElapsed = Math.floor((now.getTime() - startOfDayCount.getTime()) / 1000);
+    return base + Math.floor(secondsElapsed / 20);
 };
 
 interface PixPaymentData {
@@ -239,7 +239,7 @@ const TestimonialsSection = React.memo(() => {
                     </ul>
                 </div>
                 <div className="scroller px-4 py-4" data-direction="right" data-animated="true">
-                     <ul className="scroller__inner list-none p-0">
+                    <ul className="scroller__inner list-none p-0">
                         {TESTIMONIALS_2.map((item, index) => <TestimonialCard key={index} item={item} />)}
                         {TESTIMONIALS_2.map((item, index) => <TestimonialCard key={`dupe-${index}`} item={item} ariaHidden={true} />)}
                     </ul>
@@ -278,7 +278,7 @@ const AppContent: React.FC = () => {
     const isPixTestMode = false;
 
     const [resumeData, setResumeData] = useState<ResumeData>(DEMO_DATA);
-    
+
     // Dados para o Header
     const userData = {
         name: resumeData?.personalInfo?.name || '',
@@ -298,7 +298,7 @@ const AppContent: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(5.00);
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
-    
+
     // --- NOVO: ESTADOS DO MODAL DE IMPORTAÇÃO ---
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
@@ -307,20 +307,20 @@ const AppContent: React.FC = () => {
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
     // Controla o Loading Overlay
     const [isLoading, setIsLoading] = useState(true);
-    const [fontsLoaded, setFontsLoaded] = useState(false); 
+    const [fontsLoaded, setFontsLoaded] = useState(false);
     const [generatingStatus, setGeneratingStatus] = useState<string>('');
-    
+
     // --- ESTADOS DE DESENVOLVEDOR ---
-    const [isDevModeActive, setIsDevModeActive] = useState(false); 
-    const [devClickCount, setDevClickCount] = useState(0); 
-    const [showDevModal, setShowDevModal] = useState(false); 
-    const [devPassword, setDevPassword] = useState(''); 
+    const [isDevModeActive, setIsDevModeActive] = useState(false);
+    const [devClickCount, setDevClickCount] = useState(0);
+    const [showDevModal, setShowDevModal] = useState(false);
+    const [devPassword, setDevPassword] = useState('');
 
     // --- ESTADO PARA O GREETING DO HEADER ---
-    const [showLogo, setShowLogo] = useState(true); 
+    const [showLogo, setShowLogo] = useState(true);
     const [headerMessage, setHeaderMessage] = useState('');
-    const [hasGreeted, setHasGreeted] = useState(false); 
-    const [hasMotivatedEducation, setHasMotivatedEducation] = useState(false); 
+    const [hasGreeted, setHasGreeted] = useState(false);
+    const [hasMotivatedEducation, setHasMotivatedEducation] = useState(false);
 
     const [isContinueModalOpen, setIsContinueModalOpen] = useState(false);
     const [pendingSavedData, setPendingSavedData] = useState<any>(null);
@@ -338,11 +338,11 @@ const AppContent: React.FC = () => {
         // Tenta obter o elemento via método imperativo (se exposto) ou direto
         const getTarget = () => previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
         const element = getTarget();
-        
+
         if (!element) return;
 
         const A4_HEIGHT = 1123; // Altura fixa A4 em pixels (96 DPI)
-        
+
         // Verifica overflow com uma pequena tolerância de segurança (2px)
         // O scrollHeight aqui JÁ INCLUI a altura do PhantomSpacer inserido no ResumePreview
         const hasOverflow = element.scrollHeight > A4_HEIGHT + 2;
@@ -374,7 +374,7 @@ const AppContent: React.FC = () => {
 
         // Observa o container principal
         resizeObserver.observe(element);
-        
+
         // Observa também o primeiro filho para garantir detecção de mudanças internas de layout
         if (element.firstElementChild) {
             resizeObserver.observe(element.firstElementChild);
@@ -403,21 +403,21 @@ const AppContent: React.FC = () => {
             if (savedSession) {
                 const parsedSession = JSON.parse(savedSession);
                 const now = Date.now();
-                
+
                 // Janela de 15 minutos para tolerância
-                if (now - parsedSession.timestamp < 900000) { 
-                     setPixPaymentData(parsedSession.data);
-                     
-                     // INTELIGÊNCIA AQUI:
-                     // Se existe um progresso pendente (modal de "Continuar"), NÃO abrimos o PIX agora.
-                     // Deixamos ele carregado, mas invisível.
-                     if (!hasPendingProgress) {
-                         setIsPixModalOpen(true);
-                         console.log("Sessão PIX restaurada automaticamente.");
-                     } else {
-                         console.log("Sessão PIX carregada em background (Aguardando decisão do usuário).");
-                         setIsPixModalOpen(false);
-                     }
+                if (now - parsedSession.timestamp < 900000) {
+                    setPixPaymentData(parsedSession.data);
+
+                    // INTELIGÊNCIA AQUI:
+                    // Se existe um progresso pendente (modal de "Continuar"), NÃO abrimos o PIX agora.
+                    // Deixamos ele carregado, mas invisível.
+                    if (!hasPendingProgress) {
+                        setIsPixModalOpen(true);
+                        console.log("Sessão PIX restaurada automaticamente.");
+                    } else {
+                        console.log("Sessão PIX carregada em background (Aguardando decisão do usuário).");
+                        setIsPixModalOpen(false);
+                    }
                 } else {
                     localStorage.removeItem(PIX_SESSION_KEY);
                 }
@@ -433,20 +433,20 @@ const AppContent: React.FC = () => {
             setToast(null);
         }, 5000);
     };
-    
+
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
-    
+
     // --- LÓGICA DE CARREGAMENTO INICIAL COM SOBREPOSIÇÃO ---
     useEffect(() => {
         const loadResources = async () => {
             try {
                 await document.fonts.ready;
-                setFontsLoaded(true); 
+                setFontsLoaded(true);
             } catch (error) {
                 console.error("Failed to load fonts:", error);
-                setFontsLoaded(true); 
+                setFontsLoaded(true);
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
             setIsLoading(false);
@@ -467,13 +467,13 @@ const AppContent: React.FC = () => {
         measurementNode.style.left = '-9999px';
         measurementNode.style.top = '0px';
         measurementNode.style.zIndex = '-1';
-        measurementNode.style.width = '794px'; 
+        measurementNode.style.width = '794px';
         measurementNode.className = "font-sans text-gray-900 antialiased leading-normal text-base";
         document.body.appendChild(measurementNode);
-        
+
         measurementContainerRef.current = measurementNode;
         measurementRootRef.current = ReactDOM.createRoot(measurementNode);
-    
+
         return () => {
             setTimeout(() => {
                 measurementRootRef.current?.unmount();
@@ -484,7 +484,7 @@ const AppContent: React.FC = () => {
             }, 0);
         };
     }, []);
-    
+
     useEffect(() => {
         try {
             const savedProgress = localStorage.getItem('inProgressResume');
@@ -512,7 +512,7 @@ const AppContent: React.FC = () => {
             console.error("Failed to save progress to localStorage:", error);
         }
     }, [resumeData, currentStep, isFinished, isDemoMode]);
-    
+
     useEffect(() => {
         if (currentStep > 1 && resumeData.personalInfo.name.trim().length > 0 && !hasGreeted) {
             const timer = setTimeout(() => {
@@ -520,28 +520,28 @@ const AppContent: React.FC = () => {
                 setHeaderMessage(`Olá, ${firstName}!`);
                 setShowLogo(false);
                 setTimeout(() => {
-                     setHeaderMessage("Foco no objetivo.");
-                     setTimeout(() => {
-                         setShowLogo(true);
-                         setHasGreeted(true); 
-                     }, 5000);
+                    setHeaderMessage("Foco no objetivo.");
+                    setTimeout(() => {
+                        setShowLogo(true);
+                        setHasGreeted(true);
+                    }, 5000);
                 }, 5000);
-            }, 5000); 
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [currentStep, resumeData.personalInfo.name, hasGreeted]);
 
     useEffect(() => {
         if (currentStep === 3 && !hasMotivatedEducation) {
-             const timer = setTimeout(() => {
-                 setHeaderMessage("Falta pouco agora!");
-                 setShowLogo(false);
-                 setTimeout(() => {
-                     setShowLogo(true);
-                     setHasMotivatedEducation(true);
-                 }, 5000);
-             }, 5000); 
-             return () => clearTimeout(timer);
+            const timer = setTimeout(() => {
+                setHeaderMessage("Falta pouco agora!");
+                setShowLogo(false);
+                setTimeout(() => {
+                    setShowLogo(true);
+                    setHasMotivatedEducation(true);
+                }, 5000);
+            }, 5000);
+            return () => clearTimeout(timer);
         }
     }, [currentStep, hasMotivatedEducation]);
 
@@ -554,7 +554,7 @@ const AppContent: React.FC = () => {
             setIsDemoMode(false);
             // Ao recarregar, reseta a escala
             setContentScale(1);
-            
+
             // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
             if (pixPaymentData) {
                 setIsPixModalOpen(true);
@@ -587,7 +587,7 @@ const AppContent: React.FC = () => {
         const currentStyle = resumeData.style;
 
         setIsDemoMode(false);
-        
+
         // 2. Ao resetar os dados, preservamos o 'style' capturado
         setResumeData({
             ...INITIAL_DATA,
@@ -602,7 +602,7 @@ const AppContent: React.FC = () => {
         setIsPixModalOpen(false);
         setContentScale(1); // Reseta escala
         // Fecha o modal de Importação se estiver aberto (caso venha do fluxo de Import)
-        setIsImportModalOpen(false); 
+        setIsImportModalOpen(false);
 
         try {
             localStorage.removeItem('inProgressResume');
@@ -611,32 +611,32 @@ const AppContent: React.FC = () => {
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
-        
+
         // Scroll suave para o formulário
         document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
     };
-    
+
     // --- LÓGICA DE IMPORTAÇÃO COM IA ---
     const handleImportResume = async (file: File) => {
         setIsAnalyzingFile(true);
         try {
             // Chama o serviço inteligente que detecta PDF/DOCX/Imagem
             const extractedData = await analyzeResumePDF(file);
-            
+
             // Mescla os dados extraídos com o estado inicial para garantir estrutura
             setResumeData(prev => ({
                 ...prev,
                 ...extractedData,
                 // Mantém o estilo atual selecionado
-                style: prev.style 
+                style: prev.style
             }));
-            
+
             setIsDemoMode(false);
             setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
             setIsImportModalOpen(false);
             setContentScale(1); // Reseta escala
             showToast("Currículo importado com sucesso! Revise os dados.", "success");
-            
+
             // Scroll para o formulário
             setTimeout(() => {
                 document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
@@ -674,13 +674,13 @@ const AppContent: React.FC = () => {
 
         setDeletionTarget(null);
     };
-    
+
     useEffect(() => {
         if (currentPage > paginatedData.length) {
-          setCurrentPage(paginatedData.length > 0 ? paginatedData.length : 1);
+            setCurrentPage(paginatedData.length > 0 ? paginatedData.length : 1);
         }
     }, [paginatedData, currentPage]);
-    
+
     // --- CORREÇÃO CRÍTICA: RENDERIZAÇÃO DE MEDIÇÃO ---
     // Adicionamos uma 'key' baseada nos dados para forçar o React a recriar o componente
     // sempre que os dados mudarem (incluindo Drag & Drop). Isso garante que as alturas
@@ -689,13 +689,13 @@ const AppContent: React.FC = () => {
         if (measurementRootRef.current) {
             const timer = setTimeout(() => {
                 measurementRootRef.current.render(
-                    <ResumePreview 
+                    <ResumePreview
                         // A CHAVE MESTRA: Força recriação do DOM de medição
-                        key={JSON.stringify(resumeData)} 
-                        data={resumeData} 
-                        isDemoMode={isDemoMode} 
-                        isFirstPage={true} 
-                        isMeasurement={true} 
+                        key={JSON.stringify(resumeData)}
+                        data={resumeData}
+                        isDemoMode={isDemoMode}
+                        isFirstPage={true}
+                        isMeasurement={true}
                     />
                 );
             }, 100); // Aumentado levemente para garantir que o Drag & Drop terminou
@@ -712,7 +712,7 @@ const AppContent: React.FC = () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 calculatePagination(resumeData);
-            }, 100); 
+            }, 100);
         };
 
         const ro = new ResizeObserver(handleResize);
@@ -732,9 +732,9 @@ const AppContent: React.FC = () => {
         }
 
         const previewEl = container.firstChild as HTMLElement;
-        const A4_HEIGHT = 1123; 
-        const MARGIN_BOTTOM = 50; 
-        
+        const A4_HEIGHT = 1123;
+        const MARGIN_BOTTOM = 50;
+
         const templateKey = dataToPaginate.style.template || 'template-modern';
         // @ts-ignore
         const qrConfig = QR_CONFIG.positions[templateKey] || QR_CONFIG.positions['template-modern'];
@@ -743,11 +743,11 @@ const AppContent: React.FC = () => {
         // @ts-ignore
         const currentSpacerDims = qrConfig.overrideSpacer || QR_CONFIG.spacer;
         const qrHeight = currentSpacerDims.height;
-        
+
         // --- REVERTIDO: ZONA DE SEGURANÇA PADRÃO ---
         // Voltamos para o valor padrão (40) conforme solicitado.
-        const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40; 
-        
+        const qrPadding = qrConfig.safetyPadding !== undefined ? qrConfig.safetyPadding : 40;
+
         // --- CORREÇÃO CRÍTICA: BUFFER DE CÁLCULO ---
         // Adicionamos um buffer extra de 50px APENAS no cálculo da zona de perigo.
         // Isso faz com que a paginação seja "pessimista", quebrando a página ANTES
@@ -758,7 +758,7 @@ const AppContent: React.FC = () => {
 
         const headerEl = previewEl.querySelector('header') as HTMLElement;
         const mainEl = previewEl.querySelector('main') as HTMLElement;
-        
+
         if (!headerEl || !mainEl) { setPaginatedData([dataToPaginate]); return; }
 
         const getElementHeight = (element: HTMLElement) => {
@@ -774,8 +774,8 @@ const AppContent: React.FC = () => {
 
         interface ContentBlock {
             id: string;
-            type: keyof ResumeData; 
-            data: any; 
+            type: keyof ResumeData;
+            data: any;
             height: number;
         }
 
@@ -790,7 +790,7 @@ const AppContent: React.FC = () => {
                 blocks.push({
                     id: `${dataKey}-title`,
                     type: dataKey,
-                    data: null, 
+                    data: null,
                     height: getElementHeight(titleEl) + 10,
                 });
             }
@@ -808,7 +808,7 @@ const AppContent: React.FC = () => {
             } else if (listId) {
                 const listContainer = sectionEl.querySelector(`#${listId}`);
                 if (!listContainer) return;
-                
+
                 const items = Array.from(listContainer.children) as HTMLElement[];
                 const dataList = dataToPaginate[dataKey] as any[];
 
@@ -824,15 +824,15 @@ const AppContent: React.FC = () => {
                     }
                 });
             } else if (dataKey === 'skills' || dataKey === 'languages') {
-                    const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
-                    if(contentDiv) {
-                        blocks.push({
-                            id: `${dataKey}-block`,
-                            type: dataKey,
-                            data: dataToPaginate[dataKey],
-                            height: getElementHeight(contentDiv),
-                        });
-                    }
+                const contentDiv = sectionEl.querySelector(dataKey === 'skills' ? '#resume-skills' : '#resume-languages-list') as HTMLElement;
+                if (contentDiv) {
+                    blocks.push({
+                        id: `${dataKey}-block`,
+                        type: dataKey,
+                        data: dataToPaginate[dataKey],
+                        height: getElementHeight(contentDiv),
+                    });
+                }
             }
         };
 
@@ -844,25 +844,25 @@ const AppContent: React.FC = () => {
         if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
         const pages: PageData[] = [];
-        let currentPageData: PageData = { 
-            personalInfo: dataToPaginate.personalInfo, 
+        let currentPageData: PageData = {
+            personalInfo: dataToPaginate.personalInfo,
             style: dataToPaginate.style,
             experiences: [], education: [], courses: [], languages: [], skills: [],
-            qrCodeOffsets: {} 
+            qrCodeOffsets: {}
         };
-        
+
         let currentY = 50 + headerHeight + mainMarginTop;
         let currentPageIndex = 0;
 
         const createNewPage = () => {
             pages.push(currentPageData);
-            currentPageData = { 
+            currentPageData = {
                 style: dataToPaginate.style,
                 experiences: [], education: [], courses: [], languages: [], skills: [],
                 qrCodeOffsets: {}
             };
             currentPageIndex++;
-            currentY = 50 + 30; 
+            currentY = 50 + 30;
         };
 
         let pendingTitleHeight = 0;
@@ -877,40 +877,40 @@ const AppContent: React.FC = () => {
                 if (!currentPageData.qrCodeOffsets) currentPageData.qrCodeOffsets = {};
                 const distToDanger = dangerZoneStart - currentY;
                 const spacerMargin = distToDanger > 0 ? distToDanger : 0;
-                currentPageData.qrCodeOffsets[block.id] = spacerMargin; 
-                effectiveHeight = Math.max(block.height * 1.4, 20); 
+                currentPageData.qrCodeOffsets[block.id] = spacerMargin;
+                effectiveHeight = Math.max(block.height * 1.4, 20);
             }
 
             const available = (A4_HEIGHT - MARGIN_BOTTOM) - currentY;
 
             if (block.id.endsWith('-title')) {
-                const nextBlock = blocks[i+1];
-                const nextItemHeight = nextBlock ? nextBlock.height : 40; 
-                
+                const nextBlock = blocks[i + 1];
+                const nextItemHeight = nextBlock ? nextBlock.height : 40;
+
                 if (available < (effectiveHeight + nextItemHeight)) {
                     createNewPage();
-                    effectiveHeight = block.height; 
+                    effectiveHeight = block.height;
                 }
-                
+
                 currentY += effectiveHeight;
-                pendingTitleHeight = effectiveHeight; 
-                continue; 
+                pendingTitleHeight = effectiveHeight;
+                continue;
             }
 
             if (effectiveHeight > available) {
                 createNewPage();
                 effectiveHeight = block.height;
-                
+
                 if (block.type === 'summary') {
                     currentPageData.summary = block.data;
                 } else if (block.type === 'skills' || block.type === 'languages') {
                     currentPageData[block.type] = block.data;
                 } else if (Array.isArray(currentPageData[block.type])) {
                     (currentPageData[block.type] as any[]).push(block.data);
-                } 
-                
-                const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40; 
-                currentY += titleHeight + effectiveHeight; 
+                }
+
+                const titleHeight = pendingTitleHeight > 0 ? pendingTitleHeight : 40;
+                currentY += titleHeight + effectiveHeight;
                 pendingTitleHeight = 0;
             } else {
                 if (block.type === 'summary') {
@@ -919,22 +919,22 @@ const AppContent: React.FC = () => {
                     currentPageData[block.type] = block.data;
                 } else if (Array.isArray(currentPageData[block.type])) {
                     (currentPageData[block.type] as any[]).push(block.data);
-                } 
+                }
                 currentY += effectiveHeight;
-                pendingTitleHeight = 0; 
+                pendingTitleHeight = 0;
             }
         }
 
         if (Object.keys(currentPageData).length > 0) {
             pages.push(currentPageData);
         }
-        
+
         const finalPages = pages.filter(p => {
-            const hasData = p.summary || 
-                            (p.experiences && p.experiences.length > 0) || 
-                            (p.education && p.education.length > 0) ||
-                            (p.courses && p.courses.length > 0) ||
-                            (p.skills && p.skills.length > 0);
+            const hasData = p.summary ||
+                (p.experiences && p.experiences.length > 0) ||
+                (p.education && p.education.length > 0) ||
+                (p.courses && p.courses.length > 0) ||
+                (p.skills && p.skills.length > 0);
             return hasData || (p.personalInfo && pages.indexOf(p) === 0);
         });
 
@@ -943,40 +943,56 @@ const AppContent: React.FC = () => {
 
     const scalePreview = useCallback(() => {
         const previewColumn = previewWrapperRef.current?.parentElement;
-        const previewElement = previewRef.current?.getElement();
-        
+        const previewElement = previewRef.current?.getElement ? previewRef.current.getElement() : previewRef.current;
+
         if (!previewColumn || !previewElement) return;
 
-        let columnWidth = previewColumn.offsetWidth;
+        // Force A4 dimensions on the inner element to ensure layout is correct before scaling
+        previewElement.style.width = '794px';
+        previewElement.style.minWidth = '794px';
+        previewElement.style.height = '1123px';
+        previewElement.style.minHeight = '1123px';
+        previewElement.style.transformOrigin = 'top left';
+
         const baseWidth = 794;
         const baseHeight = 1123;
 
-        if (isDemoMode) {
-             const screenWidth = window.innerWidth;
-             if (columnWidth < 300) {
-                 columnWidth = screenWidth >= 1024 ? screenWidth * 0.5 : screenWidth - 40;
-             }
+        // Calculate available width
+        let availableWidth = previewColumn.offsetWidth;
+
+        // Mobile adjustment: Ensure we don't exceed screen width even if container says so
+        if (window.innerWidth < 1024) {
+            const screenPadding = 32; // 16px left + 16px right
+            const maxMobileWidth = window.innerWidth - screenPadding;
+            if (availableWidth > maxMobileWidth) {
+                availableWidth = maxMobileWidth;
+            }
         }
-        
-        if (columnWidth <= 0) return;
-        
-        const scale = columnWidth / baseWidth;
-        
+
+        if (availableWidth <= 0) return;
+
+        const scale = availableWidth / baseWidth;
+
+        // Apply transform
         previewElement.style.transform = `scale(${scale})`;
-        
+
+        // Update wrapper height to match scaled height
         if (previewWrapperRef.current) {
-          previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
+            previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
+            // Also constraint the wrapper width to avoid horizontal scroll on the parent if needed
+            previewWrapperRef.current.style.width = `${availableWidth}px`;
+            previewWrapperRef.current.style.overflow = 'hidden';
         }
     }, [isDemoMode]);
 
     useEffect(() => {
-        if(fontsLoaded){ 
+        if (fontsLoaded) {
             scalePreview();
             window.addEventListener('resize', scalePreview);
             return () => window.removeEventListener('resize', scalePreview);
         }
     }, [scalePreview, paginatedData, fontsLoaded]);
-    
+
     // --- FUNÇÃO EXPORT TO PDF OTIMIZADA (COMPRESSÃO JPEG) ---
     const exportToPdf = useCallback(async (dataToExport: ResumeData) => {
         setIsPaymentProcessing(true);
@@ -1001,7 +1017,7 @@ const AppContent: React.FC = () => {
         try {
             setGeneratingStatus('Gerando imagens otimizadas...');
             const pages = Array.from(printArea.querySelectorAll('.resume-page')) as HTMLElement[];
-            
+
             if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
 
             // 1. Configuração do jsPDF com compressão ativada
@@ -1017,7 +1033,7 @@ const AppContent: React.FC = () => {
 
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
-                
+
                 // Força dimensões exatas antes da captura
                 pageEl.style.height = '1123px';
                 pageEl.style.minHeight = '1123px';
@@ -1029,7 +1045,7 @@ const AppContent: React.FC = () => {
                     // quality: 0.85 -> Excelente equilíbrio (quase indistinguível de 1.0, mas muito menor)
                     // pixelRatio: 2 -> Mantém a nitidez do texto (Retina quality)
                     imgData = await toJpeg(pageEl, {
-                        quality: 0.85, 
+                        quality: 0.85,
                         pixelRatio: 2,
                         backgroundColor: '#ffffff', // OBRIGATÓRIO: JPEG não tem transparência
                         width: 794,
@@ -1048,11 +1064,11 @@ const AppContent: React.FC = () => {
                     });
                 } catch (firstError) {
                     console.warn("Falha na alta qualidade, tentando fallback...", firstError);
-                    
+
                     // Fallback: Reduz pixelRatio se falhar (ex: falta de memória no mobile)
                     imgData = await toJpeg(pageEl, {
                         quality: 0.75,
-                        pixelRatio: 1.5, 
+                        pixelRatio: 1.5,
                         backgroundColor: '#ffffff',
                         width: 794,
                         height: 1123,
@@ -1078,7 +1094,7 @@ const AppContent: React.FC = () => {
 
             setGeneratingStatus('Finalizando PDF...');
             const fileName = `curriculo-${dataToExport.personalInfo.name.replace(/\s+/g, '-').toLowerCase() || 'profissional'}.pdf`;
-            
+
             pdf.save(fileName);
             triggerFeedback();
 
@@ -1089,11 +1105,11 @@ const AppContent: React.FC = () => {
             setIsPaymentProcessing(false);
             setGeneratingStatus('');
         }
-        
+
     }, [triggerFeedback]);
 
     const handlePaymentRequest = async () => {
-        if(hasPaidInSession) {
+        if (hasPaidInSession) {
             exportToPdf(resumeData);
             return;
         }
@@ -1117,7 +1133,7 @@ const AppContent: React.FC = () => {
 
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
-            
+
             // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
             const payload = {
                 coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
@@ -1131,7 +1147,7 @@ const AppContent: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
+
             const data = await response.json();
             if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
@@ -1164,7 +1180,7 @@ const AppContent: React.FC = () => {
             const updatedResumes = editingResumeId
                 ? prevResumes.map(r => r.savedAt === editingResumeId ? newSavedResume : r)
                 : [...prevResumes, newSavedResume];
-            
+
             try {
                 localStorage.setItem('savedResumes', JSON.stringify(updatedResumes));
             } catch (error) {
@@ -1207,7 +1223,7 @@ const AppContent: React.FC = () => {
             console.error("Failed to update saved resumes in localStorage:", error);
         }
     };
-    
+
     const handleExportJson = () => {
         const json = JSON.stringify(resumeData, null, 2);
         navigator.clipboard.writeText(json)
@@ -1218,20 +1234,20 @@ const AppContent: React.FC = () => {
     const handleFillDemoData = () => {
         const deepCopy = JSON.parse(JSON.stringify(DEMO_DATA));
         setResumeData(deepCopy);
-        setIsDemoMode(false); 
-        setHasPaidInSession(false); 
+        setIsDemoMode(false);
+        setHasPaidInSession(false);
         setEditingResumeId(null);
         setContentScale(1); // Reseta a escala
         showToast("Dados de DEMO preenchidos com sucesso!", "success");
     };
 
     const handleFooterLogoClick = () => {
-        if (isDevModeActive) return; 
+        if (isDevModeActive) return;
         const newCount = devClickCount + 1;
         setDevClickCount(newCount);
         if (newCount === 5) {
             setShowDevModal(true);
-            setDevClickCount(0); 
+            setDevClickCount(0);
         }
     };
 
@@ -1249,263 +1265,263 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-        {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
-        {isLoading && (
-            <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
-                <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
-                    <img 
-                        src="/logo-azul.png" 
-                        alt="Vel Currículo" 
-                        className="w-48 md:w-56 mx-auto mb-2 object-contain" 
-                    />
-                    <p className="text-gray-500 font-medium text-sm md:text-base text-center leading-relaxed">
-                        Feito para quem precisa de <br /> resultados
-                    </p>
-                </div>
-                <div className="absolute bottom-32 left-0 right-0 flex flex-col items-center">
-                     <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                     <p className="text-gray-400 text-xs font-medium">Carregando editor...</p>
-                </div>
-            </div>
-        )}
-
-        {/* MODAL DEV */}
-        {showDevModal && (
-            <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
-                <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">Acesso Dev</h3>
-                    <input 
-                        type="password" 
-                        placeholder="Senha" 
-                        value={devPassword}
-                        onChange={(e) => setDevPassword(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowDevModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition">Cancelar</button>
-                        <button onClick={handleDevLogin} className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">Entrar</button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-        {/* PRINT CONTAINER (Hidden) */}
-        {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
-        <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
-             <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
-                {paginatedData.map((pageData, index) => (
-                    <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px', width: '794px', minWidth: '794px' }}>
-                        <ResumePreview 
-                            data={pageData} 
-                            isDemoMode={false} 
-                            isFirstPage={index === 0} 
-                            isMeasurement={false} 
-                            isPrint={true} 
-                            hideEmptySections={true} 
-                            enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
-                            contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
+            {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
+            {isLoading && (
+                <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
+                    <div className="flex flex-col items-center justify-center m-auto animate-fade-in-scale px-4">
+                        <img
+                            src="/logo-azul.png"
+                            alt="Vel Currículo"
+                            className="w-48 md:w-56 mx-auto mb-2 object-contain"
                         />
+                        <p className="text-gray-500 font-medium text-sm md:text-base text-center leading-relaxed">
+                            Feito para quem precisa de <br /> resultados
+                        </p>
                     </div>
-                ))}
-             </div>
-        </div>
-
-        {/* TOASTS */}
-        {toast && (
-            <div role="alert" className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${{success: 'bg-green-500', error: 'bg-red-600', warning: 'bg-yellow-500 text-gray-900'}[toast.type]}`}>{toast.message}</div>
-        )}
-        
-        {/* MODAIS DIVERSOS */}
-        <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
-        {isPixModalOpen && pixPaymentData && (
-            <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
-        )}
-        
-        <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
-        
-        {/* NOVO: MODAL DE IMPORTAÇÃO */}
-        <ImportModal 
-            isOpen={isImportModalOpen} 
-            onClose={() => setIsImportModalOpen(false)} 
-            onImport={handleImportResume} 
-            onStartFromScratch={handleStartEditing}
-            isAnalyzing={isAnalyzingFile}
-        />
-
-        {deletionTarget && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-                    <h3 className="text-lg font-semibold text-gray-800">Confirmar Exclusão</h3>
-                    <p className="text-gray-600 mt-2">Tem a certeza que deseja remover este item? Esta ação não pode ser desfeita.</p>
-                    <div className="mt-6 flex justify-end gap-3">
-                        <button onClick={() => setDeletionTarget(null)} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
-                        <button onClick={handleConfirmDelete} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Remover</button>
+                    <div className="absolute bottom-32 left-0 right-0 flex flex-col items-center">
+                        <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <p className="text-gray-400 text-xs font-medium">Carregando editor...</p>
                     </div>
+                </div>
+            )}
+
+            {/* MODAL DEV */}
+            {showDevModal && (
+                <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs animate-fade-in-scale">
+                        <h3 className="text-lg font-bold text-gray-800 mb-4 text-center">Acesso Dev</h3>
+                        <input
+                            type="password"
+                            placeholder="Senha"
+                            value={devPassword}
+                            onChange={(e) => setDevPassword(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowDevModal(false)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-300 transition">Cancelar</button>
+                            <button onClick={handleDevLogin} className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition">Entrar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PRINT CONTAINER (Hidden) */}
+            {/* CORREÇÃO CRÍTICA: Força largura fixa para evitar colapso em mobile */}
+            <div id="print-container" style={{ position: 'fixed', top: 0, left: '-9999px', width: '794px', height: '1123px', zIndex: -1, overflow: 'visible' }}>
+                <div id="print-area" style={{ width: '794px', minWidth: '794px' }}>
+                    {paginatedData.map((pageData, index) => (
+                        <div key={index} className="resume-page" style={{ height: '1123px', minHeight: '1123px', width: '794px', minWidth: '794px' }}>
+                            <ResumePreview
+                                data={pageData}
+                                isDemoMode={false}
+                                isFirstPage={index === 0}
+                                isMeasurement={false}
+                                isPrint={true}
+                                hideEmptySections={true}
+                                enableProtection={!hasPaidInSession} // Mantém proteção no print se não pagou
+                                contentScale={1} // CORREÇÃO: Força escala 100% para o PDF, ignorando o zoom da tela
+                            />
+                        </div>
+                    ))}
                 </div>
             </div>
-        )}
-        
-        {/* BOTÕES FLUTUANTES DEV */}
-        {isDevModeActive && (
-            <>
-                <button type="button" onClick={handleExportJson} className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105" title="Exportar JSON"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button>
-                <button type="button" onClick={handleFillDemoData} className="fixed bottom-5 left-20 z-[100] bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform hover:scale-105" title="Preencher Demo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                <button type="button" onClick={() => exportToPdf(resumeData)} className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105" title="Baixar PDF Teste"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg></button>
-            </>
-        )}
 
-        {/* --- HEADER NOVO --- */}
-        <FeedbackHeader 
-            userData={userData} 
-            headerMessage={headerMessage}
-            showLogo={showLogo}
-            // Passamos a função para abrir o modal de currículos
-            onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
-        />
+            {/* TOASTS */}
+            {toast && (
+                <div role="alert" className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${{ success: 'bg-green-500', error: 'bg-red-600', warning: 'bg-yellow-500 text-gray-900' }[toast.type]}`}>{toast.message}</div>
+            )}
 
-        <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
-            <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
-                <h1 className="text-4xl lg:text-5xl font-bold gradient-text">
-                    Faça seu Currículo Profissional por Apenas R$5<span className="text-4xl lg:text-5xl font-bold">,00</span>
-                </h1>
-                <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">Destaque-se em qualquer seleção com um currículo moderno, profissional e pronto para te garantir aquela vaga.</p>
-                <div className="mt-4 flex items-center justify-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-4 py-2 rounded-full w-fit mx-auto">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <span>+{resumesGenerated} currículos gerados!</span>
+            {/* MODAIS DIVERSOS */}
+            <ContinueProgressModal isOpen={isContinueModalOpen} onContinue={handleContinueProgress} onStartNew={handleStartNew} />
+            {isPixModalOpen && pixPaymentData && (
+                <PixModal isOpen={isPixModalOpen} onClose={() => setIsPixModalOpen(false)} paymentData={pixPaymentData} onPaymentSuccess={handlePaymentSuccess} isTestMode={isPixTestMode} amount={paymentAmount} />
+            )}
+
+            <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
+
+            {/* NOVO: MODAL DE IMPORTAÇÃO */}
+            <ImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImport={handleImportResume}
+                onStartFromScratch={handleStartEditing}
+                isAnalyzing={isAnalyzingFile}
+            />
+
+            {deletionTarget && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+                        <h3 className="text-lg font-semibold text-gray-800">Confirmar Exclusão</h3>
+                        <p className="text-gray-600 mt-2">Tem a certeza que deseja remover este item? Esta ação não pode ser desfeita.</p>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button onClick={() => setDeletionTarget(null)} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors">Cancelar</button>
+                            <button onClick={handleConfirmDelete} className="bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">Remover</button>
+                        </div>
+                    </div>
                 </div>
-                <div className="mt-8 flex flex-col items-center gap-4">
+            )}
+
+            {/* BOTÕES FLUTUANTES DEV */}
+            {isDevModeActive && (
+                <>
+                    <button type="button" onClick={handleExportJson} className="fixed bottom-5 left-5 z-[100] bg-black text-white p-3 rounded-full shadow-lg hover:bg-gray-800 focus:outline-none transition-transform hover:scale-105" title="Exportar JSON"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg></button>
+                    <button type="button" onClick={handleFillDemoData} className="fixed bottom-5 left-20 z-[100] bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none transition-transform hover:scale-105" title="Preencher Demo"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                    <button type="button" onClick={() => exportToPdf(resumeData)} className="fixed bottom-5 right-5 z-[100] bg-orange-500 text-white p-3 rounded-full shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50 transition-transform hover:scale-105" title="Baixar PDF Teste"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2" /><path d="M8.5 2h7" /><path d="M14.5 16h-5" /></svg></button>
+                </>
+            )}
+
+            {/* --- HEADER NOVO --- */}
+            <FeedbackHeader
+                userData={userData}
+                headerMessage={headerMessage}
+                showLogo={showLogo}
+                // Passamos a função para abrir o modal de currículos
+                onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
+            />
+
+            <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
+                <section id="intro" className="text-center mt-8 lg:mt-24 mb-16">
+                    <h1 className="text-4xl lg:text-5xl font-bold gradient-text">
+                        Faça seu Currículo Profissional por Apenas R$5<span className="text-4xl lg:text-5xl font-bold">,00</span>
+                    </h1>
+                    <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">Destaque-se em qualquer seleção com um currículo moderno, profissional e pronto para te garantir aquela vaga.</p>
+                    <div className="mt-4 flex items-center justify-center gap-2 bg-green-100 text-green-800 text-sm font-semibold px-4 py-2 rounded-full w-fit mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        <span>+{resumesGenerated} currículos gerados!</span>
+                    </div>
+                    <div className="mt-8 flex flex-col items-center gap-4">
+                        {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
+                        <button
+                            onClick={() => setIsImportModalOpen(true)}
+                            className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+                        >
+                            Criar meu Currículo
+                        </button>
+                    </div>
+                </section>
+
+                <section id="gerador" className="mb-16 scroll-mt-24">
+                    <div className="my-8 flex justify-center">
+                        <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
+                    </div>
+                    <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
+                        <ResumeForm
+                            data={resumeData}
+                            setData={setResumeData}
+                            isDemoMode={isDemoMode}
+                            onStartEditing={handleStartEditing}
+                            onRequestPayment={handlePaymentRequest}
+                            isPaymentProcessing={isPaymentProcessing}
+                            onRequestDelete={handleRequestDelete}
+                            hasPaidInSession={hasPaidInSession}
+                            isEditing={!!editingResumeId}
+                            currentStep={currentStep}
+                            setCurrentStep={setCurrentStep}
+                            isFinished={isFinished}
+                            setIsFinished={setIsFinished}
+                            onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
+                            showToast={showToast}
+                        />
+                        <div className="w-full lg:w-2/3">
+                            <div ref={previewWrapperRef} className="w-full">
+                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                    <ResumePreview
+                                        ref={previewRef}
+                                        data={paginatedData[currentPage - 1]}
+                                        isDemoMode={isDemoMode}
+                                        isFirstPage={currentPage === 1}
+                                        hideEmptySections={paginatedData.length > 1}
+                                        // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                        enableProtection={!hasPaidInSession}
+                                        contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                                    />
+                                )}
+                            </div>
+                            {paginatedData.length > 1 && (
+                                <div className="pagination-controls">
+                                    {paginatedData.map((_, index) => (
+                                        <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                            {/* O usuário pediu para remover */}
+
+                        </div>
+                    </div>
+                </section>
+
+                <section id="como-funciona" className="text-center my-24">
+                    <h2 className="text-3xl font-bold text-gray-800">Simples, Rápido e Eficaz</h2>
+                    <p className="text-lg text-gray-600 mt-2 max-w-2xl mx-auto">Criar um currículo de destaque nunca foi tão fácil. Siga apenas 3 passos:</p>
+                    <div className="mt-12 grid md:grid-cols-3 gap-8">
+                        <div className="flex flex-col items-center">
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">1</div>
+                            <h3 className="text-xl font-semibold mb-2">Preencha</h3>
+                            <p className="text-gray-600">Insira as suas informações nos campos guiados. A nossa IA pode ajudar a refinar os textos.</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">2</div>
+                            <h3 className="text-xl font-semibold mb-2">Personalize</h3>
+                            <p className="text-gray-600">Escolha entre templates modernos e ajuste a cor para combinar com o seu estilo.</p>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">3</div>
+                            <h3 className="text-xl font-semibold mb-2">Exporte</h3>
+                            <p className="text-gray-600">Pague uma taxa simbólica e baixe o seu novo currículo em formato PDF, pronto para ser enviado.</p>
+                        </div>
+                    </div>
+                </section>
+                <TestimonialsSection />
+                <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
+                    <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
+                    <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
                     {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
-                    <button 
+                    <button
                         onClick={() => setIsImportModalOpen(true)}
-                        className="inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+                        className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
                     >
                         Criar meu Currículo
                     </button>
-                </div>
-            </section>
-            
-            <section id="gerador" className="mb-16 scroll-mt-24">
-                 <div className="my-8 flex justify-center">
-                    <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
-                </div>
-                <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
-                    <ResumeForm 
-                        data={resumeData} 
-                        setData={setResumeData} 
-                        isDemoMode={isDemoMode} 
-                        onStartEditing={handleStartEditing} 
-                        onRequestPayment={handlePaymentRequest} 
-                        isPaymentProcessing={isPaymentProcessing} 
-                        onRequestDelete={handleRequestDelete}
-                        hasPaidInSession={hasPaidInSession}
-                        isEditing={!!editingResumeId}
-                        currentStep={currentStep}
-                        setCurrentStep={setCurrentStep}
-                        isFinished={isFinished}
-                        setIsFinished={setIsFinished}
-                        onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
-                        showToast={showToast}
-                    />
-                    <div className="w-full lg:w-2/3">
-                        <div ref={previewWrapperRef} className="w-full">
-                           {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                             <ResumePreview
-                                ref={previewRef}
-                                data={paginatedData[currentPage - 1]}
-                                isDemoMode={isDemoMode}
-                                isFirstPage={currentPage === 1}
-                                hideEmptySections={paginatedData.length > 1}
-                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                enableProtection={!hasPaidInSession}
-                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                             />
-                           )}
-                        </div>
-                        {paginatedData.length > 1 && (
-                            <div className="pagination-controls">
-                                {paginatedData.map((_, index) => (
-                                    <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
-                                ))}
-                            </div>
-                        )}
-                        
-                        {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                        {/* O usuário pediu para remover */}
+                </section>
+            </main>
 
-                    </div>
-                </div>
-            </section>
-            
-            <section id="como-funciona" className="text-center my-24">
-                <h2 className="text-3xl font-bold text-gray-800">Simples, Rápido e Eficaz</h2>
-                <p className="text-lg text-gray-600 mt-2 max-w-2xl mx-auto">Criar um currículo de destaque nunca foi tão fácil. Siga apenas 3 passos:</p>
-                <div className="mt-12 grid md:grid-cols-3 gap-8">
-                    <div className="flex flex-col items-center">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">1</div>
-                        <h3 className="text-xl font-semibold mb-2">Preencha</h3>
-                        <p className="text-gray-600">Insira as suas informações nos campos guiados. A nossa IA pode ajudar a refinar os textos.</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">2</div>
-                        <h3 className="text-xl font-semibold mb-2">Personalize</h3>
-                        <p className="text-gray-600">Escolha entre templates modernos e ajuste a cor para combinar com o seu estilo.</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                         <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">3</div>
-                        <h3 className="text-xl font-semibold mb-2">Exporte</h3>
-                        <p className="text-gray-600">Pague uma taxa simbólica e baixe o seu novo currículo em formato PDF, pronto para ser enviado.</p>
-                    </div>
-                </div>
-            </section>
-            <TestimonialsSection />
-            <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
-                 <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
-                 <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                 {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
-                 <button 
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
-                 >
-                    Criar meu Currículo
-                 </button>
-            </section>
-        </main>
-        
-        {/* FOOTER ATUALIZADO: padding extra para home indicator (pb-12 -> pb-16 no mobile) */}
-        <footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12">
-            <div className="container mx-auto px-4 max-w-7xl">
-                <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div className="mb-6 md:mb-0 text-center md:text-left">
-                        <div className="mb-4 mx-auto md:mx-0 cursor-pointer select-none" style={{width: 'fit-content'}} onClick={handleFooterLogoClick}>
-                            <img src="https://i.postimg.cc/D0pp6j3q/Subcabe-alho-39.png" alt="Vel Sites Logo Rodapé" className="footer-logo" />
+            {/* FOOTER ATUALIZADO: padding extra para home indicator (pb-12 -> pb-16 no mobile) */}
+            <footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12">
+                <div className="container mx-auto px-4 max-w-7xl">
+                    <div className="flex flex-col md:flex-row justify-between items-center">
+                        <div className="mb-6 md:mb-0 text-center md:text-left">
+                            <div className="mb-4 mx-auto md:mx-0 cursor-pointer select-none" style={{ width: 'fit-content' }} onClick={handleFooterLogoClick}>
+                                <img src="https://i.postimg.cc/D0pp6j3q/Subcabe-alho-39.png" alt="Vel Sites Logo Rodapé" className="footer-logo" />
+                            </div>
+                            <p className="text-gray-400 max-w-md">A Vel nasceu pra quem não espera, pra quem resolve. Se você move o mundo com seu ofício, a gente move sua marca no digital.</p>
                         </div>
-                        <p className="text-gray-400 max-w-md">A Vel nasceu pra quem não espera, pra quem resolve. Se você move o mundo com seu ofício, a gente move sua marca no digital.</p>
-                    </div>
-                    <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
-                        <div>
-                            {/* ATUALIZADO: "Contacto" -> "Contato" */}
-                            <h4 className="font-bold text-lg mb-4">Contato</h4>
-                            <ul className="space-y-2">
-                                {/* ATUALIZADO: Telefone atualizado */}
-                                <li className="text-gray-400">(37) 98411-6034</li>
-                                <li className="text-gray-400">contato@velsites.com.br</li>
-                            </ul>
-                        </div>
-                         <div>
-                            <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
-                            <div className="flex space-x-4 justify-center md:justify-start">
-                                <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon">
-                                    <svg className="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
-                                </a>
+                        <div className="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-12 text-center md:text-left">
+                            <div>
+                                {/* ATUALIZADO: "Contacto" -> "Contato" */}
+                                <h4 className="font-bold text-lg mb-4">Contato</h4>
+                                <ul className="space-y-2">
+                                    {/* ATUALIZADO: Telefone atualizado */}
+                                    <li className="text-gray-400">(37) 98411-6034</li>
+                                    <li className="text-gray-400">contato@velsites.com.br</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-lg mb-4">Siga-nos</h4>
+                                <div className="flex space-x-4 justify-center md:justify-start">
+                                    <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center footer-social-icon">
+                                        <svg className="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400">
+                        <p>&copy; {new Date().getFullYear()} Vel Sites. Todos os direitos reservados.</p>
+                    </div>
                 </div>
-                <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-400">
-                    <p>&copy; {new Date().getFullYear()} Vel Sites. Todos os direitos reservados.</p>
-                </div>
-            </div>
-        </footer>
+            </footer>
         </>
     );
 };
