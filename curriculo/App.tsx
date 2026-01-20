@@ -962,7 +962,7 @@ const AppContent: React.FC = () => {
 
         // Mobile adjustment: Ensure we don't exceed screen width even if container says so
         if (window.innerWidth < 1024) {
-            const screenPadding = 32; // 16px left + 16px right
+            const screenPadding = 32; // 16px left + 16px right (Revertido para padrão)
             const maxMobileWidth = window.innerWidth - screenPadding;
             if (availableWidth > maxMobileWidth) {
                 availableWidth = maxMobileWidth;
@@ -981,7 +981,8 @@ const AppContent: React.FC = () => {
             previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
             // Also constraint the wrapper width to avoid horizontal scroll on the parent if needed
             previewWrapperRef.current.style.width = `${availableWidth}px`;
-            previewWrapperRef.current.style.overflow = 'hidden';
+            previewWrapperRef.current.style.overflow = 'visible';
+            previewWrapperRef.current.style.marginBottom = '30px'; // Garante espaço para a sombra inferior
         }
     }, [isDemoMode]);
 
