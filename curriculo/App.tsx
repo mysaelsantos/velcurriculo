@@ -962,7 +962,7 @@ const AppContent: React.FC = () => {
 
         // Mobile adjustment: Ensure we don't exceed screen width even if container says so
         if (window.innerWidth < 1024) {
-            const screenPadding = 32;
+            const screenPadding = 32; // 16px left + 16px right
             const maxMobileWidth = window.innerWidth - screenPadding;
             if (availableWidth > maxMobileWidth) {
                 availableWidth = maxMobileWidth;
@@ -971,40 +971,17 @@ const AppContent: React.FC = () => {
 
         if (availableWidth <= 0) return;
 
-        // --- CORREÇÃO DE SOMBRA SEGURA ---
-        // Adicionamos uma margem interna para que a sombra apareça MESMO com overflow: hidden.
-        // Isso evita que o layout quebre (scroll horizontal) mas mantém a sombra visível.
-        const isMobile = window.innerWidth < 768;
-        const shadowMargin = isMobile ? 20 : 40; // Espaço reservado para sombra
-
-        // A largura útil para o papel é a largura total MENOS as margens da sombra
-        const usableWidth = availableWidth - (shadowMargin * 2);
-
-        // Garante que não quebre em telas muito pequenas (watch/fold)
-        if (usableWidth <= 0) return;
-
-        const scale = usableWidth / baseWidth;
+        const scale = availableWidth / baseWidth;
 
         // Apply transform
         previewElement.style.transform = `scale(${scale})`;
 
-        // Centraliza o papel dentro do wrapper (dando espaço para a sombra nas laterais e topo)
-        previewElement.style.marginLeft = `${shadowMargin}px`;
-        previewElement.style.marginTop = `${shadowMargin}px`;
-
         // Update wrapper height to match scaled height
         if (previewWrapperRef.current) {
-            // Altura total = Altura do papel escalado + Margem Topo + Margem Baixo (extra para shadow)
-            const totalHeight = (baseHeight * scale) + (shadowMargin * 2) + 20;
-
-            previewWrapperRef.current.style.height = `${totalHeight}px`;
+            previewWrapperRef.current.style.height = `${baseHeight * scale}px`;
             // Also constraint the wrapper width to avoid horizontal scroll on the parent if needed
             previewWrapperRef.current.style.width = `${availableWidth}px`;
-
-            // VOLTAMOS PARA HIDDEN para garantir a proporção do site (pedido do usuário)
-            // A sombra agora aparece porque o papel está menor que o container (graças ao shadowMargin)
             previewWrapperRef.current.style.overflow = 'hidden';
-            previewWrapperRef.current.style.marginBottom = '0px';
         }
     }, [isDemoMode]);
 
