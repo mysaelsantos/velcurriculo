@@ -332,6 +332,10 @@ const AppContent: React.FC = () => {
     // --- NOVO STATE: Controle de Escala Inteligente (Smart Shrink) ---
     const [contentScale, setContentScale] = useState(1);
 
+    // --- NOVO STATE: Controle de Fade-in Inteligente do Preview ---
+    // Começa false apenas quando em modo demo e carregando, para esconder o preview "cortado"
+    const [isPreviewReady, setIsPreviewReady] = useState(false);
+
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
     const checkOverflow = useCallback(() => {
@@ -385,6 +389,23 @@ const AppContent: React.FC = () => {
 
         return () => resizeObserver.disconnect();
     }, [checkOverflow, resumeData, currentPage]); // Recalcula se dados ou página mudarem
+
+    // --- FADE-IN INTELIGENTE DO PREVIEW ---
+    // Ativa o preview apenas após o carregamento inicial completar E o primeiro cálculo de escala
+    // Isso previne o flash do preview "cortado" em dispositivos móveis lentos
+    useEffect(() => {
+        // Só ativa quando não está mais carregando (isLoading === false)
+        if (!isLoading && !isPreviewReady) {
+            // Aguarda um frame extra para garantir que o checkOverflow já rodou
+            const timer = requestAnimationFrame(() => {
+                // Adiciona um pequeno delay para suavizar a transição
+                setTimeout(() => {
+                    setIsPreviewReady(true);
+                }, 100);
+            });
+            return () => cancelAnimationFrame(timer);
+        }
+    }, [isLoading, isPreviewReady]);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
@@ -1423,7 +1444,7 @@ const AppContent: React.FC = () => {
                             showToast={showToast}
                         />
                         <div className="w-full lg:w-2/3">
-                            <div ref={previewWrapperRef} className="w-full">
+                            <div ref={previewWrapperRef} className={`w-full rounded-lg shadow-lg shadow-blue-900/10 transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}>
                                 {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                                     <ResumePreview
                                         ref={previewRef}
