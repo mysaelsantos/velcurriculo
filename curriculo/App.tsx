@@ -391,21 +391,17 @@ const AppContent: React.FC = () => {
     }, [checkOverflow, resumeData, currentPage]); // Recalcula se dados ou página mudarem
 
     // --- FADE-IN INTELIGENTE DO PREVIEW ---
-    // Ativa o preview apenas após o carregamento inicial completar E o primeiro cálculo de escala
+    // Ativa o preview apenas após o carregamento inicial completar
     // Isso previne o flash do preview "cortado" em dispositivos móveis lentos
     useEffect(() => {
-        // Só ativa quando não está mais carregando (isLoading === false)
-        if (!isLoading && !isPreviewReady) {
-            // Aguarda um frame extra para garantir que o checkOverflow já rodou
-            const timer = requestAnimationFrame(() => {
-                // Adiciona um pequeno delay para suavizar a transição
-                setTimeout(() => {
-                    setIsPreviewReady(true);
-                }, 100);
-            });
-            return () => cancelAnimationFrame(timer);
+        if (!isLoading) {
+            // Aguarda um tempo suficiente para o cálculo de escala completar
+            const timer = setTimeout(() => {
+                setIsPreviewReady(true);
+            }, 400); // 400ms é suficiente para o checkOverflow rodar
+            return () => clearTimeout(timer);
         }
-    }, [isLoading, isPreviewReady]);
+    }, [isLoading]);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
@@ -1444,7 +1440,7 @@ const AppContent: React.FC = () => {
                             showToast={showToast}
                         />
                         <div className="w-full lg:w-2/3">
-                            <div ref={previewWrapperRef} className={`w-full rounded-lg shadow-lg shadow-blue-900/10 transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}>
+                            <div ref={previewWrapperRef} className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`} style={{ boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)', borderRadius: '8px' }}>
                                 {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                                     <ResumePreview
                                         ref={previewRef}
