@@ -5,7 +5,7 @@ import { toJpeg } from 'html-to-image';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 import ResumeForm from './components/ResumeForm';
-// IMPORTANTE: Importamos QR_CONFIG e usamos 'any' para o ref para evitar erros de tipagem
+// IMPORTANTE: Importamos QR_CONFIG e usamos 'any' para o ref para evitar errosx de tipagem
 import ResumePreview, { QR_CONFIG } from './components/ResumePreview';
 import PixModal from './components/PixModal';
 import MyResumesModal from './components/MyResumesModal';
