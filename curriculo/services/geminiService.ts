@@ -73,13 +73,13 @@ const extractTextFromPDF = async (file: File): Promise<string> => {
   });
 
   const arrayBuffer = await fileReadPromise;
-  
+
   // Carrega o documento usando a lib importada
   const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
   let fullText = '';
 
   // SEGURANÇA: Limite de páginas para evitar travamento em arquivos grandes
-  const MAX_PAGES = 6; 
+  const MAX_PAGES = 6;
   const pagesToProcess = Math.min(pdf.numPages, MAX_PAGES);
 
   for (let i = 1; i <= pagesToProcess; i++) {
@@ -88,67 +88,111 @@ const extractTextFromPDF = async (file: File): Promise<string> => {
     const pageText = textContent.items.map((item: any) => item.str).join(' ');
     fullText += pageText + '\n\n';
   }
-  
+
   return fullText;
 };
 
 // 2. Extração de DOCX (Nova)
 const extractTextFromDocx = async (file: File): Promise<string> => {
-    const reader = new FileReader();
-    const fileReadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as ArrayBuffer);
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
+  const reader = new FileReader();
+  const fileReadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
 
-    const arrayBuffer = await fileReadPromise;
-    try {
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        return result.value; // O texto bruto extraído
-    } catch (error) {
-        console.error("Erro ao ler DOCX:", error);
-        throw new Error("Não foi possível ler o arquivo Word. Tente salvar como PDF.");
-    }
+  const arrayBuffer = await fileReadPromise;
+  try {
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value; // O texto bruto extraído
+  } catch (error) {
+    console.error("Erro ao ler DOCX:", error);
+    throw new Error("Não foi possível ler o arquivo Word. Tente salvar como PDF.");
+  }
 };
 
 // 3. Compressão de Imagem e Conversão para Base64 (Nova)
 const compressImage = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1024; // Largura suficiente para ler texto, pequena o bastante para API
-                const scaleSize = MAX_WIDTH / img.width;
-                const newWidth = MAX_WIDTH;
-                const newHeight = img.height * scaleSize;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024; // Largura suficiente para ler texto, pequena o bastante para API
+        const scaleSize = MAX_WIDTH / img.width;
+        const newWidth = MAX_WIDTH;
+        const newHeight = img.height * scaleSize;
 
-                canvas.width = newWidth;
-                canvas.height = newHeight;
-                
-                const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    reject(new Error("Falha ao processar imagem no navegador."));
-                    return;
-                }
-                
-                ctx.drawImage(img, 0, 0, newWidth, newHeight);
-                
-                // Retorna apenas a parte Base64 (remove o prefixo 'data:image/jpeg;base64,')
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Qualidade 80%
-                const base64 = dataUrl.split(',')[1];
-                resolve(base64);
-            };
-            img.onerror = (err) => reject(err);
-        };
-        reader.onerror = (err) => reject(err);
-    });
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error("Falha ao processar imagem no navegador."));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+        // Retorna apenas a parte Base64 (remove o prefixo 'data:image/jpeg;base64,')
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // Qualidade 80%
+        const base64 = dataUrl.split(',')[1];
+        resolve(base64);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
 };
 
 // --- FUNÇÃO PRINCIPAL UNIFICADA ---
+
+// Formata telefone brasileiro: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+const formatBrazilianPhone = (phone: string): string => {
+  if (!phone) return '';
+
+  // Remove tudo que não é número
+  const digits = phone.replace(/\D/g, '');
+
+  // Se tiver 10 ou 11 dígitos (com ou sem nono dígito)
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  } else if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return phone; // Retorna original se não conseguir formatar
+};
+
+// Converte primeira página do PDF para imagem (para PDFs que são imagens escaneadas)
+const convertPdfToImage = async (file: File): Promise<string> => {
+  const reader = new FileReader();
+  const fileReadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+
+  const arrayBuffer = await fileReadPromise;
+  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  const page = await pdf.getPage(1);
+
+  const scale = 2; // Alta resolução para OCR
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  const ctx = canvas.getContext('2d')!;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // Retorna base64 sem prefixo (para enviar como image/png)
+  return canvas.toDataURL('image/png', 0.9).split(',')[1];
+};
 
 export const analyzeResumePDF = async (file: File): Promise<Partial<ResumeData>> => {
   try {
@@ -157,32 +201,50 @@ export const analyzeResumePDF = async (file: File): Promise<Partial<ResumeData>>
 
     // ESTRATÉGIA DE EXTRAÇÃO BASEADA NO TIPO
     if (file.type === "application/pdf") {
-        // PDF: Extraímos texto localmente para economizar tokens e bytes
-        payload = await extractTextFromPDF(file);
+      // PDF: Primeiro tentamos extrair texto
+      const extractedText = await extractTextFromPDF(file);
+
+      // DETECÇÃO DE PDF-IMAGEM: Se o texto é muito curto, provavelmente é um scan/screenshot
+      const isImagePdf = extractedText.trim().length < 100;
+
+      if (isImagePdf) {
+        // Converte a primeira página para imagem e envia para análise visual
+        console.log("PDF detectado como imagem - convertendo para análise visual...");
+        payload = await convertPdfToImage(file);
+        mimeType = "image/png";
+      } else {
+        payload = extractedText;
         mimeType = "text/plain";
+      }
     } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        // DOCX: Extraímos texto via Mammoth
-        payload = await extractTextFromDocx(file);
-        mimeType = "text/plain";
+      // DOCX: Extraímos texto via Mammoth
+      payload = await extractTextFromDocx(file);
+      mimeType = "text/plain";
     } else if (file.type.startsWith("image/")) {
-        // IMAGEM: Comprimimos e enviamos Base64 para a IA ver
-        payload = await compressImage(file);
-        mimeType = file.type; // ex: image/jpeg, image/png
+      // IMAGEM: Comprimimos e enviamos Base64 para a IA ver
+      payload = await compressImage(file);
+      mimeType = file.type; // ex: image/jpeg, image/png
     } else {
-        throw new Error("Formato de arquivo não suportado.");
+      throw new Error("Formato de arquivo não suportado.");
     }
 
     // Envia para o Backend Multimodal
     const response = await fetch('/.netlify/functions/analyze-resume-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-          payload, 
-          mimeType 
+      body: JSON.stringify({
+        payload,
+        mimeType
       }),
     });
 
     const data = await handleResponse(response, 'analyzeResumePDF');
+
+    // PÓS-PROCESSAMENTO: Formatar telefone brasileiro
+    if (data.personalInfo?.phone) {
+      data.personalInfo.phone = formatBrazilianPhone(data.personalInfo.phone);
+    }
+
     return data as Partial<ResumeData>;
 
   } catch (error) {
@@ -193,7 +255,7 @@ export const analyzeResumePDF = async (file: File): Promise<Partial<ResumeData>>
 
 // Esta função antiga pode ser mantida para compatibilidade ou refatorada futuramente
 // Por enquanto, vamos deixá-la usando a lógica de PDF padrão
-export const analyzeWorkExperiencePDF = async (file: File): Promise<{company: string, jobTitle: string, location: string, startDate: string, endDate: string}[]> => {
+export const analyzeWorkExperiencePDF = async (file: File): Promise<{ company: string, jobTitle: string, location: string, startDate: string, endDate: string }[]> => {
   try {
     // Reutiliza a lógica principal para pegar tudo e extrair só experiencias
     // (Poderíamos otimizar criando endpoint especifico, mas para MVP isso funciona)
