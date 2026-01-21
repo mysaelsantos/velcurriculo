@@ -420,9 +420,18 @@ const AppContent: React.FC = () => {
         }
     }, [isLoading, isPreviewReady]);
 
-    // --- TIMER: Fade-out dos Placeholders após 5 segundos no passo 2+ ---
+    // --- LÓGICA DE VISIBILIDADE DOS PLACEHOLDERS ---
+    // Placeholders são escondidos em 2 cenários:
+    // 1. IMEDIATO: Se isDemoMode é false (dados importados ou restaurados)
+    // 2. COM TIMER: Se usuário está no passo 2+ por mais de 5 segundos
     useEffect(() => {
-        // Só inicia o timer quando o usuário estiver no passo 2 ou além
+        // Se não está em modo demo (dados foram carregados/importados), esconde imediatamente
+        if (!isDemoMode && !hidePlaceholders) {
+            setHidePlaceholders(true);
+            return;
+        }
+
+        // Se está no passo 2 ou além (ainda em demo mode), aguarda 5 segundos
         if (currentStep >= 1 && !hidePlaceholders) {
             const placeholderTimer = setTimeout(() => {
                 setHidePlaceholders(true);
@@ -430,7 +439,7 @@ const AppContent: React.FC = () => {
 
             return () => clearTimeout(placeholderTimer);
         }
-    }, [currentStep, hidePlaceholders]);
+    }, [currentStep, hidePlaceholders, isDemoMode]);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
