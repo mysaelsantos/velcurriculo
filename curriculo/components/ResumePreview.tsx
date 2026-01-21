@@ -29,14 +29,19 @@ export const QR_CONFIG = {
 };
 
 // Componente visual para secções vazias (Ocupa pouco espaço)
-// Recebe prop 'hidden' para fade-out suave
-const CollapsedPlaceholder = ({ label, hidden = false }: { label: string; hidden?: boolean }) => (
-    <div className={`w-full py-1.5 my-1 border border-dashed border-gray-300 rounded bg-gray-50/50 flex items-center justify-center select-none group hover:bg-gray-100 transition-all duration-700 ${hidden ? 'opacity-0 max-h-0 py-0 my-0 border-0 overflow-hidden' : 'opacity-100 max-h-20'}`}>
-        <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider group-hover:text-gray-500">
-            {label} (Vazio)
-        </span>
-    </div>
-);
+// Quando 'hidden' é true, não renderiza nada (remove do DOM)
+const CollapsedPlaceholder = ({ label, hidden = false }: { label: string; hidden?: boolean }) => {
+    // Se hidden, não renderiza o placeholder
+    if (hidden) return null;
+
+    return (
+        <div className="w-full py-1.5 my-1 border border-dashed border-gray-300 rounded bg-gray-50/50 flex items-center justify-center select-none group hover:bg-gray-100 transition-colors">
+            <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider group-hover:text-gray-500">
+                {label} (Vazio)
+            </span>
+        </div>
+    );
+};
 
 // Interface atualizada com enableProtection e hidePlaceholders
 interface ResumePreviewProps {
