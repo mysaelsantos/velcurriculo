@@ -363,16 +363,16 @@ const AppContent: React.FC = () => {
             if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
             }
+        }
 
-            // IMPORTANTE: Marca que o cálculo de escala foi feito com sucesso
-            // (só quando não há overflow, significa que a escala está estabilizada)
-            if (!isScaleCalculatedRef.current) {
-                isScaleCalculatedRef.current = true;
-                // Pequeno delay para garantir que a renderização está completa
-                setTimeout(() => {
-                    setIsPreviewReady(true);
-                }, 100);
-            }
+        // CORREÇÃO: Marca que o primeiro checkOverflow rodou (movido para FORA do else)
+        // Isso garante que o preview apareça mesmo quando há overflow inicial
+        if (!isScaleCalculatedRef.current) {
+            isScaleCalculatedRef.current = true;
+            // Pequeno delay para garantir que a renderização está completa
+            setTimeout(() => {
+                setIsPreviewReady(true);
+            }, 150);
         }
     }, [contentScale]);
 
@@ -653,6 +653,12 @@ const AppContent: React.FC = () => {
             // Chama o serviço inteligente que detecta PDF/DOCX/Imagem
             const extractedData = await analyzeResumePDF(file);
 
+            // VALIDAÇÃO INTELIGENTE: Verifica se pelo menos dados básicos foram extraídos
+            const hasName = extractedData.personalInfo?.name && extractedData.personalInfo.name.trim().length > 2;
+            const hasExperiences = extractedData.experiences && extractedData.experiences.length > 0;
+            const hasEducation = extractedData.education && extractedData.education.length > 0;
+            const hasUsefulData = hasName || hasExperiences || hasEducation;
+
             // Mescla os dados extraídos com o estado inicial para garantir estrutura
             setResumeData(prev => ({
                 ...prev,
@@ -665,7 +671,13 @@ const AppContent: React.FC = () => {
             setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
             setIsImportModalOpen(false);
             setContentScale(1); // Reseta escala
-            showToast("Currículo importado com sucesso! Revise os dados.", "success");
+
+            // Mostra mensagem apropriada baseada nos dados extraídos
+            if (hasUsefulData) {
+                showToast("Currículo importado com sucesso! Revise os dados.", "success");
+            } else {
+                showToast("Não conseguimos extrair dados válidos. Preencha os campos manualmente.", "warning");
+            }
 
             // Scroll para o formulário
             setTimeout(() => {
