@@ -336,6 +336,10 @@ const AppContent: React.FC = () => {
     // Começa false para esconder o preview "cortado" até que a escala esteja calculada
     const [isPreviewReady, setIsPreviewReady] = useState(false);
 
+    // --- NOVO STATE: Controle de Fade-out dos Placeholders ---
+    // Após 5 segundos no passo 2+, os placeholders "(Vazio)" desaparecem com fade-out
+    const [hidePlaceholders, setHidePlaceholders] = useState(false);
+
     // Flag para saber se o primeiro cálculo de escala já foi feito
     const isScaleCalculatedRef = useRef(false);
 
@@ -415,6 +419,18 @@ const AppContent: React.FC = () => {
             return () => clearTimeout(fallbackTimer);
         }
     }, [isLoading, isPreviewReady]);
+
+    // --- TIMER: Fade-out dos Placeholders após 5 segundos no passo 2+ ---
+    useEffect(() => {
+        // Só inicia o timer quando o usuário estiver no passo 2 ou além
+        if (currentStep >= 1 && !hidePlaceholders) {
+            const placeholderTimer = setTimeout(() => {
+                setHidePlaceholders(true);
+            }, 5000); // 5 segundos
+
+            return () => clearTimeout(placeholderTimer);
+        }
+    }, [currentStep, hidePlaceholders]);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
@@ -1476,6 +1492,7 @@ const AppContent: React.FC = () => {
                                         // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
                                         enableProtection={!hasPaidInSession}
                                         contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                                        hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
                                     />
                                 )}
                             </div>
