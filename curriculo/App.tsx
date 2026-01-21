@@ -21,6 +21,8 @@ import AdminDashboard from './components/AdminDashboard';
 // IMPORTA O NOVO HEADER E CONTEXTO
 import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
 import FeedbackHeader from './components/FeedbackHeader';
+// HOOK DE NAVEGAÇÃO POR SWIPE
+import useSwipeNavigation from './hooks/useSwipeNavigation';
 
 interface SavedResume extends ResumeData {
     savedAt: string;
@@ -342,6 +344,14 @@ const AppContent: React.FC = () => {
 
     // Flag para saber se o primeiro cálculo de escala já foi feito
     const isScaleCalculatedRef = useRef(false);
+
+    // --- HOOK DE NAVEGAÇÃO POR SWIPE ---
+    // Permite arrastar/swipe horizontal para navegar entre páginas do currículo
+    const { handlers: swipeHandlers, swipeStyle } = useSwipeNavigation(
+        paginatedData.length,
+        currentPage,
+        setCurrentPage
+    );
 
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
@@ -1490,7 +1500,18 @@ const AppContent: React.FC = () => {
                             showToast={showToast}
                         />
                         <div className="w-full lg:w-2/3">
-                            <div ref={previewWrapperRef} className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`} style={{ boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)', borderRadius: '8px' }}>
+                            <div
+                                ref={previewWrapperRef}
+                                className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
+                                style={{
+                                    boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
+                                    borderRadius: '8px',
+                                    touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
+                                    userSelect: 'none',   // Evita seleção de texto durante arraste
+                                    ...swipeStyle         // Aplica transform e cursor dinâmicos
+                                }}
+                                {...swipeHandlers}        // Aplica todos os handlers de swipe
+                            >
                                 {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                                     <ResumePreview
                                         ref={previewRef}
