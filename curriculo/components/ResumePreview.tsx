@@ -3,7 +3,7 @@ import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
 import ATSHiddenLayer from './ATSHiddenLayer';
 
-// CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
+// CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇAs
 export const QR_CONFIG = {
     spacer: { width: 230, height: 180 },  // Aumentado de 160 para 180
 
