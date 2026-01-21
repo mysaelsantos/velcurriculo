@@ -333,8 +333,11 @@ const AppContent: React.FC = () => {
     const [contentScale, setContentScale] = useState(1);
 
     // --- NOVO STATE: Controle de Fade-in Inteligente do Preview ---
-    // Começa false apenas quando em modo demo e carregando, para esconder o preview "cortado"
+    // Começa false para esconder o preview "cortado" até que a escala esteja calculada
     const [isPreviewReady, setIsPreviewReady] = useState(false);
+
+    // Flag para saber se o primeiro cálculo de escala já foi feito
+    const isScaleCalculatedRef = useRef(false);
 
     // --- LÓGICA DE OVERFLOW INTELIGENTE (Smart Shrink) ---
     // Monitora se o conteúdo + PhantomSpacer estourou a página e ajusta a escala
@@ -359,6 +362,16 @@ const AppContent: React.FC = () => {
             // Só tenta aumentar a escala se tiver uma folga considerável (ex: 20px) para evitar o efeito "flicker"
             if (contentScale < 1 && element.scrollHeight < A4_HEIGHT - 20) {
                 setContentScale(prev => Math.min(1, prev + 0.01));
+            }
+
+            // IMPORTANTE: Marca que o cálculo de escala foi feito com sucesso
+            // (só quando não há overflow, significa que a escala está estabilizada)
+            if (!isScaleCalculatedRef.current) {
+                isScaleCalculatedRef.current = true;
+                // Pequeno delay para garantir que a renderização está completa
+                setTimeout(() => {
+                    setIsPreviewReady(true);
+                }, 100);
             }
         }
     }, [contentScale]);
@@ -390,18 +403,18 @@ const AppContent: React.FC = () => {
         return () => resizeObserver.disconnect();
     }, [checkOverflow, resumeData, currentPage]); // Recalcula se dados ou página mudarem
 
-    // --- FADE-IN INTELIGENTE DO PREVIEW ---
-    // Ativa o preview apenas após o carregamento inicial completar
-    // Isso previne o flash do preview "cortado" em dispositivos móveis lentos
+    // --- FALLBACK: Se após 2 segundos ainda não tiver mostrado, força a exibição ---
+    // Isso é um safety net para casos extremos onde o cálculo pode não completar
     useEffect(() => {
-        if (!isLoading) {
-            // Aguarda um tempo suficiente para o cálculo de escala completar
-            const timer = setTimeout(() => {
-                setIsPreviewReady(true);
-            }, 400); // 400ms é suficiente para o checkOverflow rodar
-            return () => clearTimeout(timer);
+        if (!isLoading && !isPreviewReady) {
+            const fallbackTimer = setTimeout(() => {
+                if (!isPreviewReady) {
+                    setIsPreviewReady(true);
+                }
+            }, 2000);
+            return () => clearTimeout(fallbackTimer);
         }
-    }, [isLoading]);
+    }, [isLoading, isPreviewReady]);
 
     // INICIALIZAÇÃO E MONITORAMENTO
     useEffect(() => {
