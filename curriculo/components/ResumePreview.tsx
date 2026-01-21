@@ -29,15 +29,16 @@ export const QR_CONFIG = {
 };
 
 // Componente visual para secções vazias (Ocupa pouco espaço)
-const CollapsedPlaceholder = ({ label }: { label: string }) => (
-    <div className="w-full py-1.5 my-1 border border-dashed border-gray-300 rounded bg-gray-50/50 flex items-center justify-center select-none group hover:bg-gray-100 transition-colors">
+// Recebe prop 'hidden' para fade-out suave
+const CollapsedPlaceholder = ({ label, hidden = false }: { label: string; hidden?: boolean }) => (
+    <div className={`w-full py-1.5 my-1 border border-dashed border-gray-300 rounded bg-gray-50/50 flex items-center justify-center select-none group hover:bg-gray-100 transition-all duration-700 ${hidden ? 'opacity-0 max-h-0 py-0 my-0 border-0 overflow-hidden' : 'opacity-100 max-h-20'}`}>
         <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider group-hover:text-gray-500">
             {label} (Vazio)
         </span>
     </div>
 );
 
-// Interface atualizada com enableProtection
+// Interface atualizada com enableProtection e hidePlaceholders
 interface ResumePreviewProps {
     data: PageData;
     isDemoMode?: boolean;
@@ -47,9 +48,10 @@ interface ResumePreviewProps {
     isPrint?: boolean;
     enableProtection?: boolean;
     contentScale?: number; // Adicionado para receber a escala do App.tsx
+    hidePlaceholders?: boolean; // Fade-out dos placeholders após 5s no passo 2+
 }
 
-const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false, contentScale = 1 }, ref) => {
+const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, isFirstPage, isMeasurement, hideEmptySections, isPrint, enableProtection = false, contentScale = 1, hidePlaceholders = false }, ref) => {
     const safeData = data || {};
     const { personalInfo, summary, experiences, education, courses, languages, skills = [], style, qrCodeOffsets } = safeData;
 
@@ -372,7 +374,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Resumo Profissional" />
+                        <CollapsedPlaceholder label="Resumo Profissional" hidden={hidePlaceholders} />
                     )
                 )}
 
@@ -404,7 +406,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Experiência Profissional" />
+                        <CollapsedPlaceholder label="Experiência Profissional" hidden={hidePlaceholders} />
                     )
                 )}
 
@@ -430,7 +432,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Formação Acadêmica" />
+                        <CollapsedPlaceholder label="Formação Acadêmica" hidden={hidePlaceholders} />
                     )
                 )}
 
@@ -456,7 +458,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Cursos Complementares" />
+                        <CollapsedPlaceholder label="Cursos Complementares" hidden={hidePlaceholders} />
                     )
                 )}
 
@@ -475,7 +477,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Idiomas" />
+                        <CollapsedPlaceholder label="Idiomas" hidden={hidePlaceholders} />
                     )
                 )}
 
@@ -511,7 +513,7 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                             </div>
                         </section>
                     ) : (
-                        <CollapsedPlaceholder label="Habilidades e Competências" />
+                        <CollapsedPlaceholder label="Habilidades e Competências" hidden={hidePlaceholders} />
                     )
                 )}
 
