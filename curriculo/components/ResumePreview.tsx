@@ -22,8 +22,8 @@ export const QR_CONFIG = {
         'template-minimalist': {
             bottom: 30,
             right: 25,
-            safetyPadding: 50,            // Aumentado de 40 para 50
-            overrideSpacer: { width: 230, height: 130 }  // Aumentado de 100 para 130
+            safetyPadding: 30,            // Reduzido de 50 para 30 (evita overflow)
+            overrideSpacer: { width: 230, height: 100 }  // Reduzido de 130 para 100
         },
     }
 };
@@ -517,18 +517,20 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                     )
                 )}
 
-                {/* --- ESPAÇADOR DE SEGURANÇA INFERIOR (SEMPRE PRESENTE) --- */}
-                {/* Garante margem inferior fixa para evitar cortes no conteúdo, independente do QR Code */}
-                <div
-                    className="bottom-safety-spacer"
-                    style={{
-                        width: '100%',
-                        height: '40px', // Margem de segurança fixa
-                        visibility: 'hidden',
-                        pointerEvents: 'none',
-                        display: 'block'
-                    }}
-                />
+                {/* --- ESPAÇADOR DE SEGURANÇA INFERIOR --- */}
+                {/* Só mostra quando NÃO há QR Code para evitar duplicação de espaçamento */}
+                {!(isFirstPage && showQR) && (
+                    <div
+                        className="bottom-safety-spacer"
+                        style={{
+                            width: '100%',
+                            height: '30px', // Margem de segurança menor quando não há QR
+                            visibility: 'hidden',
+                            pointerEvents: 'none',
+                            display: 'block'
+                        }}
+                    />
+                )}
 
                 {/* --- PHANTOM SPACER (ESPAÇADOR FANTASMA) --- */}
                 {/* Este bloco invisível garante que o texto "sinta" a presença do QR Code no fluxo do documento. */}
