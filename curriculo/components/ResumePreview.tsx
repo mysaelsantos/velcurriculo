@@ -1,6 +1,7 @@
 import React, { useEffect, forwardRef, useImperativeHandle, useRef, useMemo, useState } from 'react';
 import type { PageData } from '../types';
 import QRCodeComponent from './QRCode';
+import ATSHiddenLayer from './ATSHiddenLayer';
 
 // CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
 export const QR_CONFIG = {
@@ -577,6 +578,11 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                 }}>
                     <QRCodeComponent phone={personalInfo.phone} show={style.showQRCode} linkedin={personalInfo.linkedin} showLinkedin={style.showLinkedinQr ?? true} />
                 </div>
+            )}
+
+            {/* CAMADA ATS INVISÍVEL - Texto estruturado para robôs ATS */}
+            {isFirstPage && (
+                <ATSHiddenLayer data={data} />
             )}
         </div>
     );
