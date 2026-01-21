@@ -4,28 +4,26 @@ import QRCodeComponent from './QRCode';
 
 // CONFIGURAÇÃO DE POSIÇÃO E SEGURANÇA
 export const QR_CONFIG = {
-    spacer: { width: 230, height: 160 },
+    spacer: { width: 230, height: 180 },  // Aumentado de 160 para 180
 
     positions: {
         'template-modern': {
             bottom: 15,
             right: 0,
-            safetyPadding: 15,
-            // CONTROLE MANUAL DE ALTURA PARA O TEMPLATE MODERNO
-            // Altere o 'height' aqui para ajustar o raio da área protegida (Ex: 80, 100, 120)
-            overrideSpacer: { width: 230, height: 100 }
+            safetyPadding: 25,            // Aumentado de 15 para 25
+            overrideSpacer: { width: 230, height: 120 }  // Aumentado de 100 para 120
         },
         'template-classic': {
             bottom: 35,
             right: 25,
-            safetyPadding: 29,
-            overrideSpacer: { width: 230, height: 100 }
+            safetyPadding: 40,            // Aumentado de 29 para 40
+            overrideSpacer: { width: 230, height: 130 }  // Aumentado de 100 para 130
         },
         'template-minimalist': {
             bottom: 30,
             right: 25,
-            safetyPadding: 40,
-            overrideSpacer: { width: 230, height: 100 }
+            safetyPadding: 50,            // Aumentado de 40 para 50
+            overrideSpacer: { width: 230, height: 130 }  // Aumentado de 100 para 130
         },
     }
 };
@@ -516,6 +514,19 @@ const ResumePreview = forwardRef<any, ResumePreviewProps>(({ data, isDemoMode, i
                         <CollapsedPlaceholder label="Habilidades e Competências" />
                     )
                 )}
+
+                {/* --- ESPAÇADOR DE SEGURANÇA INFERIOR (SEMPRE PRESENTE) --- */}
+                {/* Garante margem inferior fixa para evitar cortes no conteúdo, independente do QR Code */}
+                <div
+                    className="bottom-safety-spacer"
+                    style={{
+                        width: '100%',
+                        height: '40px', // Margem de segurança fixa
+                        visibility: 'hidden',
+                        pointerEvents: 'none',
+                        display: 'block'
+                    }}
+                />
 
                 {/* --- PHANTOM SPACER (ESPAÇADOR FANTASMA) --- */}
                 {/* Este bloco invisível garante que o texto "sinta" a presença do QR Code no fluxo do documento. */}
