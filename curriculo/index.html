@@ -449,7 +449,8 @@
 
         .scroller[data-animated="true"] {
             overflow: hidden;
-            /* Mask removida para não cortar sombras */
+            -webkit-mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
+            mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
         }
 
         .scroller[data-animated="true"] .scroller__inner {
