@@ -513,8 +513,8 @@ const AppContent: React.FC = () => {
             style: { ...prev.style, template: tempTemplate }
         }));
 
-        // Aguarda React processar a mudança
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Aguarda React processar a mudança (aumentado para celulares mais lentos)
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Volta para o template original
         setResumeData(prev => ({
@@ -522,8 +522,8 @@ const AppContent: React.FC = () => {
             style: { ...prev.style, template: currentTemplate }
         }));
 
-        // Aguarda estabilização
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Aguarda estabilização (aumentado para celulares mais lentos)
+        await new Promise(resolve => setTimeout(resolve, 100));
     }, []); // SEM dependências - função estável
 
     const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -645,6 +645,11 @@ const AppContent: React.FC = () => {
     const handleContinueProgress = async () => {
         if (pendingSavedData) {
             const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = pendingSavedData;
+
+            // CORREÇÃO MOBILE: Esconde preview durante recalculo para evitar "flash" de corte
+            setIsPreviewReady(false);
+            isScaleCalculatedRef.current = false;
+
             setResumeData(savedData);
             setCurrentStep(savedStep);
             setIsFinished(savedIsFinished);
@@ -1317,6 +1322,10 @@ const AppContent: React.FC = () => {
     const handleEditResume = async (savedAt: string) => {
         const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
         if (resumeToEdit) {
+            // CORREÇÃO MOBILE: Esconde preview durante recalculo para evitar "flash" de corte
+            setIsPreviewReady(false);
+            isScaleCalculatedRef.current = false;
+
             setResumeData(resumeToEdit);
             setIsDemoMode(false);
             setIsMyResumesModalOpen(false);
