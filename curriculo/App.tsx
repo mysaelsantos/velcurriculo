@@ -502,29 +502,29 @@ const AppContent: React.FC = () => {
     // --- CORREÇÃO DE PROPORÇÃO MOBILE: TROCA RÁPIDA DE TEMPLATE ---
     // Força um recálculo das dimensões do preview trocando temporariamente o template.
     // Isso resolve o problema de "corte" visual que ocorre devido ao delay no cálculo inicial.
-    const performTemplateRefresh = useCallback(async (targetData?: ResumeData) => {
-        const dataToUse = targetData || resumeData;
-        const currentTemplate = dataToUse.style?.template || 'template-modern';
+    // IMPORTANTE: Recebe os dados como parâmetro para evitar dependência de resumeData (que causava loops)
+    const performTemplateRefresh = useCallback(async (targetTemplate?: string) => {
+        const currentTemplate = targetTemplate || 'template-modern';
         const tempTemplate = currentTemplate === 'template-modern' ? 'template-classic' : 'template-modern';
-        
+
         // Troca temporária para forçar recálculo
         setResumeData(prev => ({
             ...prev,
             style: { ...prev.style, template: tempTemplate }
         }));
-        
+
         // Aguarda React processar a mudança
         await new Promise(resolve => setTimeout(resolve, 50));
-        
+
         // Volta para o template original
         setResumeData(prev => ({
             ...prev,
             style: { ...prev.style, template: currentTemplate }
         }));
-        
+
         // Aguarda estabilização
         await new Promise(resolve => setTimeout(resolve, 50));
-    }, [resumeData]);
+    }, []); // SEM dependências - função estável
 
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
@@ -541,14 +541,15 @@ const AppContent: React.FC = () => {
                 setFontsLoaded(true);
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
+
             // CORREÇÃO MOBILE: Força recálculo de proporção antes de mostrar
-            await performTemplateRefresh();
-            
+            // Usa o template padrão 'template-modern' (DEMO_DATA usa esse)
+            await performTemplateRefresh('template-modern');
+
             setIsLoading(false);
         };
         loadResources();
-    }, [performTemplateRefresh]);
+    }, []); // SEM dependências - executa apenas uma vez no mount
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -650,9 +651,9 @@ const AppContent: React.FC = () => {
             setIsDemoMode(false);
             // Ao recarregar, reseta a escala
             setContentScale(1);
-            
+
             // CORREÇÃO MOBILE: Força recálculo de proporção após carregar dados
-            await performTemplateRefresh(savedData);
+            await performTemplateRefresh(savedData.style?.template);
 
             // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
             if (pixPaymentData) {
@@ -1322,9 +1323,9 @@ const AppContent: React.FC = () => {
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
             setContentScale(1); // Reseta a escala ao editar
-            
+
             // CORREÇÃO MOBILE: Força recálculo de proporção após carregar dados
-            await performTemplateRefresh(resumeToEdit);
+            await performTemplateRefresh(resumeToEdit.style?.template);
         }
     };
 
