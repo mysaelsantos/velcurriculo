@@ -16,6 +16,8 @@ import type { ResumeData, PageData } from './types';
 import { runAutoSetup } from './services/autoSetup';
 import { trackVisitor, trackResumeGenerated, trackSale } from './services/tracker';
 import { analyzeResumePDF } from './services/geminiService';
+import { db } from './services/firebase';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 // IMPORTA O PAINEL ADMINISTRATIVO
 import AdminDashboard from './components/AdminDashboard';
 // IMPORTA O NOVO HEADER E CONTEXTO
@@ -339,6 +341,13 @@ const AppContent: React.FC = () => {
 
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     const [hasPaidInSession, setHasPaidInSession] = useState(false);
+
+    // --- ESTADOS DO SISTEMA DE CUPONS ---
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, type: 'fixed' | 'percentage', value: number, discount: number } | null>(null);
+    const [couponError, setCouponError] = useState('');
+    const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
     // Controla o Loading Overlay
     const [isLoading, setIsLoading] = useState(true);
     const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -1264,6 +1273,94 @@ const AppContent: React.FC = () => {
 
     }, [triggerFeedback]);
 
+    // --- FUNÇÃO DE VALIDAÇÃO DE CUPOM ---
+    const handleValidateCoupon = async (codeToValidate: string): Promise<boolean> => {
+        const cleanCode = codeToValidate.trim().toUpperCase();
+        if (!cleanCode) {
+            setCouponError('Digite um código de cupom');
+            return false;
+        }
+
+        setIsValidatingCoupon(true);
+        setCouponError('');
+
+        try {
+            // Busca o cupom no Firestore
+            const couponRef = doc(db, 'coupons', cleanCode);
+            const couponSnap = await getDoc(couponRef);
+
+            if (!couponSnap.exists()) {
+                setCouponError('Cupom não encontrado');
+                setAppliedCoupon(null);
+                return false;
+            }
+
+            const couponData = couponSnap.data();
+
+            // Verifica se está ativo
+            if (!couponData.isActive) {
+                setCouponError('Este cupom não está mais ativo');
+                setAppliedCoupon(null);
+                return false;
+            }
+
+            // Verifica limite de usos total
+            if (couponData.usageCount >= couponData.maxUses) {
+                setCouponError('Este cupom atingiu o limite de usos');
+                setAppliedCoupon(null);
+                return false;
+            }
+
+            // Verifica se o email já usou este cupom (1 uso por usuário)
+            const userEmail = resumeData.personalInfo.email?.toLowerCase().trim();
+            if (userEmail && couponData.usedBy && Array.isArray(couponData.usedBy)) {
+                if (couponData.usedBy.includes(userEmail)) {
+                    setCouponError('Você já utilizou este cupom');
+                    setAppliedCoupon(null);
+                    return false;
+                }
+            }
+
+            // Cupom válido - calcula o desconto
+            const basePrice = 5.00;
+            let discountAmount = 0;
+
+            if (couponData.type === 'fixed') {
+                discountAmount = Math.min(couponData.value, basePrice - 0.01); // Mínimo 1 centavo
+            } else if (couponData.type === 'percentage') {
+                discountAmount = basePrice * (couponData.value / 100);
+                discountAmount = Math.min(discountAmount, basePrice - 0.01);
+            }
+
+            const finalDiscount = parseFloat(discountAmount.toFixed(2));
+
+            setAppliedCoupon({
+                code: cleanCode,
+                type: couponData.type,
+                value: couponData.value,
+                discount: finalDiscount
+            });
+
+            showToast(`Cupom aplicado! Desconto de R$ ${finalDiscount.toFixed(2)}`, 'success');
+            return true;
+
+        } catch (error) {
+            console.error('Erro ao validar cupom:', error);
+            setCouponError('Erro ao validar cupom. Tente novamente.');
+            setAppliedCoupon(null);
+            return false;
+        } finally {
+            setIsValidatingCoupon(false);
+        }
+    };
+
+    // --- FUNÇÃO PARA REMOVER CUPOM APLICADO ---
+    const handleRemoveCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponCode('');
+        setCouponError('');
+    };
+
     const handlePaymentRequest = async () => {
         if (hasPaidInSession) {
             exportToPdf(resumeData);
@@ -1271,7 +1368,11 @@ const AppContent: React.FC = () => {
         }
 
         setIsPaymentProcessing(true);
-        const currentAmount = !!editingResumeId ? 2.50 : 5.00;
+
+        // Calcula o preço final com base no cupom aplicado
+        const basePrice = 5.00;
+        const discountAmount = appliedCoupon?.discount || 0;
+        const currentAmount = Math.max(0.01, basePrice - discountAmount);
         setPaymentAmount(currentAmount);
 
         if (isPixTestMode) {
@@ -1290,9 +1391,9 @@ const AppContent: React.FC = () => {
         try {
             const backendUrl = '/.netlify/functions/create-pix-payment';
 
-            // 🔒 ATUALIZAÇÃO DE SEGURANÇA (Passo 1.2)
+            // Envia o cupom aplicado para o backend validar novamente
             const payload = {
-                coupon: !!editingResumeId ? 'PROMO_LANCAMENTO' : null,
+                coupon: appliedCoupon?.code || null,
                 email: resumeData.personalInfo.email,
                 firstName: resumeData.personalInfo.name.split(' ')[0],
                 lastName: resumeData.personalInfo.name.split(' ').slice(1).join(' ')
@@ -1308,6 +1409,12 @@ const AppContent: React.FC = () => {
             if (!response.ok || !data.paymentId) {
                 throw new Error(data.message || 'Falha ao iniciar o pagamento Pix.');
             }
+
+            // Atualiza o valor real retornado pelo backend
+            if (data.amount) {
+                setPaymentAmount(data.amount);
+            }
+
             setPixPaymentData(data);
             setIsPixModalOpen(true);
         } catch (error) {
@@ -1582,8 +1689,17 @@ const AppContent: React.FC = () => {
                             setCurrentStep={setCurrentStep}
                             isFinished={isFinished}
                             setIsFinished={setIsFinished}
-                            onRequestImport={() => setIsImportModalOpen(true)} // Atalho caso precise
+                            onRequestImport={() => setIsImportModalOpen(true)}
                             showToast={showToast}
+                            // Props do sistema de cupom
+                            couponCode={couponCode}
+                            setCouponCode={setCouponCode}
+                            appliedCoupon={appliedCoupon}
+                            couponError={couponError}
+                            isValidatingCoupon={isValidatingCoupon}
+                            onValidateCoupon={handleValidateCoupon}
+                            onRemoveCoupon={handleRemoveCoupon}
+                            paymentAmount={paymentAmount}
                         />
                         <div className="w-full lg:w-2/3">
                             <div
