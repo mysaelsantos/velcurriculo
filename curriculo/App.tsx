@@ -219,19 +219,27 @@ interface PixPaymentData {
 }
 
 const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => (
-    <li className="flex flex-col flex-shrink-0 w-80 bg-white p-6 rounded-lg shadow-lg" aria-hidden={ariaHidden}>
+    <li className="flex flex-col flex-shrink-0 w-80 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border border-gray-100 hover:shadow-2xl hover:border-blue-200 transition-all duration-300" aria-hidden={ariaHidden}>
         <div className="flex-grow">
-            <p className="text-gray-700">{item.text}</p>
+            <svg className="w-8 h-8 text-blue-400 mb-3 opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
+            <p className="text-gray-700 leading-relaxed">{item.text}</p>
         </div>
-        <p className="font-semibold text-right mt-4 text-gray-800">{item.author}</p>
+        <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                {item.author.charAt(0)}
+            </div>
+            <p className="font-semibold text-gray-800">{item.author}</p>
+        </div>
     </li>
 );
 
 const TestimonialsSection = React.memo(() => {
     return (
-        <section id="avaliacoes" className="my-24">
-            <h2 className="text-3xl font-bold text-center text-gray-800">Feito para quem precisa de resultados</h2>
-            <p className="text-lg text-center text-gray-600 mt-2 mb-12">Veja o que os nossos usuários estão a dizer.</p>
+        <section id="avaliacoes" className="py-20 bg-gradient-to-b from-white to-gray-50">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Feito para quem precisa de <span className="gradient-text">resultados</span></h2>
+                <p className="text-lg text-gray-600">Veja o que nossos usuários estão dizendo.</p>
+            </div>
 
             <div className="space-y-4">
                 <div className="scroller px-4 py-4" data-animated="true">
@@ -1641,7 +1649,7 @@ const AppContent: React.FC = () => {
                 </section>
 
                 {/* SEÇÃO COMO FUNCIONA - Design Melhorado */}
-                <section id="como-funciona" className="py-20 bg-gray-900 text-white overflow-hidden">
+                <section id="como-funciona" className="py-20 bg-gray-900 text-white overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none">
                     <div className="container mx-auto px-4 max-w-6xl">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             {/* Lado Esquerdo: Texto e Passos */}
@@ -1722,7 +1730,7 @@ const AppContent: React.FC = () => {
                 <TestimonialsSection />
 
                 {/* CTA FINAL - Design Impactante */}
-                <section id="final" className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a5f)' }}>
+                <section id="final" className="py-16 md:py-24 relative overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a5f)' }}>
                     {/* Glow Effect */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px]"></div>
 
@@ -1750,9 +1758,9 @@ const AppContent: React.FC = () => {
 
                         <button
                             onClick={() => setIsImportModalOpen(true)}
-                            className="px-10 py-4 rounded-full bg-white text-gray-900 font-bold text-lg hover:scale-105 transition-transform duration-300 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+                            className="btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
                         >
-                            Criar Meu Currículo Agora
+                            Criar meu Currículo
                         </button>
 
                         <p className="mt-4 text-sm text-gray-500">Sem cartão de crédito necessário para começar.</p>
