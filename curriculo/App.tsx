@@ -347,7 +347,7 @@ const AppContent: React.FC = () => {
 
     // --- HOOK DE NAVEGAÇÃO POR SWIPE ---
     // Permite arrastar/swipe horizontal para navegar entre páginas do currículo
-    const { handlers: swipeHandlers, swipeStyle } = useSwipeNavigation(
+    const { handlers: swipeHandlers, swipeOffset, isDragging } = useSwipeNavigation(
         paginatedData.length,
         currentPage,
         setCurrentPage
@@ -1547,36 +1547,95 @@ const AppContent: React.FC = () => {
                             showToast={showToast}
                         />
                         <div className="w-full lg:w-2/3">
+                            {/* CONTAINER COM EFEITO DE VIRAR PÁGINA */}
+                            {/* Páginas ficam sobrepostas em camadas, a página atual desliza revelando a próxima */}
                             <div
                                 ref={previewWrapperRef}
                                 className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
                                 style={{
                                     boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
                                     borderRadius: '8px',
-                                    touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
-                                    userSelect: 'none',   // Evita seleção de texto durante arraste
-                                    ...swipeStyle         // Aplica transform e cursor dinâmicos
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    // Altura fixa baseada no A4 escalado
+                                    height: 'auto',
+                                    touchAction: 'pan-y',
+                                    userSelect: 'none',
                                 }}
-                                {...swipeHandlers}        // Aplica todos os handlers de swipe
+                                {...swipeHandlers}
                             >
-                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                    <ResumePreview
-                                        ref={previewRef}
-                                        data={paginatedData[currentPage - 1]}
-                                        isDemoMode={isDemoMode}
-                                        isFirstPage={currentPage === 1}
-                                        hideEmptySections={paginatedData.length > 1}
-                                        // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                        enableProtection={!hasPaidInSession}
-                                        contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                        hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
-                                    />
-                                )}
+                                {/* Renderiza páginas em camadas sobrepostas */}
+                                {paginatedData.map((pageData, index) => {
+                                    const pageNumber = index + 1;
+                                    const isCurrentPage = pageNumber === currentPage;
+                                    const isNextPage = pageNumber === currentPage + 1;
+                                    const isPrevPage = pageNumber === currentPage - 1;
+
+                                    // Só renderiza a página atual e as adjacentes para performance
+                                    if (!isCurrentPage && !isNextPage && !isPrevPage) return null;
+
+                                    // Calcula posição baseada no swipe
+                                    let translateX = 0;
+                                    let zIndex = 1;
+                                    let opacity = 1;
+
+                                    if (isCurrentPage) {
+                                        // Página atual: segue o dedo no swipe
+                                        translateX = swipeOffset;
+                                        zIndex = 10;
+                                    } else if (isNextPage && swipeOffset < 0) {
+                                        // Próxima página: aparece por baixo quando arrastando para esquerda
+                                        zIndex = 5;
+                                        opacity = Math.min(1, Math.abs(swipeOffset) / 100);
+                                    } else if (isPrevPage && swipeOffset > 0) {
+                                        // Página anterior: aparece por baixo quando arrastando para direita
+                                        zIndex = 5;
+                                        opacity = Math.min(1, swipeOffset / 100);
+                                    } else {
+                                        // Páginas não visíveis
+                                        opacity = 0;
+                                        zIndex = 0;
+                                    }
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                position: isCurrentPage ? 'relative' : 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                transform: `translateX(${translateX}px)`,
+                                                transition: isDragging ? 'none' : 'transform 0.3s ease-out, opacity 0.3s ease-out',
+                                                zIndex,
+                                                opacity: isCurrentPage ? 1 : opacity,
+                                            }}
+                                        >
+                                            <ResumePreview
+                                                ref={isCurrentPage ? previewRef : undefined}
+                                                data={pageData}
+                                                isDemoMode={isDemoMode}
+                                                isFirstPage={index === 0}
+                                                hideEmptySections={paginatedData.length > 1}
+                                                enableProtection={!hasPaidInSession}
+                                                contentScale={index === 0 ? contentScale : 1}
+                                                hidePlaceholders={hidePlaceholders}
+                                            />
+                                        </div>
+                                    );
+                                })}
                             </div>
+                            {/* Indicador de páginas */}
                             {paginatedData.length > 1 && (
                                 <div className="pagination-controls">
                                     {paginatedData.map((_, index) => (
-                                        <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                        <button
+                                            key={index}
+                                            onClick={() => setCurrentPage(index + 1)}
+                                            className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}
+                                        >
+                                            {index + 1}
+                                        </button>
                                     ))}
                                 </div>
                             )}
@@ -1621,10 +1680,10 @@ const AppContent: React.FC = () => {
                         Criar meu Currículo
                     </button>
                 </section>
-            </main>
+            </main >
 
             {/* FOOTER ATUALIZADO: padding extra para home indicator (pb-12 -> pb-16 no mobile) */}
-            <footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12">
+            < footer className="bg-gray-900 text-white py-10 md:py-12 pb-16 md:pb-12" >
                 <div className="container mx-auto px-4 max-w-7xl">
                     <div className="flex flex-col md:flex-row justify-between items-center">
                         <div className="mb-6 md:mb-0 text-center md:text-left">
@@ -1657,7 +1716,7 @@ const AppContent: React.FC = () => {
                         <p>&copy; {new Date().getFullYear()} Vel Sites. Todos os direitos reservados.</p>
                     </div>
                 </div>
-            </footer>
+            </footer >
         </>
     );
 };
