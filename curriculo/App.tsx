@@ -499,6 +499,33 @@ const AppContent: React.FC = () => {
         }, 5000);
     };
 
+    // --- CORREÇÃO DE PROPORÇÃO MOBILE: TROCA RÁPIDA DE TEMPLATE ---
+    // Força um recálculo das dimensões do preview trocando temporariamente o template.
+    // Isso resolve o problema de "corte" visual que ocorre devido ao delay no cálculo inicial.
+    const performTemplateRefresh = useCallback(async (targetData?: ResumeData) => {
+        const dataToUse = targetData || resumeData;
+        const currentTemplate = dataToUse.style?.template || 'template-modern';
+        const tempTemplate = currentTemplate === 'template-modern' ? 'template-classic' : 'template-modern';
+        
+        // Troca temporária para forçar recálculo
+        setResumeData(prev => ({
+            ...prev,
+            style: { ...prev.style, template: tempTemplate }
+        }));
+        
+        // Aguarda React processar a mudança
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Volta para o template original
+        setResumeData(prev => ({
+            ...prev,
+            style: { ...prev.style, template: currentTemplate }
+        }));
+        
+        // Aguarda estabilização
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }, [resumeData]);
+
     const previewWrapperRef = useRef<HTMLDivElement>(null);
     const measurementRootRef = useRef<any>(null);
     const measurementContainerRef = useRef<HTMLDivElement | null>(null);
@@ -514,10 +541,14 @@ const AppContent: React.FC = () => {
                 setFontsLoaded(true);
             }
             await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // CORREÇÃO MOBILE: Força recálculo de proporção antes de mostrar
+            await performTemplateRefresh();
+            
             setIsLoading(false);
         };
         loadResources();
-    }, []);
+    }, [performTemplateRefresh]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -610,7 +641,7 @@ const AppContent: React.FC = () => {
         }
     }, [currentStep, hasMotivatedEducation]);
 
-    const handleContinueProgress = () => {
+    const handleContinueProgress = async () => {
         if (pendingSavedData) {
             const { resumeData: savedData, currentStep: savedStep, isFinished: savedIsFinished } = pendingSavedData;
             setResumeData(savedData);
@@ -619,6 +650,9 @@ const AppContent: React.FC = () => {
             setIsDemoMode(false);
             // Ao recarregar, reseta a escala
             setContentScale(1);
+            
+            // CORREÇÃO MOBILE: Força recálculo de proporção após carregar dados
+            await performTemplateRefresh(savedData);
 
             // INTELIGÊNCIA: Se o usuário confirmou continuar, E temos um PIX salvo, AGORA abrimos ele.
             if (pixPaymentData) {
@@ -1279,7 +1313,7 @@ const AppContent: React.FC = () => {
         }, 300);
     };
 
-    const handleEditResume = (savedAt: string) => {
+    const handleEditResume = async (savedAt: string) => {
         const resumeToEdit = savedResumes.find(r => r.savedAt === savedAt);
         if (resumeToEdit) {
             setResumeData(resumeToEdit);
@@ -1288,6 +1322,9 @@ const AppContent: React.FC = () => {
             setEditingResumeId(savedAt);
             setHasPaidInSession(false);
             setContentScale(1); // Reseta a escala ao editar
+            
+            // CORREÇÃO MOBILE: Força recálculo de proporção após carregar dados
+            await performTemplateRefresh(resumeToEdit);
         }
     };
 
