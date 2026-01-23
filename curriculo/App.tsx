@@ -1588,38 +1588,175 @@ const AppContent: React.FC = () => {
                     </div>
                 </section>
 
-                <section id="como-funciona" className="text-center my-24">
-                    <h2 className="text-3xl font-bold text-gray-800">Simples, Rápido e Eficaz</h2>
-                    <p className="text-lg text-gray-600 mt-2 max-w-2xl mx-auto">Criar um currículo de destaque nunca foi tão fácil. Siga apenas 3 passos:</p>
-                    <div className="mt-12 grid md:grid-cols-3 gap-8">
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">1</div>
-                            <h3 className="text-xl font-semibold mb-2">Preencha</h3>
-                            <p className="text-gray-600">Insira as suas informações nos campos guiados. A nossa IA pode ajudar a refinar os textos.</p>
+                {/* SEÇÃO DE FEATURES - Design Premium */}
+                <section id="features" className="py-20 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="container mx-auto px-4 max-w-6xl">
+                        <div className="text-center mb-16">
+                            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                                Poderoso. Simples. <span className="gradient-text">Inteligente.</span>
+                            </h2>
+                            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
+                                Nossa tecnologia analisa padrões de currículos aprovados para garantir que o seu siga os formatos que recrutadores e sistemas (ATS) procuram.
+                            </p>
                         </div>
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">2</div>
-                            <h3 className="text-xl font-semibold mb-2">Personalize</h3>
-                            <p className="text-gray-600">Escolha entre templates modernos e ajuste a cor para combinar com o seu estilo.</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-center justify-center w-16 h-16 rounded-full btn-primary text-white text-2xl font-bold mb-4">3</div>
-                            <h3 className="text-xl font-semibold mb-2">Exporte</h3>
-                            <p className="text-gray-600">Pague uma taxa simbólica e baixe o seu novo currículo em formato PDF, pronto para ser enviado.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {/* Card 1: IA */}
+                            <div className="group bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300 hover:-translate-y-1">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Escrita com IA</h3>
+                                <p className="text-gray-600 text-sm">Nossa IA gera descrições de cargos impactantes, otimizadas para palavras-chave.</p>
+                            </div>
+
+                            {/* Card 2: ATS */}
+                            <div className="group bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl hover:border-green-200 transition-all duration-300 hover:-translate-y-1">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white text-xl mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">100% ATS Friendly</h3>
+                                <p className="text-gray-600 text-sm">Estrutura legível por qualquer sistema de recrutamento automático.</p>
+                            </div>
+
+                            {/* Card 3: Tempo Real */}
+                            <div className="group bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300 hover:-translate-y-1">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white text-xl mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Edição em Tempo Real</h3>
+                                <p className="text-gray-600 text-sm">Veja as mudanças instantaneamente enquanto você digita.</p>
+                            </div>
+
+                            {/* Card 4: PDF */}
+                            <div className="group bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl hover:border-orange-200 transition-all duration-300 hover:-translate-y-1">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xl mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">Exportação PDF</h3>
+                                <p className="text-gray-600 text-sm">Baixe em PDF de alta qualidade, pronto para impressão ou envio digital.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
+
+                {/* SEÇÃO COMO FUNCIONA - Design Melhorado */}
+                <section id="como-funciona" className="py-20 bg-gray-900 text-white overflow-hidden">
+                    <div className="container mx-auto px-4 max-w-6xl">
+                        <div className="grid md:grid-cols-2 gap-12 items-center">
+                            {/* Lado Esquerdo: Texto e Passos */}
+                            <div>
+                                <h2 className="text-3xl md:text-4xl font-bold mb-8">
+                                    Tão fácil quanto<br />preencher um formulário.
+                                </h2>
+
+                                <div className="space-y-6">
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold shrink-0 group-hover:scale-110 transition-transform shadow-lg">
+                                            1
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xl font-bold text-white mb-1">Escolha um Modelo</h4>
+                                            <p className="text-gray-400">Templates profissionais criados por especialistas em RH.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-bold shrink-0 group-hover:border-blue-500 transition-colors">
+                                            2
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xl font-bold text-white mb-1">Preencha seus Dados</h4>
+                                            <p className="text-gray-400">Nossa IA sugere o que escrever em cada campo.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 group">
+                                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-bold shrink-0 group-hover:border-blue-500 transition-colors">
+                                            3
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xl font-bold text-white mb-1">Baixe e Aplique</h4>
+                                            <p className="text-gray-400">Seu currículo pronto em menos de 10 minutos.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Lado Direito: Mockup Visual */}
+                            <div className="relative">
+                                <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
+                                    {/* Header do Mockup */}
+                                    <div className="h-8 bg-gray-900 border-b border-gray-700 flex items-center px-3 gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                                    </div>
+                                    {/* Body do Mockup */}
+                                    <div className="p-4 grid grid-cols-2 gap-4">
+                                        <div className="space-y-3">
+                                            <div className="h-6 bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                                            <div className="h-3 bg-gray-700/50 rounded w-full"></div>
+                                            <div className="h-3 bg-gray-700/50 rounded w-5/6"></div>
+                                            <div className="h-20 bg-gray-700/30 rounded border border-dashed border-gray-600 flex items-center justify-center text-xs text-gray-500 mt-4">
+                                                Editor
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded shadow-lg p-3 transform hover:scale-105 transition-transform">
+                                            <div className="space-y-2">
+                                                <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                                                <div className="h-2 bg-gray-200 rounded w-full"></div>
+                                                <div className="h-2 bg-gray-200 rounded w-full"></div>
+                                                <div className="h-12 bg-gray-100 rounded w-full mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Glow Effect */}
+                                <div className="absolute -inset-4 bg-blue-500/20 rounded-xl blur-2xl -z-10"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <TestimonialsSection />
-                <section id="final" className="text-center my-24 bg-white p-12 rounded-lg shadow-md">
-                    <h2 className="text-3xl font-bold gradient-text">Pronto para dar o próximo passo na sua carreira?</h2>
-                    <p className="text-lg text-gray-600 mt-4 max-w-3xl mx-auto">A sua jornada profissional merece um currículo à altura. Comece agora e crie um documento que abre portas.</p>
-                    {/* BOTÃO ALTERADO: Agora abre o modal de importação */}
-                    <button
-                        onClick={() => setIsImportModalOpen(true)}
-                        className="mt-8 inline-block btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
-                    >
-                        Criar meu Currículo
-                    </button>
+
+                {/* CTA FINAL - Design Impactante */}
+                <section id="final" className="py-24 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a5f)' }}>
+                    {/* Glow Effect */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px]"></div>
+
+                    <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
+                        <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+                            Pronto para o próximo nível?
+                        </h2>
+
+                        <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto">
+                            Junte-se a mais de <span className="text-white font-bold">1.000 profissionais</span> que já criaram currículos de sucesso com o VelCurrículo.
+                        </p>
+
+                        {/* Prova Social: Avatares */}
+                        <div className="flex justify-center items-center gap-2 mb-8">
+                            <div className="flex -space-x-2">
+                                <img src="https://i.pravatar.cc/100?img=1" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
+                                <img src="https://i.pravatar.cc/100?img=5" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
+                                <img src="https://i.pravatar.cc/100?img=8" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
+                                <div className="w-10 h-10 rounded-full border-2 border-white/20 bg-blue-600 flex items-center justify-center text-xs text-white font-bold">
+                                    +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
+                                </div>
+                            </div>
+                            <span className="text-gray-400 text-sm ml-2">currículos gerados hoje</span>
+                        </div>
+
+                        <button
+                            onClick={() => setIsImportModalOpen(true)}
+                            className="px-10 py-4 rounded-full bg-white text-gray-900 font-bold text-lg hover:scale-105 transition-transform duration-300 shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]"
+                        >
+                            Criar Meu Currículo Agora
+                        </button>
+
+                        <p className="mt-4 text-sm text-gray-500">Sem cartão de crédito necessário para começar.</p>
+                    </div>
                 </section>
             </main>
 
