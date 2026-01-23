@@ -218,20 +218,44 @@ interface PixPaymentData {
     paymentId: string;
 }
 
-const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => (
-    <li className="flex flex-col flex-shrink-0 w-80 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border border-gray-100 hover:shadow-2xl hover:border-blue-200 transition-all duration-300" aria-hidden={ariaHidden}>
-        <div className="flex-grow">
-            <svg className="w-8 h-8 text-blue-400 mb-3 opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
-            <p className="text-gray-700 leading-relaxed">{item.text}</p>
-        </div>
-        <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                {item.author.charAt(0)}
+const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => {
+    // Extrai nome e cargo do autor (formato: "- Nome S. - Cargo")
+    const authorParts = item.author.replace(/^-\s*/, '').split(' - ');
+    const authorName = authorParts[0] || 'Usuário';
+    const authorRole = authorParts[1] || '';
+    const initial = authorName.charAt(0).toUpperCase();
+
+    // Remove aspas extras do texto se existirem
+    const cleanText = item.text.replace(/^["'""]|["'""]$/g, '');
+
+    return (
+        <li
+            className="flex flex-col flex-shrink-0 w-72 md:w-80 bg-white p-6 rounded-2xl shadow-xl border border-gray-100/80 hover:shadow-2xl hover:border-blue-100 transition-all duration-300"
+            aria-hidden={ariaHidden}
+        >
+            {/* Ícone de Aspas */}
+            <svg className="w-10 h-10 text-blue-500 mb-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4.583 17.321C3.553 16.227 3 15 3 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179zm10 0C13.553 16.227 13 15 13 13.011c0-3.5 2.457-6.637 6.03-8.188l.893 1.378c-3.335 1.804-3.987 4.145-4.247 5.621.537-.278 1.24-.375 1.929-.311 1.804.167 3.226 1.648 3.226 3.489a3.5 3.5 0 01-3.5 3.5c-1.073 0-2.099-.49-2.748-1.179z" />
+            </svg>
+
+            {/* Texto do Depoimento */}
+            <div className="flex-grow mb-4">
+                <p className="text-gray-600 leading-relaxed text-sm md:text-base">{cleanText}</p>
             </div>
-            <p className="font-semibold text-gray-800">{item.author}</p>
-        </div>
-    </li>
-);
+
+            {/* Avatar + Autor */}
+            <div className="flex items-center pt-4 border-t border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
+                    <span className="text-white font-bold text-sm">{initial}</span>
+                </div>
+                <div className="ml-3 min-w-0">
+                    <p className="font-semibold text-gray-800 text-sm truncate">{authorName}</p>
+                    {authorRole && <p className="text-xs text-gray-500 truncate">{authorRole}</p>}
+                </div>
+            </div>
+        </li>
+    );
+};
 
 const TestimonialsSection = React.memo(() => {
     return (
@@ -1744,16 +1768,22 @@ const AppContent: React.FC = () => {
                         </p>
 
                         {/* Prova Social: Avatares */}
-                        <div className="flex justify-center items-center gap-2 mb-8">
-                            <div className="flex -space-x-2">
-                                <img src="https://i.pravatar.cc/100?img=1" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
-                                <img src="https://i.pravatar.cc/100?img=5" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
-                                <img src="https://i.pravatar.cc/100?img=8" className="w-10 h-10 rounded-full border-2 border-white/20" alt="Usuário" />
-                                <div className="w-10 h-10 rounded-full border-2 border-white/20 bg-blue-600 flex items-center justify-center text-xs text-white font-bold">
+                        <div className="flex justify-center items-center gap-3 mb-8">
+                            <div className="flex -space-x-3">
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                    <img src="https://i.pravatar.cc/100?img=1" className="w-full h-full object-cover" alt="Usuário" />
+                                </div>
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                    <img src="https://i.pravatar.cc/100?img=5" className="w-full h-full object-cover" alt="Usuário" />
+                                </div>
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                    <img src="https://i.pravatar.cc/100?img=8" className="w-full h-11 object-cover" alt="Usuário" />
+                                </div>
+                                <div className="w-11 h-11 rounded-full border-[3px] border-white/40 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs text-white font-bold shadow-lg">
                                     +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
                                 </div>
                             </div>
-                            <span className="text-gray-400 text-sm ml-2">currículos gerados hoje</span>
+                            <span className="text-gray-400 text-sm ml-1">currículos gerados hoje</span>
                         </div>
 
                         <button
