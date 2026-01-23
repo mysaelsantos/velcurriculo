@@ -1754,9 +1754,7 @@ const AppContent: React.FC = () => {
                 <TestimonialsSection />
 
                 {/* CTA FINAL - Design Limpo */}
-                <section id="final" className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-                    {/* Subtle Glow Effect */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-100 rounded-full blur-[120px]"></div>
+                <section id="final" className="py-16 md:py-24 relative overflow-hidden bg-white">
 
                     <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
                         <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
