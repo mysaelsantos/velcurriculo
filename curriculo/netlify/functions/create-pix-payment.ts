@@ -1,14 +1,21 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import mercadopago from "mercadopago";
+import { db, admin } from "./firebase-admin";
 
-// Configurações de Preço e Cupons
-const PRICING_TABLE = {
-  FULL: 5.00,
-  DISCOUNTED: 2.50
-};
-const VALID_COUPONS = ['PROMO_LANCAMENTO', 'DESCONTO_ESPECIAL'];
+// Preço base
+const BASE_PRICE = 5.00;
 
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
+
+// Interface do cupom no Firestore
+interface CouponData {
+  type: 'fixed' | 'percentage';
+  value: number;
+  maxUses: number;
+  usageCount: number;
+  isActive: boolean;
+  usedBy?: string[];
+}
 
 export const handler: Handler = async (event: HandlerEvent) => {
   const origin = event.headers.origin || event.headers.Origin || "";
@@ -22,7 +29,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
   };
 
   if (process.env.NODE_ENV !== 'development' && !isAllowed) {
-     return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
+    return { statusCode: 403, headers, body: JSON.stringify({ message: "Forbidden" }) };
   }
 
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
@@ -37,21 +44,73 @@ export const handler: Handler = async (event: HandlerEvent) => {
   try {
     let body;
     try {
-        body = JSON.parse(event.body || '{}');
+      body = JSON.parse(event.body || '{}');
     } catch (e) {
-        return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "JSON inválido." }) };
     }
-    
+
     if (!body.email) {
-        return { statusCode: 400, headers, body: JSON.stringify({ message: "Email obrigatório." }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ message: "Email obrigatório." }) };
     }
 
-    let finalAmount = PRICING_TABLE.FULL;
+    let finalAmount = BASE_PRICE;
     let description = 'Download Currículo Profissional';
+    const userEmail = body.email.toLowerCase().trim();
 
-    if (body.coupon && VALID_COUPONS.includes(body.coupon)) {
-        finalAmount = PRICING_TABLE.DISCOUNTED;
-        description += ' (Oferta Aplicada)';
+    // Validar cupom se fornecido
+    if (body.coupon && typeof body.coupon === 'string') {
+      const couponCode = body.coupon.toUpperCase().trim();
+
+      try {
+        const couponRef = db.collection('coupons').doc(couponCode);
+        const couponSnap = await couponRef.get();
+
+        if (couponSnap.exists) {
+          const couponData = couponSnap.data() as CouponData;
+
+          // Verificar se o cupom está ativo
+          if (couponData.isActive) {
+            // Verificar limite de usos
+            if (couponData.usageCount < couponData.maxUses) {
+              // Verificar se o email já usou este cupom (1 uso por usuário)
+              const usedBy = couponData.usedBy || [];
+              if (!usedBy.includes(userEmail)) {
+                // Cupom válido - calcular desconto
+                let discount = 0;
+
+                if (couponData.type === 'fixed') {
+                  discount = Math.min(couponData.value, BASE_PRICE - 0.01);
+                } else if (couponData.type === 'percentage') {
+                  discount = BASE_PRICE * (couponData.value / 100);
+                  discount = Math.min(discount, BASE_PRICE - 0.01);
+                }
+
+                finalAmount = Math.max(0.01, BASE_PRICE - discount);
+                description += ` (Cupom ${couponCode} aplicado)`;
+
+                // Incrementar uso e registrar email
+                await couponRef.update({
+                  usageCount: admin.firestore.FieldValue.increment(1),
+                  usedBy: admin.firestore.FieldValue.arrayUnion(userEmail)
+                });
+
+                console.log(`✅ Cupom ${couponCode} aplicado para ${userEmail}. Desconto: R$${discount.toFixed(2)}`);
+              } else {
+                console.log(`⚠️ Cupom ${couponCode}: Email ${userEmail} já utilizou este cupom`);
+              }
+            } else {
+              console.log(`⚠️ Cupom ${couponCode}: Limite de usos atingido`);
+            }
+          } else {
+            console.log(`⚠️ Cupom ${couponCode}: Cupom não está ativo`);
+          }
+        } else {
+          console.log(`⚠️ Cupom ${body.coupon}: Não encontrado`);
+        }
+      } catch (couponError) {
+        // Se houver erro ao validar cupom (ex: Firebase não configurado), continua sem desconto
+        console.error('Erro ao validar cupom:', couponError);
+      }
     }
 
     const payment_data = {
@@ -69,10 +128,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const payment = await mercadopago.payment.create(payment_data);
 
     if (!payment.body.id || !payment.body.point_of_interaction?.transaction_data) {
-        throw new Error('Falha ao obter dados do Pix.');
+      throw new Error('Falha ao obter dados do Pix.');
     }
 
-    // Retorna APENAS os dados do Pix, sem tentar salvar no banco aqui (o site fará isso)
     return {
       statusCode: 200,
       headers: headers,
@@ -86,10 +144,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   } catch (err) {
     console.error(`[Erro Pagamento] ${(err as Error).message}`);
-    return { 
-        statusCode: 500, 
-        headers: headers,
-        body: JSON.stringify({ message: "Erro ao processar pagamento." }) 
+    return {
+      statusCode: 500,
+      headers: headers,
+      body: JSON.stringify({ message: "Erro ao processar pagamento." })
     };
   }
 };
