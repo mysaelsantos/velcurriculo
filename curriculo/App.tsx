@@ -1673,13 +1673,13 @@ const AppContent: React.FC = () => {
                 </section>
 
                 {/* SEÇÃO COMO FUNCIONA - Design Melhorado */}
-                <section id="como-funciona" className="py-20 bg-gray-900 text-white overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none">
+                <section id="como-funciona" className="py-20 bg-white overflow-hidden">
                     <div className="container mx-auto px-4 max-w-6xl">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             {/* Lado Esquerdo: Texto e Passos */}
                             <div>
-                                <h2 className="text-3xl md:text-4xl font-bold mb-8">
-                                    Tão fácil quanto<br />preencher um formulário.
+                                <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-800">
+                                    Tão fácil quanto<br />preencher um <span className="gradient-text">formulário</span>.
                                 </h2>
 
                                 <div className="space-y-6">
@@ -1688,28 +1688,28 @@ const AppContent: React.FC = () => {
                                             1
                                         </div>
                                         <div>
-                                            <h4 className="text-xl font-bold text-white mb-1">Escolha um Modelo</h4>
-                                            <p className="text-gray-400">Templates profissionais criados por especialistas em RH.</p>
+                                            <h4 className="text-xl font-bold text-gray-800 mb-1">Escolha um Modelo</h4>
+                                            <p className="text-gray-600">Templates profissionais criados por especialistas em RH.</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 group">
-                                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-bold shrink-0 group-hover:border-blue-500 transition-colors">
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 font-bold shrink-0 group-hover:border-blue-500 transition-colors">
                                             2
                                         </div>
                                         <div>
-                                            <h4 className="text-xl font-bold text-white mb-1">Preencha seus Dados</h4>
-                                            <p className="text-gray-400">Nossa IA sugere o que escrever em cada campo.</p>
+                                            <h4 className="text-xl font-bold text-gray-800 mb-1">Preencha seus Dados</h4>
+                                            <p className="text-gray-600">Nossa IA sugere o que escrever em cada campo.</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 group">
-                                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white font-bold shrink-0 group-hover:border-blue-500 transition-colors">
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-700 font-bold shrink-0 group-hover:border-blue-500 transition-colors">
                                             3
                                         </div>
                                         <div>
-                                            <h4 className="text-xl font-bold text-white mb-1">Baixe e Aplique</h4>
-                                            <p className="text-gray-400">Seu currículo pronto em menos de 10 minutos.</p>
+                                            <h4 className="text-xl font-bold text-gray-800 mb-1">Baixe e Aplique</h4>
+                                            <p className="text-gray-600">Seu currículo pronto em menos de 10 minutos.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1717,20 +1717,20 @@ const AppContent: React.FC = () => {
 
                             {/* Lado Direito: Mockup Visual */}
                             <div className="relative">
-                                <div className="bg-gray-800 rounded-xl border border-gray-700 shadow-2xl overflow-hidden">
+                                <div className="bg-gray-50 rounded-xl border border-gray-200 shadow-2xl overflow-hidden">
                                     {/* Header do Mockup */}
-                                    <div className="h-8 bg-gray-900 border-b border-gray-700 flex items-center px-3 gap-1.5">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-                                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                                    <div className="h-8 bg-gray-100 border-b border-gray-200 flex items-center px-3 gap-1.5">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                                        <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
                                     </div>
                                     {/* Body do Mockup */}
                                     <div className="p-4 grid grid-cols-2 gap-4">
                                         <div className="space-y-3">
-                                            <div className="h-6 bg-gray-700 rounded w-3/4 animate-pulse"></div>
-                                            <div className="h-3 bg-gray-700/50 rounded w-full"></div>
-                                            <div className="h-3 bg-gray-700/50 rounded w-5/6"></div>
-                                            <div className="h-20 bg-gray-700/30 rounded border border-dashed border-gray-600 flex items-center justify-center text-xs text-gray-500 mt-4">
+                                            <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                                            <div className="h-3 bg-gray-200/80 rounded w-full"></div>
+                                            <div className="h-3 bg-gray-200/80 rounded w-5/6"></div>
+                                            <div className="h-20 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 mt-4">
                                                 Editor
                                             </div>
                                         </div>
@@ -1744,8 +1744,8 @@ const AppContent: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                {/* Glow Effect */}
-                                <div className="absolute -inset-4 bg-blue-500/20 rounded-xl blur-2xl -z-10"></div>
+                                {/* Shadow Effect */}
+                                <div className="absolute -inset-4 bg-blue-100 rounded-xl blur-2xl -z-10"></div>
                             </div>
                         </div>
                     </div>
@@ -1753,37 +1753,37 @@ const AppContent: React.FC = () => {
 
                 <TestimonialsSection />
 
-                {/* CTA FINAL - Design Impactante */}
-                <section id="final" className="py-16 md:py-24 relative overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a5f)' }}>
-                    {/* Glow Effect */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px]"></div>
+                {/* CTA FINAL - Design Limpo */}
+                <section id="final" className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+                    {/* Subtle Glow Effect */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-100 rounded-full blur-[120px]"></div>
 
                     <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
-                        <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                            Pronto para o próximo nível?
+                        <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
+                            Pronto para o <span className="gradient-text">próximo nível</span>?
                         </h2>
 
-                        <p className="text-xl text-gray-300 mb-4 max-w-2xl mx-auto">
-                            Junte-se a mais de <span className="text-white font-bold">1.000 profissionais</span> que já criaram currículos de sucesso com o VelCurrículo.
+                        <p className="text-xl text-gray-600 mb-4 max-w-2xl mx-auto">
+                            Junte-se a mais de <span className="text-gray-800 font-bold">1.000 profissionais</span> que já criaram currículos de sucesso com o VelCurrículo.
                         </p>
 
                         {/* Prova Social: Avatares */}
                         <div className="flex justify-center items-center gap-3 mb-8">
                             <div className="flex -space-x-3">
-                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white shadow-lg">
                                     <img src="https://i.pravatar.cc/100?img=1" className="w-full h-full object-cover" alt="Usuário" />
                                 </div>
-                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white shadow-lg">
                                     <img src="https://i.pravatar.cc/100?img=5" className="w-full h-full object-cover" alt="Usuário" />
                                 </div>
-                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white/40 shadow-lg">
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-[3px] border-white shadow-lg">
                                     <img src="https://i.pravatar.cc/100?img=8" className="w-full h-11 object-cover" alt="Usuário" />
                                 </div>
-                                <div className="w-11 h-11 rounded-full border-[3px] border-white/40 bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs text-white font-bold shadow-lg">
+                                <div className="w-11 h-11 rounded-full border-[3px] border-white bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs text-white font-bold shadow-lg">
                                     +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
                                 </div>
                             </div>
-                            <span className="text-gray-400 text-sm ml-1">currículos gerados hoje</span>
+                            <span className="text-gray-500 text-sm ml-1">currículos gerados hoje</span>
                         </div>
 
                         <button
@@ -1793,7 +1793,7 @@ const AppContent: React.FC = () => {
                             Criar meu Currículo
                         </button>
 
-                        <p className="mt-4 text-sm text-gray-500">Sem cartão de crédito necessário para começar.</p>
+                        <p className="mt-4 text-sm text-gray-400">Sem cartão de crédito necessário para começar.</p>
                     </div>
                 </section>
             </main>
