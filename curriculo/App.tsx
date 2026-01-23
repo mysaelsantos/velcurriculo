@@ -774,10 +774,17 @@ const AppContent: React.FC = () => {
                 style: prev.style
             }));
 
+            // CORREÇÃO: Esconde preview durante recalculo para evitar "flash" de corte
+            setIsPreviewReady(false);
+            isScaleCalculatedRef.current = false;
+
             setIsDemoMode(false);
             setCurrentStep(0); // Vai para o passo de Dados Pessoais para revisão
             setIsImportModalOpen(false);
             setContentScale(1); // Reseta escala
+
+            // CORREÇÃO: Força recálculo de proporção após importar dados
+            await performTemplateRefresh(extractedData.style?.template || 'template-modern');
 
             // Mostra mensagem apropriada baseada nos dados extraídos
             if (hasUsefulData) {
