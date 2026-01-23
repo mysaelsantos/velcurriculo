@@ -230,7 +230,7 @@ const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?:
 
     return (
         <li
-            className="flex flex-col flex-shrink-0 w-72 md:w-80 bg-white p-6 rounded-2xl shadow-xl border border-gray-100/80 hover:shadow-2xl hover:border-blue-100 transition-all duration-300"
+            className="flex flex-col flex-shrink-0 w-72 md:w-80 bg-white p-6 rounded-2xl shadow-md hover:shadow-lg border border-gray-100/80 transition-all duration-300"
             aria-hidden={ariaHidden}
         >
             {/* Ícone de Aspas */}
