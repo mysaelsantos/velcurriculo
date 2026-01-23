@@ -219,23 +219,29 @@ interface PixPaymentData {
 }
 
 const TestimonialCard: React.FC<{ item: typeof ALL_TESTIMONIALS[0], ariaHidden?: boolean }> = ({ item, ariaHidden = false }) => (
-    <li className="flex flex-col flex-shrink-0 w-80 bg-white p-6 rounded-xl shadow-lg border border-gray-100" aria-hidden={ariaHidden}>
+    <li className="flex flex-col flex-shrink-0 w-80 bg-gradient-to-br from-white to-gray-50 p-6 rounded-2xl shadow-xl border border-gray-100 hover:shadow-2xl hover:border-blue-200 transition-all duration-300" aria-hidden={ariaHidden}>
         <div className="flex-grow">
-            <p className="text-gray-700 leading-relaxed italic">"{item.text}"</p>
+            <svg className="w-8 h-8 text-blue-400 mb-3 opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
+            <p className="text-gray-700 leading-relaxed">{item.text}</p>
         </div>
-        <p className="font-semibold text-right mt-4 text-gray-800">- {item.author}</p>
+        <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                {item.author.charAt(0)}
+            </div>
+            <p className="font-semibold text-gray-800">{item.author}</p>
+        </div>
     </li>
 );
 
 const TestimonialsSection = React.memo(() => {
     return (
-        <section id="avaliacoes" className="py-16 my-8">
-            <div className="text-center mb-12 px-4">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">Feito para quem precisa de resultados</h2>
+        <section id="avaliacoes" className="py-20 bg-gradient-to-b from-white to-gray-50">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Feito para quem precisa de <span className="gradient-text">resultados</span></h2>
                 <p className="text-lg text-gray-600">Veja o que nossos usuários estão dizendo.</p>
             </div>
 
-            <div className="space-y-4 -mx-4 lg:-mx-8">
+            <div className="space-y-4">
                 <div className="scroller px-4 py-4" data-animated="true">
                     <ul className="scroller__inner list-none p-0">
                         {TESTIMONIALS_1.map((item, index) => <TestimonialCard key={index} item={item} />)}
@@ -1590,8 +1596,8 @@ const AppContent: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SEÇÃO DE FEATURES - Full Width */}
-                <section id="features" className="py-20 bg-gradient-to-b from-gray-50 to-white -mx-4 lg:-mx-8 px-4 lg:px-8">
+                {/* SEÇÃO DE FEATURES - Design Premium */}
+                <section id="features" className="py-20 bg-gradient-to-b from-gray-50 to-white">
                     <div className="container mx-auto px-4 max-w-6xl">
                         <div className="text-center mb-16">
                             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
@@ -1642,8 +1648,8 @@ const AppContent: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SEÇÃO COMO FUNCIONA - Full Width */}
-                <section id="como-funciona" className="py-16 bg-gray-900 text-white -mx-4 lg:-mx-8 px-4 lg:px-8">
+                {/* SEÇÃO COMO FUNCIONA - Design Melhorado */}
+                <section id="como-funciona" className="py-20 bg-gray-900 text-white overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none">
                     <div className="container mx-auto px-4 max-w-6xl">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             {/* Lado Esquerdo: Texto e Passos */}
@@ -1723,8 +1729,8 @@ const AppContent: React.FC = () => {
 
                 <TestimonialsSection />
 
-                {/* CTA FINAL - Full Width */}
-                <section id="final" className="py-16 relative -mx-4 lg:-mx-8 px-4 lg:px-8" style={{ background: 'linear-gradient(to bottom, #1e3a5f, #0f172a)' }}>
+                {/* CTA FINAL - Design Impactante */}
+                <section id="final" className="py-16 md:py-24 relative overflow-hidden mx-4 md:mx-0 rounded-2xl md:rounded-none" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a5f)' }}>
                     {/* Glow Effect */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px]"></div>
 
