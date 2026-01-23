@@ -1781,7 +1781,7 @@ const AppContent: React.FC = () => {
                                     +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
                                 </div>
                             </div>
-                            <span className="text-gray-500 text-sm ml-1">currículos gerados hoje</span>
+                            <span className="text-gray-500 text-sm ml-1">currículos gerados</span>
                         </div>
 
                         <button
