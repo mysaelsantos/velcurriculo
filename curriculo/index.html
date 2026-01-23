@@ -1,35 +1,40 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#002e9e">
-    
+
     <title>Vel Currículo | Gerador de Currículo Profissional com IA</title>
-    <meta name="description" content="Crie seu currículo profissional em minutos com a IA da Vel Currículo. Modelos modernos, exportação em PDF e otimização para recrutadores.">
-    <meta name="keywords" content="currículo, criador de currículo, inteligência artificial, currículo pdf, currículo grátis, modelos de currículo, fazer curriculo, currículo profissional, currículo barato, rh">
+    <meta name="description"
+        content="Crie seu currículo profissional em minutos com a IA da Vel Currículo. Modelos modernos, exportação em PDF e otimização para recrutadores.">
+    <meta name="keywords"
+        content="currículo, criador de currículo, inteligência artificial, currículo pdf, currículo grátis, modelos de currículo, fazer curriculo, currículo profissional, currículo barato, rh">
     <meta name="author" content="Vel Currículo">
     <link rel="canonical" href="https://velcurriculo.com.br/" />
 
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://velcurriculo.com.br/">
     <meta property="og:title" content="Vel Currículo | Crie seu Currículo com IA">
-    <meta property="og:description" content="Destaque-se no mercado de trabalho. Crie currículos profissionais, otimizados e modernos em instantes com nossa IA.">
+    <meta property="og:description"
+        content="Destaque-se no mercado de trabalho. Crie currículos profissionais, otimizados e modernos em instantes com nossa IA.">
     <meta property="og:image" content="https://velcurriculo.com.br/logo-azul.png">
 
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://velcurriculo.com.br/">
     <meta property="twitter:title" content="Vel Currículo | Crie seu Currículo com IA">
-    <meta property="twitter:description" content="Destaque-se no mercado de trabalho. Crie currículos profissionais, otimizados e modernos em instantes com nossa IA.">
+    <meta property="twitter:description"
+        content="Destaque-se no mercado de trabalho. Crie currículos profissionais, otimizados e modernos em instantes com nossa IA.">
     <meta property="twitter:image" content="https://velcurriculo.com.br/logo-azul.png">
-    
+
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 
     <link rel="manifest" href="/manifest.json">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.1/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
@@ -42,6 +47,7 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
         :root {
             --theme-color: #002e9e;
             --cor-primaria: #002e9e;
@@ -53,7 +59,7 @@
             font-family: 'Poppins', sans-serif;
             background-color: #f9fafb;
         }
-        
+
         .form-container {
             display: flex;
             flex-direction: column;
@@ -70,17 +76,17 @@
             position: absolute;
             width: 100%;
         }
-        
+
         .wizard-step:not(.step-active) {
             opacity: 0;
             transform: translateX(20px);
             pointer-events: none;
         }
-        
+
         .wizard-step.step-active {
             opacity: 1;
             transform: translateX(0);
-            position: relative; 
+            position: relative;
         }
 
         #wizard-nav {
@@ -97,7 +103,8 @@
 
         /* Estilo Base da Pré-visualização (Na Tela) */
         .resume-preview {
-            width: 794px; /* Largura A4 base (96dpi) */
+            width: 794px;
+            /* Largura A4 base (96dpi) */
             background-color: white;
             transition: all 0.3s ease-in-out;
             transform-origin: top left;
@@ -106,10 +113,11 @@
         }
 
         .resume-preview-paginated {
-            height: 1123px; /* Altura A4 base */
+            height: 1123px;
+            /* Altura A4 base */
             overflow: hidden;
         }
-        
+
         /* ESTRATÉGIA "SANDBOX" PARA GERAÇÃO DE PDF MOBILE
            O container tem tamanho 0x0 para não ser visto, mas não usa display:none
            para que o conteúdo interno seja renderizado pelo navegador.
@@ -121,7 +129,8 @@
             width: 0;
             height: 0;
             overflow: hidden;
-            z-index: -9999; /* Fica atrás de tudo */
+            z-index: -9999;
+            /* Fica atrás de tudo */
         }
 
         /* A área real que será capturada pelo html-to-image */
@@ -129,14 +138,17 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 794px; /* Largura fixa A4 */
+            width: 794px;
+            /* Largura fixa A4 */
             background: white;
-            transform: none !important; /* Importante para cálculos de coordenadas precisos */
+            transform: none !important;
+            /* Importante para cálculos de coordenadas precisos */
         }
 
         #print-area .resume-page {
             width: 794px;
-            height: 1123px; /* Altura Fixa A4 */
+            height: 1123px;
+            /* Altura Fixa A4 */
             background: white;
             position: relative;
             margin: 0;
@@ -152,6 +164,7 @@
             gap: 0.5rem;
             margin-top: 1rem;
         }
+
         .pagination-btn {
             width: 2rem;
             height: 2rem;
@@ -165,15 +178,17 @@
             align-items: center;
             justify-content: center;
         }
+
         .pagination-btn:hover {
             background-color: #f3f4f6;
         }
+
         .pagination-btn.active {
             background-color: var(--theme-color);
             color: white;
             border-color: var(--theme-color);
         }
-        
+
         .section-title {
             font-weight: bold;
             text-transform: uppercase;
@@ -183,13 +198,34 @@
             border-bottom-width: 1px;
             font-size: 0.9rem;
         }
-        
+
         /* Espaçamentos ajustados nos templates */
-        .template-classic { padding: 40px 60px; font-size: 0.85rem; }
-        .template-classic header { text-align: left; border-bottom: 1px solid #e5e7eb; padding-bottom: 1rem; position: relative; margin-top: 1.5rem; }
-        .template-classic main { margin-top: 1.75rem; } 
-        .template-classic #resume-name { color: var(--theme-color); font-size: 2.2rem; }
-        .template-classic #resume-job-title { font-size: 1.1rem; }
+        .template-classic {
+            padding: 40px 60px;
+            font-size: 0.85rem;
+        }
+
+        .template-classic header {
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 1rem;
+            position: relative;
+            margin-top: 1.5rem;
+        }
+
+        .template-classic main {
+            margin-top: 1.75rem;
+        }
+
+        .template-classic #resume-name {
+            color: var(--theme-color);
+            font-size: 2.2rem;
+        }
+
+        .template-classic #resume-job-title {
+            font-size: 1.1rem;
+        }
+
         .template-classic #contact-info {
             display: flex;
             justify-content: flex-start;
@@ -197,34 +233,60 @@
             gap: 0.5rem 1.5rem;
             font-size: 0.8rem;
         }
-        .template-classic #contact-info a, 
-        .template-classic #contact-info div { 
-            display: flex; 
-            align-items: center; 
+
+        .template-classic #contact-info a,
+        .template-classic #contact-info div {
+            display: flex;
+            align-items: center;
             gap: 0.375rem;
         }
+
         .template-classic #contact-info svg {
             width: 0.9rem;
             height: 0.9rem;
             flex-shrink: 0;
         }
-        .template-classic .section-title { font-size: 1rem; color: var(--theme-color); border-color: #d1d5db; }
-        .template-classic h4 { font-size: 0.95rem; }
-        .template-classic p { font-size: 0.85rem; }
-        
-        .template-modern { padding: 0; font-size: 0.85rem; }
-        .template-modern header { 
-            background-color: var(--theme-color); 
-            color: white; 
-            text-align: left; 
+
+        .template-classic .section-title {
+            font-size: 1rem;
+            color: var(--theme-color);
+            border-color: #d1d5db;
+        }
+
+        .template-classic h4 {
+            font-size: 0.95rem;
+        }
+
+        .template-classic p {
+            font-size: 0.85rem;
+        }
+
+        .template-modern {
+            padding: 0;
+            font-size: 0.85rem;
+        }
+
+        .template-modern header {
+            background-color: var(--theme-color);
+            color: white;
+            text-align: left;
             padding: 25px 40px 15px;
-            border-bottom: none; 
+            border-bottom: none;
             position: relative;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .template-modern #resume-name { color: white; font-size: 1.8rem; }
-        .template-modern #resume-job-title { color: #e0e7ff; font-size: 1rem; }
+
+        .template-modern #resume-name {
+            color: white;
+            font-size: 1.8rem;
+        }
+
+        .template-modern #resume-job-title {
+            color: #e0e7ff;
+            font-size: 1rem;
+        }
+
         .template-modern #contact-info {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -234,53 +296,117 @@
             border-top: 1px solid #3b82f6;
             font-size: 0.85rem;
         }
-        .template-modern #contact-info a, 
-        .template-modern #contact-info div { 
-            color: #e0e7ff; 
-            display: flex; 
-            align-items: center; 
+
+        .template-modern #contact-info a,
+        .template-modern #contact-info div {
+            color: #e0e7ff;
+            display: flex;
+            align-items: center;
             gap: 0.5rem;
         }
+
         .template-modern #contact-info svg {
             width: 0.9rem;
             height: 0.9rem;
             flex-shrink: 0;
         }
-        .template-modern main { padding: 24px 40px 25px; } 
-        .template-modern .section-title { color: var(--theme-color); border-color: #d1d5db; }
-        .template-modern h4 { font-size: 0.95rem; }
-        .template-modern p { font-size: 0.85rem; }
 
-        .template-minimalist { padding: 40px 60px; font-family: 'Lato', sans-serif; font-size: 0.8rem; }
-        .template-minimalist header { text-align: left; border-bottom: 2px solid #111827; padding-bottom: 1.2rem; position: relative; }
-        .template-minimalist #resume-name { color: #111827; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; font-size: 1.6rem; }
-        .template-minimalist #resume-job-title { font-weight: 400; color: #6B7280; margin-top: 0.15rem; font-size: 1rem; }
-        .template-minimalist #contact-info { 
+        .template-modern main {
+            padding: 24px 40px 25px;
+        }
+
+        .template-modern .section-title {
+            color: var(--theme-color);
+            border-color: #d1d5db;
+        }
+
+        .template-modern h4 {
+            font-size: 0.95rem;
+        }
+
+        .template-modern p {
+            font-size: 0.85rem;
+        }
+
+        .template-minimalist {
+            padding: 40px 60px;
+            font-family: 'Lato', sans-serif;
+            font-size: 0.8rem;
+        }
+
+        .template-minimalist header {
+            text-align: left;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 1.2rem;
+            position: relative;
+        }
+
+        .template-minimalist #resume-name {
+            color: #111827;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.6rem;
+        }
+
+        .template-minimalist #resume-job-title {
+            font-weight: 400;
+            color: #6B7280;
+            margin-top: 0.15rem;
+            font-size: 1rem;
+        }
+
+        .template-minimalist #contact-info {
             display: flex;
             flex-wrap: wrap;
-            justify-content: flex-start; 
-            margin-top: 0.6rem; 
+            justify-content: flex-start;
+            margin-top: 0.6rem;
             gap: 0.5rem 1.5rem;
             font-size: 0.75rem;
         }
-        .template-minimalist #contact-info a, 
-        .template-minimalist #contact-info div { 
-            display: flex; 
-            align-items: center; 
+
+        .template-minimalist #contact-info a,
+        .template-minimalist #contact-info div {
+            display: flex;
+            align-items: center;
             gap: 0.5rem;
         }
+
         .template-minimalist #contact-info svg {
             width: 0.9rem;
             height: 0.9rem;
             flex-shrink: 0;
             color: #4b5563;
         }
-        .template-minimalist main { margin-top: 1.2rem; }
-        .template-minimalist .section-title { font-size: 0.8rem; font-weight: 700; color: #111827; border: none; margin-bottom: 0.4rem; }
-        .template-minimalist section { padding-bottom: 0.6rem; border-bottom: 1px solid #e5e7eb; }
-        .template-minimalist section:last-child { border-bottom: none; }
-        .template-minimalist h4 { font-size: 0.9rem; }
-        .template-minimalist p { font-size: 0.8rem; }
+
+        .template-minimalist main {
+            margin-top: 1.2rem;
+        }
+
+        .template-minimalist .section-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #111827;
+            border: none;
+            margin-bottom: 0.4rem;
+        }
+
+        .template-minimalist section {
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .template-minimalist section:last-child {
+            border-bottom: none;
+        }
+
+        .template-minimalist h4 {
+            font-size: 0.9rem;
+        }
+
+        .template-minimalist p {
+            font-size: 0.8rem;
+        }
 
         .gradient-text {
             background: var(--gradiente-texto);
@@ -293,15 +419,26 @@
             background: linear-gradient(135deg, #002e9e, #0078e8);
             transition: all 0.3s ease;
         }
+
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(0, 120, 232, 0.3);
         }
 
-        .footer-logo { width: 130px; height: auto; }
-        .footer-social-icon { transition: all 0.3s ease; }
-        .footer-social-icon:hover { background-color: rgba(255, 255, 255, 0.4) !important; transform: scale(1.1); }
-        
+        .footer-logo {
+            width: 130px;
+            height: auto;
+        }
+
+        .footer-social-icon {
+            transition: all 0.3s ease;
+        }
+
+        .footer-social-icon:hover {
+            background-color: rgba(255, 255, 255, 0.4) !important;
+            transform: scale(1.1);
+        }
+
         .scroller__inner {
             padding-block: 1.5rem;
             padding-inline: 1rem;
@@ -309,18 +446,17 @@
             flex-wrap: nowrap;
             gap: 1.25rem;
         }
-        
+
         .scroller[data-animated="true"] {
             overflow: hidden;
-            -webkit-mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
-            mask: linear-gradient(90deg, transparent, white 20%, white 80%, transparent);
+            /* Mask removida para não cortar sombras */
         }
-        
+
         .scroller[data-animated="true"] .scroller__inner {
             width: max-content;
             animation: scroll 80s linear infinite;
         }
-        
+
         @media (prefers-reduced-motion: reduce) {
             .scroller[data-animated="true"] .scroller__inner {
                 animation-play-state: paused;
@@ -331,16 +467,28 @@
             animation-direction: reverse;
         }
 
-        @keyframes scroll { to { transform: translate(calc(-50% - .5rem)); } }
+        @keyframes scroll {
+            to {
+                transform: translate(calc(-50% - .5rem));
+            }
+        }
 
         @keyframes fade-in-scale {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
+
         .animate-fade-in-scale {
             animation: fade-in-scale 0.2s ease-out forwards;
         }
-        
+
         #whatsapp-qr-code-container {
             position: absolute;
             bottom: 1.5rem;
@@ -354,7 +502,7 @@
             z-index: 10;
             gap: 1rem;
         }
-        
+
         /* CORREÇÃO DO PERFIL */
         #profile-pic-container {
             display: none;
@@ -367,33 +515,56 @@
             -webkit-transform: translateZ(0);
             backface-visibility: hidden;
         }
-        
+
         #profile-pic-container.visible {
             display: block;
         }
-        
-        #profile-pic-img { 
-            width: 100%; 
-            height: 100%; 
+
+        #profile-pic-img {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
             /* FIX 2: Aplica o arredondamento diretamente na imagem também */
-            border-radius: 50%; 
+            border-radius: 50%;
         }
-        
+
         .template-modern #profile-pic-container {
-            width: 100px; height: 100px; border-radius: 9999px; top: 2.5rem; right: 3.125rem; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 6; 
+            width: 100px;
+            height: 100px;
+            border-radius: 9999px;
+            top: 2.5rem;
+            right: 3.125rem;
+            border: 3px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 6;
             /* Garante que a borda não corte o conteúdo */
-            box-sizing: border-box; 
+            box-sizing: border-box;
         }
+
         .template-classic #profile-pic-container {
-            width: 100px; height: 100px; border-radius: 9999px; top: 2.5rem; right: 3.125rem; border: 3px solid #e5e7eb; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 6;
+            width: 100px;
+            height: 100px;
+            border-radius: 9999px;
+            top: 2.5rem;
+            right: 3.125rem;
+            border: 3px solid #e5e7eb;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 6;
             box-sizing: border-box;
         }
+
         .template-minimalist #profile-pic-container {
-            width: 100px; height: 100px; border-radius: 9999px; top: 2.5rem; right: 3.125rem; border: 3px solid #e5e7eb; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 6;
+            width: 100px;
+            height: 100px;
+            border-radius: 9999px;
+            top: 2.5rem;
+            right: 3.125rem;
+            border: 3px solid #e5e7eb;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 6;
             box-sizing: border-box;
         }
-        
+
         .template-classic header.has-photo,
         .template-minimalist header.has-photo {
             padding-right: 170px;
@@ -402,6 +573,7 @@
         .template-minimalist header.has-photo {
             border-bottom: none;
         }
+
         .template-minimalist header.has-photo::after {
             content: '';
             position: absolute;
@@ -411,18 +583,20 @@
             height: 2px;
             background-color: #111827;
         }
-        
+
         .template-modern header.has-photo #contact-info {
             border-top: none;
             position: relative;
         }
+
         .template-modern header.has-photo #contact-info::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             height: 1px;
-            width: calc(100% - 170px); /* Space for photo (100px) + right offset (50px) + gap (20px) */
+            width: calc(100% - 170px);
+            /* Space for photo (100px) + right offset (50px) + gap (20px) */
             background-color: #3b82f6;
         }
 
@@ -430,7 +604,7 @@
             display: none;
         }
     </style>
-<script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
@@ -451,11 +625,13 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/index.css">
 </head>
+
 <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
