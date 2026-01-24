@@ -1235,98 +1235,115 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
 
         <div className="flex-grow flex flex-col overflow-hidden">
           {isFinished ? (
-            <div className="text-center p-8 flex flex-col justify-center items-center flex-grow">
-              <svg className="w-24 h-24 text-green-500 mb-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-              <h3 className="text-2xl font-bold text-gray-800">Seu currículo está pronto!</h3>
+            <div className="text-center py-6 px-4 flex flex-col justify-center items-center flex-grow">
+              {/* Ícone de sucesso com tamanho fixo */}
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 flex-shrink-0">
+                <svg className="w-8 h-8 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-800 mb-1">Seu currículo está pronto!</h3>
 
-              {/* --- ÁREA DE PREÇO E CUPOM --- */}
-              <div className="w-full max-w-sm mx-auto mt-4 mb-4">
-                {/* Exibição do valor */}
-                <div className="text-center mb-4">
-                  {appliedCoupon ? (
-                    <div className="space-y-1">
-                      <p className="text-gray-500 text-sm line-through">R$ 5,00</p>
-                      <p className="text-2xl font-bold text-green-600">R$ {paymentAmount.toFixed(2).replace('.', ',')}</p>
-                      <p className="text-green-600 text-sm font-medium">✓ Cupom {appliedCoupon.code} aplicado</p>
-                    </div>
-                  ) : (
-                    <p className="text-2xl font-bold text-gray-800">R$ 5,00</p>
-                  )}
-                </div>
+              {/* --- ÁREA DE PREÇO COMPACTA --- */}
+              <div className="mb-4">
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-gray-400 text-base line-through">R$ 5,00</span>
+                    <span className="text-2xl font-bold text-green-600">R$ {(5 - appliedCoupon.discount).toFixed(2).replace('.', ',')}</span>
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-blue-700">R$ 5,00</p>
+                )}
+              </div>
 
+              {/* --- CONTAINER UNIFICADO PARA CUPOM E TERMOS --- */}
+              <div className="w-full space-y-3">
                 {/* Campo de Cupom */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
-                  <p className="text-xs font-medium text-gray-600 mb-2">Tem um cupom de desconto?</p>
-
                   {appliedCoupon ? (
-                    /* Cupom Aplicado - Mostra botão para remover */
+                    /* Cupom Aplicado */
                     <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                        <span className="font-mono font-bold text-green-700">{appliedCoupon.code}</span>
-                        <span className="text-green-600 text-sm">(-R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')})</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 flex-shrink-0">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        <span className="font-mono font-bold text-green-700 truncate">{appliedCoupon.code}</span>
+                        <span className="text-green-600 text-sm whitespace-nowrap">(-R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')})</span>
                       </div>
                       <button
                         type="button"
                         onClick={onRemoveCoupon}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1 flex-shrink-0"
                         title="Remover cupom"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
                       </button>
                     </div>
                   ) : (
                     /* Campo para digitar cupom */
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="CODIGO"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        maxLength={20}
-                        disabled={isValidatingCoupon}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onValidateCoupon(couponCode)}
-                        disabled={isValidatingCoupon || !couponCode.trim()}
-                        className="px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                      >
-                        {isValidatingCoupon ? (
-                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        ) : 'Aplicar'}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Mensagem de erro */}
-                  {couponError && (
-                    <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                      {couponError}
-                    </p>
+                    <>
+                      <p className="text-xs font-medium text-gray-500 mb-2">Tem um cupom de desconto?</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="CÓDIGO"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                          maxLength={20}
+                          disabled={isValidatingCoupon}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => onValidateCoupon(couponCode)}
+                          disabled={isValidatingCoupon || !couponCode.trim()}
+                          className="px-4 py-2 bg-indigo-600 text-white font-semibold text-sm rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-w-[80px]"
+                        >
+                          {isValidatingCoupon ? (
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : 'Aplicar'}
+                        </button>
+                      </div>
+                      {/* Mensagem de erro */}
+                      {couponError && (
+                        <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          {couponError}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
-              </div>
-              {/* --- FIM ÁREA DE PREÇO E CUPOM --- */}
 
-              {/* --- ÁREA DE ACEITE DOS TERMOS (COM MARGEM NEGATIVA PARA ALARGAR) --- */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-2.5 mb-4 text-left shadow-sm -mx-2 w-[calc(100%+1rem)] sm:w-full sm:mx-0 sm:p-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="terms-checkbox"
-                    checked={isTermsAccepted}
-                    onChange={(e) => setIsTermsAccepted(e.target.checked)}
-                    className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
-                  />
-                  <label htmlFor="terms-checkbox" className="text-[13px] text-gray-700 cursor-pointer select-none flex-1 leading-tight">
-                    Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
-                  </label>
+                {/* Área de Aceite dos Termos - mesma largura que o cupom */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="terms-checkbox"
+                      checked={isTermsAccepted}
+                      onChange={(e) => setIsTermsAccepted(e.target.checked)}
+                      className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
+                    />
+                    <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none leading-snug">
+                      Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
+                    </label>
+                  </div>
                 </div>
               </div>
-              {/* ------------------------------------------------ */}
 
             </div>
           ) : (
