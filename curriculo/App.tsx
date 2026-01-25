@@ -1660,8 +1660,8 @@ const AppContent: React.FC = () => {
 
             {/* TOASTS - Modernizado */}
             {toast && (
-                <div className="fixed top-20 inset-x-0 z-[101] flex justify-center px-4 animate-fade-in-scale">
-                    <div role="alert" className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl font-medium transition-all duration-300 backdrop-blur-lg border whitespace-nowrap ${toast.type === 'success'
+                <div className="fixed top-28 inset-x-0 z-[101] flex justify-center px-4 animate-fade-in-scale">
+                    <div role="alert" className={`flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl font-medium transition-all duration-300 backdrop-blur-lg border max-w-md text-center ${toast.type === 'success'
                         ? 'bg-emerald-500/95 text-white border-white/20 shadow-emerald-500/30'
                         : toast.type === 'error'
                             ? 'bg-red-500/95 text-white border-white/20 shadow-red-500/30'
