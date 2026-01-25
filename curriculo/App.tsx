@@ -609,7 +609,7 @@ const AppContent: React.FC = () => {
         }));
 
         // Aguarda React processar a mudança (aumentado para celulares mais lentos)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 150));
 
         // Volta para o template original
         setResumeData(prev => ({
@@ -617,8 +617,13 @@ const AppContent: React.FC = () => {
             style: { ...prev.style, template: currentTemplate }
         }));
 
-        // Aguarda estabilização (aumentado para celulares mais lentos)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Aguarda estabilização e recálculo de layout (aumentado para garantia)
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // CORREÇÃO CRÍTICA: Marca que o cálculo foi feito e exibe o preview
+        // Isso acontece DEPOIS de toda a troca de template, garantindo 100% de consistência
+        isScaleCalculatedRef.current = true;
+        setIsPreviewReady(true);
     }, []); // SEM dependências - função estável
 
     const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -773,7 +778,7 @@ const AppContent: React.FC = () => {
             console.error("Error removing localStorage item", error);
         }
 
-        // CORREÇÃO: Esconde preview durante recalculo para evitar "flash" de corte
+        // CORREÇÃO CRÍTICA: Esconde preview PRIMEIRO antes de qualquer mudança
         setIsPreviewReady(false);
         isScaleCalculatedRef.current = false;
 
@@ -782,17 +787,23 @@ const AppContent: React.FC = () => {
         setPixPaymentData(null); // Limpa estado visual também
         setIsPixModalOpen(false);
         setContentScale(1); // Reseta escala
-        // Abre o modal de escolha ao começar novo, se desejar
-        setIsImportModalOpen(true);
 
-        // CORREÇÃO MOBILE: Força recálculo de proporção (mesma lógica do carregamento inicial)
+        // CORREÇÃO MOBILE: Força recálculo de proporção ANTES de abrir o modal
+        // O performTemplateRefresh agora define isPreviewReady = true ao final
         await performTemplateRefresh('template-modern');
+
+        // Abre o modal de escolha APÓS o preview estar pronto
+        setIsImportModalOpen(true);
     };
 
     // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
-    const handleStartEditing = () => {
+    const handleStartEditing = async () => {
         // 1. Capturamos o estilo (template e cor) que o usuário escolheu visualmente na etapa 0
         const currentStyle = resumeData.style;
+
+        // CORREÇÃO CRÍTICA: Esconde preview PRIMEIRO
+        setIsPreviewReady(false);
+        isScaleCalculatedRef.current = false;
 
         setIsDemoMode(false);
 
@@ -819,6 +830,9 @@ const AppContent: React.FC = () => {
         } catch (error) {
             console.error("Failed to remove in-progress resume from localStorage:", error);
         }
+
+        // CORREÇÃO MOBILE: Força recálculo de proporção para evitar corte visual
+        await performTemplateRefresh(currentStyle.template);
 
         // Scroll suave para o formulário
         document.getElementById('form-wizard')?.scrollIntoView({ behavior: 'smooth' });
@@ -855,7 +869,8 @@ const AppContent: React.FC = () => {
             setContentScale(1); // Reseta escala
 
             // CORREÇÃO: Força recálculo de proporção após importar dados
-            await performTemplateRefresh(extractedData.style?.template || 'template-modern');
+            // Usamos resumeData.style.template pois preservamos prev.style acima
+            await performTemplateRefresh(resumeData.style?.template || 'template-modern');
 
             // Mostra mensagem apropriada baseada nos dados extraídos
             if (hasUsefulData) {
