@@ -1715,7 +1715,7 @@ const AppContent: React.FC = () => {
 
                         {/* Coluna do Card 3D */}
                         <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-                            <Hero3DCard className="h-[380px] md:h-[460px] lg:h-[520px]" />
+                            <Hero3DCard className="h-[380px] md:h-[460px] lg:h-[520px]" isLoaded={!isLoading} />
                         </div>
                     </div>
                 </section>
