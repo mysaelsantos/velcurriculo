@@ -44,7 +44,7 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
             {/* The Resume Card */}
             <div
                 ref={cardRef}
-                className="hero-3d-card relative w-[280px] md:w-[320px] lg:w-[360px] h-[400px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-5 md:p-6 transition-transform duration-300 ease-out"
+                className="hero-3d-card animate-card-entrance relative w-[240px] md:w-[320px] lg:w-[360px] h-[320px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-4 md:p-6 transition-transform duration-300 ease-out"
                 style={{
                     transform,
                     transformStyle: 'preserve-3d',
