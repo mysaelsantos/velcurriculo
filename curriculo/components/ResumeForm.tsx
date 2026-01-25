@@ -1301,7 +1301,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
           </div>
         )}
 
-        <div className="flex-grow flex flex-col overflow-y-auto">
+        <div className="flex-grow flex flex-col overflow-y-auto max-h-[60vh]">
           {isFinished ? (
             <div className="text-center py-6 px-4 flex flex-col justify-center items-center flex-grow">
               {/* Ícone Animado de Sucesso */}
@@ -1427,30 +1427,30 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               {renderStepContent()}
             </div>
           )}
-        </div>
 
-        <div id="wizard-nav" className="sticky bottom-0 z-10 bg-white mt-auto flex justify-between gap-4 p-6 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-          <button type="button" onClick={handlePrev} disabled={currentStep === 0 && !isFinished} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-            {isFinished ? 'Voltar' : 'Anterior'}
-          </button>
+          <div id="wizard-nav" className="sticky bottom-0 z-10 bg-white mt-auto flex justify-between gap-4 p-6 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <button type="button" onClick={handlePrev} disabled={currentStep === 0 && !isFinished} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+              {isFinished ? 'Voltar' : 'Anterior'}
+            </button>
 
-          {isFinished ? (
-            // Botão modificado para chamar handlePaymentClick em vez de onRequestPayment diretamente
-            <button type="button" onClick={handlePaymentClick} disabled={isPaymentProcessing} className={`btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow flex items-center justify-center gap-2 ${!isTermsAccepted ? 'opacity-70' : ''}`}>
-              {isPaymentProcessing ? (
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-              ) : (
-                hasPaidInSession
-                  ? <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                  : <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-dollar-sign"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-              )}
-              {isPaymentProcessing ? 'Processando...' : getFinalButtonText()}
-            </button>
-          ) : (
-            <button type="button" onClick={handleNext} className="btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow">
-              {(isDemoMode && currentStep === 0) ? 'Começar' : (currentStep === WIZARD_STEPS.length - 1 ? 'Concluir' : 'Próximo')}
-            </button>
-          )}
+            {isFinished ? (
+              // Botão modificado para chamar handlePaymentClick em vez de onRequestPayment diretamente
+              <button type="button" onClick={handlePaymentClick} disabled={isPaymentProcessing} className={`btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow flex items-center justify-center gap-2 ${!isTermsAccepted ? 'opacity-70' : ''}`}>
+                {isPaymentProcessing ? (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                  hasPaidInSession
+                    ? <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                    : <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-dollar-sign"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                )}
+                {isPaymentProcessing ? 'Processando...' : getFinalButtonText()}
+              </button>
+            ) : (
+              <button type="button" onClick={handleNext} className="btn-primary text-white font-semibold py-2 px-4 rounded-full transition-all flex-grow">
+                {(isDemoMode && currentStep === 0) ? 'Começar' : (currentStep === WIZARD_STEPS.length - 1 ? 'Concluir' : 'Próximo')}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </React.Fragment>
