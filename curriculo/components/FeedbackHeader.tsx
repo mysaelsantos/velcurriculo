@@ -269,56 +269,54 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 {/* 2. CONTEÚDO DO MENU */}
                 <div className={`absolute top-14 left-0 right-0 bottom-0 p-6 flex flex-col transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
 
-                    {/* Botões Principais */}
-                    <div className="flex gap-3 mb-4">
+                    {/* Botões Principais - Empilhados */}
+                    <div className="flex flex-col gap-3 mb-4">
                         <button
                             onClick={() => { closeAll(); onOpenMyResumes(); }}
-                            className="flex-1 py-3.5 rounded-2xl bg-blue-50 text-blue-700 font-poppins font-bold text-base flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors shadow-sm active:scale-95"
+                            className="w-full py-4 rounded-2xl bg-blue-50 text-blue-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 hover:bg-blue-100 transition-colors shadow-sm active:scale-95"
                         >
                             <Icons.FileText /> Meus Currículos
                         </button>
+
                         <button
                             onClick={() => { closeAll(); setTimeout(openFeedback, 100); }}
-                            className="flex-1 py-3.5 rounded-2xl bg-amber-50 text-amber-700 font-poppins font-bold text-base flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors shadow-sm active:scale-95"
+                            className="w-full py-4 rounded-2xl bg-amber-50 text-amber-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 hover:bg-amber-100 transition-colors shadow-sm active:scale-95"
                         >
                             <Icons.StarFilled /> Avaliar
                         </button>
-                    </div>
 
-                    {/* Botão Baixar App (PWA) */}
-                    <button
-                        onClick={() => {
-                            // Tenta disparar o prompt de instalação do PWA
-                            const deferredPrompt = (window as any).deferredPrompt;
-                            if (deferredPrompt) {
-                                deferredPrompt.prompt();
-                                deferredPrompt.userChoice.then(() => {
-                                    (window as any).deferredPrompt = null;
-                                });
-                            } else {
-                                // Fallback - abre modal/toast explicando como instalar
-                                alert('Para instalar o app:\n\n📱 iPhone/iPad: Toque em "Compartilhar" → "Adicionar à Tela de Início"\n\n🤖 Android: Toque no menu (⋮) → "Instalar app" ou "Adicionar à tela inicial"');
-                            }
-                            closeAll();
-                        }}
-                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-poppins font-bold text-base flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/25 transition-all shadow-sm active:scale-95 mb-4"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                        Baixar App
-                    </button>
+                        {/* Botão Baixar App (PWA) */}
+                        <button
+                            onClick={() => {
+                                const deferredPrompt = (window as any).deferredPrompt;
+                                if (deferredPrompt) {
+                                    deferredPrompt.prompt();
+                                    deferredPrompt.userChoice.then(() => {
+                                        (window as any).deferredPrompt = null;
+                                    });
+                                    closeAll();
+                                }
+                            }}
+                            className={`w-full py-4 rounded-2xl font-poppins font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-sm active:scale-95 ${(window as any).deferredPrompt ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/25' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            disabled={!(window as any).deferredPrompt}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                            {(window as any).deferredPrompt ? 'Baixar App' : 'App já instalado'}
+                        </button>
+                    </div>
 
                     <div className="w-full border-t border-gray-100 my-2"></div>
 
-                    {/* Links Sociais - Mais Compactos */}
+                    {/* Links Sociais */}
                     <div className="flex flex-col gap-2 w-full mt-2">
-                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors">
-                            <div className="p-1.5 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
+                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                            <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
-                        <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors">
-                            <div className="p-1.5 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
+                        <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                            <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
                         </a>
-                        <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 text-gray-600 text-sm font-medium transition-colors">
-                            <div className="p-1.5 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
+                        <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+                            <div className="p-2 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
                         </a>
                     </div>
                 </div>
