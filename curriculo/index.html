@@ -492,9 +492,12 @@
 
         /* 3D Hero Card Float Animation */
         @keyframes float {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: translateY(0) translateZ(40px);
             }
+
             50% {
                 transform: translateY(-10px) translateZ(40px);
             }
@@ -502,6 +505,23 @@
 
         .animate-float {
             animation: float 3s ease-in-out infinite;
+        }
+
+        /* 3D Hero Card Entrance Animation */
+        @keyframes card-entrance {
+            0% {
+                opacity: 0;
+                transform: perspective(1000px) rotateX(15deg) rotateY(-20deg) translateY(30px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: perspective(1000px) rotateX(5deg) rotateY(-10deg) translateY(0);
+            }
+        }
+
+        .animate-card-entrance {
+            animation: card-entrance 0.8s ease-out forwards;
         }
 
         #whatsapp-qr-code-container {
