@@ -2,9 +2,10 @@ import React, { useRef, useState, useEffect } from 'react';
 
 interface Hero3DCardProps {
     className?: string;
+    isLoaded?: boolean; // Prop to sync with loading screen
 }
 
-const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
+const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '', isLoaded = false }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -19,15 +20,18 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
     const [atsScore, setAtsScore] = useState(0);
     const targetScore = 98;
 
-    // Entrance animation - triggered after a delay to account for loading screen
+    // Entrance animation - triggered when isLoaded becomes true (after loading screen)
     useEffect(() => {
+        if (!isLoaded) return;
+
+        // Small delay after loading screen disappears for a clean transition
         const entranceTimer = setTimeout(() => {
             setIsVisible(true);
             setHasAnimated(true);
-        }, 500); // Delay to sync with loading screen finish
+        }, 200);
 
         return () => clearTimeout(entranceTimer);
-    }, []);
+    }, [isLoaded]);
 
     // ATS Score counting animation with easeOutQuart for deceleration
     useEffect(() => {
@@ -56,7 +60,7 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
         // Start counting after a small delay for the badge to appear
         const countTimer = setTimeout(() => {
             requestAnimationFrame(animateScore);
-        }, 300);
+        }, 400);
 
         return () => clearTimeout(countTimer);
     }, [isVisible]);
@@ -96,9 +100,9 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
             {/* The Resume Card */}
             <div
                 ref={cardRef}
-                className="hero-3d-card relative w-[240px] md:w-[320px] lg:w-[360px] h-[320px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-4 md:p-6 transition-all duration-500 ease-out"
+                className="hero-3d-card relative w-[240px] md:w-[320px] lg:w-[360px] h-[320px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-4 md:p-6 transition-all duration-700 ease-out"
                 style={{
-                    transform: isVisible ? transform : 'perspective(1000px) rotateX(15deg) rotateY(-20deg) translateY(30px)',
+                    transform: isVisible ? transform : 'perspective(1000px) rotateX(15deg) rotateY(-20deg) translateY(40px)',
                     transformStyle: 'preserve-3d',
                     boxShadow: '0 25px 50px -12px rgba(0, 79, 220, 0.15), 0 0 0 1px rgba(0, 79, 220, 0.05)',
                     opacity: isVisible ? 1 : 0,
@@ -136,11 +140,10 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
 
                     {/* Floating Badge - ATS Score with counting animation */}
                     <div
-                        className="absolute -right-4 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float transition-all duration-300"
+                        className="absolute -right-4 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float transition-all duration-500"
                         style={{
                             transform: 'translateZ(40px)',
                             opacity: isVisible ? 1 : 0,
-                            transitionDelay: '0.3s'
                         }}
                     >
                         <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
