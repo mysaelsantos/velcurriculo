@@ -145,7 +145,7 @@ const MyCouponsPage: React.FC = () => {
     };
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(`https://velcurriculo.com.br?cupom=${couponData?.code}`);
+        navigator.clipboard.writeText(`https://velcurriculo.com.br/#/?cupom=${couponData?.code}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -188,7 +188,7 @@ const MyCouponsPage: React.FC = () => {
                 <header className="fixed top-4 left-4 right-4 md:top-6 md:left-6 md:right-6 z-50">
                     <div className="bg-blue-800/90 backdrop-blur-lg rounded-full shadow-2xl px-5 py-3 flex items-center justify-between max-w-lg mx-auto border border-white/10">
                         <img src="/logo-header.png" alt="Vel Currículo" className="h-5" />
-                        <a href="#/" className="text-blue-200 hover:text-white text-sm font-medium transition-colors">
+                        <a href="/#/" onClick={(e) => { e.preventDefault(); window.location.href = '/#/'; }} className="text-blue-200 hover:text-white text-sm font-medium transition-colors">
                             Voltar ao site
                         </a>
                     </div>
@@ -275,14 +275,17 @@ const MyCouponsPage: React.FC = () => {
 
     // ====================== DASHBOARD ======================
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white font-poppins">
-            {/* Header Flutuante (igual ao site principal) */}
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white font-poppins">
+            {/* Header Flutuante */}
             <header className="fixed top-4 left-4 right-4 md:top-6 md:left-6 md:right-6 z-50">
-                <div className="bg-blue-800/90 backdrop-blur-lg rounded-full shadow-2xl px-5 py-3 flex items-center justify-between max-w-2xl mx-auto border border-white/10">
+                <div className="bg-blue-800/95 backdrop-blur-xl rounded-full shadow-2xl shadow-blue-900/20 px-5 py-3 flex items-center justify-between max-w-2xl mx-auto border border-white/10">
                     <img src="/logo-header.png" alt="Vel Currículo" className="h-5" />
                     <div className="flex items-center gap-3">
-                        <span className="text-white font-bold text-sm">{couponData?.code}</span>
-                        <button onClick={handleLogout} className="flex items-center gap-1.5 text-blue-200 hover:text-white text-sm font-medium transition-colors">
+                        <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-full px-3 py-1">
+                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                            <span className="text-white font-bold text-sm">{couponData?.code}</span>
+                        </div>
+                        <button onClick={handleLogout} className="flex items-center gap-1.5 text-blue-200 hover:text-white text-sm font-medium transition-colors bg-white/5 hover:bg-white/10 rounded-full px-3 py-1.5">
                             <Icons.Logout />
                             <span className="hidden sm:inline">Sair</span>
                         </button>
@@ -292,54 +295,98 @@ const MyCouponsPage: React.FC = () => {
 
             <main className="max-w-2xl mx-auto px-4 pt-24 pb-12 space-y-5">
 
-                {/* Card Principal - Saldo */}
-                <div className="bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 rounded-3xl p-6 text-white shadow-2xl shadow-blue-500/25 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                {/* Saudação Pessoal */}
+                <div className="mb-2">
+                    <p className="text-gray-500 text-sm">Bem-vindo de volta,</p>
+                    <h1 className="text-2xl font-bold text-gray-800">Afiliado <span className="gradient-text">{couponData?.code}</span></h1>
+                </div>
 
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 text-blue-200 mb-1">
+                {/* Card Principal - Saldo (Redesenhado) */}
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20 group">
+                    {/* Gradiente Premium com Animação */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600"></div>
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
+
+                    {/* Decorações Circulares Animadas */}
+                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full transition-transform duration-700 group-hover:scale-110"></div>
+                    <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full transition-transform duration-700 group-hover:scale-110"></div>
+                    <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
+
+                    <div className="relative z-10 p-6 text-white">
+                        <div className="flex items-center gap-2 text-blue-100 mb-2">
                             <Icons.Wallet />
-                            <span className="text-sm font-medium">Disponível para saque</span>
+                            <span className="text-sm font-medium tracking-wide uppercase">Disponível para saque</span>
                         </div>
-                        <p className="text-5xl font-bold tracking-tight">
-                            R$ {availableBalance.toFixed(2).replace('.', ',')}
-                        </p>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-lg font-medium text-blue-200">R$</span>
+                            <p className="text-5xl md:text-6xl font-bold tracking-tight">
+                                {availableBalance.toFixed(2).replace('.', ',')}
+                            </p>
+                        </div>
+
+                        {/* Barra de Progresso até o mínimo */}
+                        {availableBalance < 5 && (
+                            <div className="mt-4">
+                                <div className="flex justify-between text-xs text-blue-200 mb-1">
+                                    <span>Progresso para saque mínimo</span>
+                                    <span>{Math.round((availableBalance / 5) * 100)}%</span>
+                                </div>
+                                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-green-400 to-emerald-300 rounded-full transition-all duration-500"
+                                        style={{ width: `${Math.min(100, (availableBalance / 5) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
+
                         {totalWithdrawn > 0 && (
-                            <p className="text-blue-200 text-sm mt-2">Total sacado: R$ {totalWithdrawn.toFixed(2).replace('.', ',')}</p>
+                            <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2">
+                                <Icons.CheckCircle />
+                                <p className="text-blue-100 text-sm">Total já sacado: <strong>R$ {totalWithdrawn.toFixed(2).replace('.', ',')}</strong></p>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Métricas */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-                        <div className="text-blue-500 mb-3"><Icons.Users /></div>
+                    <div className="group bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80 hover:shadow-xl hover:-translate-y-1 hover:border-blue-200 transition-all duration-300">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 group-hover:bg-blue-100 text-blue-500 flex items-center justify-center mb-3 transition-colors">
+                            <Icons.Users />
+                        </div>
                         <p className="text-3xl font-bold text-gray-800">{couponData?.usageCount || 0}</p>
                         <p className="text-gray-500 text-sm">Indicações</p>
                     </div>
-                    <div className="bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-                        <div className="text-green-500 mb-3"><Icons.TrendingUp /></div>
+                    <div className="group bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80 hover:shadow-xl hover:-translate-y-1 hover:border-green-200 transition-all duration-300">
+                        <div className="w-12 h-12 rounded-xl bg-green-50 group-hover:bg-green-100 text-green-500 flex items-center justify-center mb-3 transition-colors">
+                            <Icons.TrendingUp />
+                        </div>
                         <p className="text-3xl font-bold text-gray-800">R$ {totalEarnings.toFixed(0)}</p>
                         <p className="text-gray-500 text-sm">Total ganho</p>
                     </div>
                 </div>
 
-                {/* Link de Compartilhamento */}
-                <div className="bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80">
+                {/* Link de Compartilhamento (Redesenhado) */}
+                <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80">
                     <div className="flex items-center gap-2 text-gray-700 font-semibold mb-4">
-                        <Icons.Link2 />
-                        <span>Seu link exclusivo</span>
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center">
+                            <Icons.Share2 />
+                        </div>
+                        <span>Compartilhe e ganhe</span>
                     </div>
+                    <p className="text-gray-500 text-sm mb-4">Envie este link para amigos e ganhe <strong className="text-green-600">R$ 1,00</strong> por cada compra realizada!</p>
                     <div className="flex items-center gap-2">
-                        <div className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                        <div className="flex-1 min-w-0 bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 group hover:border-blue-300 transition-colors">
                             <p className="text-gray-600 text-sm truncate font-mono">
-                                velcurriculo.com.br?cupom={couponData?.code}
+                                velcurriculo.com.br/#/?cupom={couponData?.code}
                             </p>
                         </div>
                         <button
                             onClick={handleCopyLink}
-                            className={`shrink-0 h-12 px-4 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${copied ? 'bg-green-500 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                            className={`shrink-0 h-12 px-5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg ${copied
+                                ? 'bg-green-500 text-white shadow-green-500/25'
+                                : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-blue-500/25 hover:shadow-blue-500/40'
                                 }`}
                         >
                             {copied ? <Icons.Check /> : <Icons.Copy />}
@@ -440,8 +487,8 @@ const MyCouponsPage: React.FC = () => {
                         ].map((item) => (
                             <div key={item.step} className="flex items-start gap-4 group">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-110 shadow-lg ${item.active
-                                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                                        : 'bg-gray-100 text-gray-500 border border-gray-200 group-hover:border-blue-300'
+                                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-500 border border-gray-200 group-hover:border-blue-300'
                                     }`}>
                                     {item.step}
                                 </div>
@@ -487,7 +534,7 @@ const MyCouponsPage: React.FC = () => {
 
             {/* Footer */}
             <footer className="py-8 text-center border-t border-gray-100 mt-4">
-                <a href="#/" className="inline-flex items-center gap-2 text-blue-600 hover:underline text-sm font-medium">
+                <a href="/#/" onClick={(e) => { e.preventDefault(); window.location.href = '/#/'; }} className="inline-flex items-center gap-2 text-blue-600 hover:underline text-sm font-medium">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                     Voltar ao site
                 </a>
