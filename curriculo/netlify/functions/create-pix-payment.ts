@@ -88,13 +88,11 @@ export const handler: Handler = async (event: HandlerEvent) => {
                 finalAmount = Math.max(0.01, BASE_PRICE - discount);
                 description += ` (Cupom ${couponCode} aplicado)`;
 
-                // Incrementar uso e registrar email
-                await couponRef.update({
-                  usageCount: admin.firestore.FieldValue.increment(1),
-                  usedBy: admin.firestore.FieldValue.arrayUnion(userEmail)
-                });
+                // NÃO marcar cupom como usado aqui!
+                // O cupom só será marcado como usado quando o pagamento for CONFIRMADO
+                // Isso será feito em get-payment-status.ts
 
-                console.log(`✅ Cupom ${couponCode} aplicado para ${userEmail}. Desconto: R$${discount.toFixed(2)}`);
+                console.log(`✅ Cupom ${couponCode} validado para ${userEmail}. Desconto: R$${discount.toFixed(2)} (Aguardando pagamento)`);
               } else {
                 console.log(`⚠️ Cupom ${couponCode}: Email ${userEmail} já utilizou este cupom`);
               }
@@ -138,7 +136,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
         paymentId: payment.body.id,
         qrCodeUrl: `data:image/png;base64,${payment.body.point_of_interaction.transaction_data.qr_code_base64}`,
         copyPasteCode: payment.body.point_of_interaction.transaction_data.qr_code,
-        amount: finalAmount
+        amount: finalAmount,
+        // Retornar cupom e email para rastrear uso após confirmação
+        couponCode: body.coupon ? body.coupon.toUpperCase().trim() : null,
+        userEmail: userEmail
       }),
     };
 
