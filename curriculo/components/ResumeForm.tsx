@@ -1301,7 +1301,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
           </div>
         )}
 
-        <div className="flex-grow flex flex-col overflow-hidden">
+        <div className="flex-grow flex flex-col overflow-y-auto">
           {isFinished ? (
             <div className="text-center py-6 px-4 flex flex-col justify-center items-center flex-grow">
               {/* Ícone Animado de Sucesso */}
@@ -1429,7 +1429,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
           )}
         </div>
 
-        <div id="wizard-nav" className="sticky bottom-0 bg-white mt-auto flex justify-between gap-4 p-6 border-t border-gray-100">
+        <div id="wizard-nav" className="sticky bottom-0 z-10 bg-white mt-auto flex justify-between gap-4 p-6 border-t border-gray-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <button type="button" onClick={handlePrev} disabled={currentStep === 0 && !isFinished} className="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
             {isFinished ? 'Voltar' : 'Anterior'}
           </button>
