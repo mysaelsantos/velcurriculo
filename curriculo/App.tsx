@@ -334,33 +334,8 @@ const TestimonialsSection = React.memo(() => {
 
 // COMPONENTE PRINCIPAL
 const AppContent: React.FC = () => {
-    // --- LÓGICA DE ROTEAMENTO (ATUALIZADA) ---
-    const [currentRoute, setCurrentRoute] = useState(window.location.hash);
-
     // --- HOOK DE FEEDBACK ---
     const { status, triggerFeedback } = useFeedback();
-
-    useEffect(() => {
-        const handleHashChange = () => {
-            console.log("Navegação detectada para:", window.location.hash);
-            setCurrentRoute(window.location.hash);
-        }
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
-
-    // DEBUG: Mostra no console qual rota está ativa
-    console.log("Rota Atual do App:", currentRoute);
-
-    // Se a rota for admin (aceita #/admin, #admin ou #/admin/), mostra o Dashboard
-    if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
-        return <AdminDashboard />;
-    }
-
-    // Se a rota for meus-cupons, mostra a página de afiliados
-    if (currentRoute === '#/meus-cupons' || currentRoute === '#meus-cupons' || currentRoute === '#/meus-cupons/') {
-        return <MyCouponsPage />;
-    }
 
     // --- CÓDIGO DO SITE NORMAL ABAIXO ---
     const isPixTestMode = false;
@@ -548,6 +523,32 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         runAutoSetup();
         trackVisitor();
+    }, []);
+
+    // --- LEITURA DE CUPOM DA URL ---
+    // Extrai o cupom do hash: #/?cupom=CODIGO ou #/cupom=CODIGO
+    useEffect(() => {
+        try {
+            const hash = window.location.hash;
+            // Aceita formatos: #/?cupom=CODE ou #/cupom=CODE
+            const match = hash.match(/[?&]cupom=([^&]+)/i);
+            if (match && match[1]) {
+                const couponFromUrl = decodeURIComponent(match[1]).toUpperCase().trim();
+                if (couponFromUrl && !appliedCoupon) {
+                    console.log("Cupom detectado na URL:", couponFromUrl);
+                    setCouponCode(couponFromUrl);
+                    // Limpa o parâmetro da URL para evitar reprocessamento
+                    window.history.replaceState(null, '', '/#/');
+                    // Mostra toast informando que o cupom foi preenchido
+                    setTimeout(() => {
+                        setToast({ message: `Cupom "${couponFromUrl}" preenchido! Complete seus dados para aplicar.`, type: 'success' });
+                        setTimeout(() => setToast(null), 5000);
+                    }, 2500); // Aguarda o loading inicial
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao ler cupom da URL:", error);
+        }
     }, []);
 
     // --- RESTAURAÇÃO INTELIGENTE DE SESSÃO PIX (COM HIERARQUIA) ---
@@ -2055,12 +2056,39 @@ const AppContent: React.FC = () => {
     );
 };
 
-const App: React.FC = () => {
+// === ROUTER: Sempre montado para capturar hashchange ===
+const Router: React.FC = () => {
+    const [currentRoute, setCurrentRoute] = useState(window.location.hash);
+
+    useEffect(() => {
+        const handleHashChange = () => {
+            console.log("Navegação detectada para:", window.location.hash);
+            setCurrentRoute(window.location.hash);
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
+
+    // Se a rota for admin
+    if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
+        return <AdminDashboard />;
+    }
+
+    // Se a rota for meus-cupons
+    if (currentRoute === '#/meus-cupons' || currentRoute === '#meus-cupons' || currentRoute === '#/meus-cupons/') {
+        return <MyCouponsPage />;
+    }
+
+    // Rota padrão: site principal (envolvido pelo FeedbackProvider)
     return (
         <FeedbackProvider>
             <AppContent />
         </FeedbackProvider>
     );
+};
+
+const App: React.FC = () => {
+    return <Router />;
 };
 
 export default App;
