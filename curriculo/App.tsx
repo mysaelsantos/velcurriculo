@@ -26,6 +26,8 @@ import { FeedbackProvider, useFeedback } from './contexts/FeedbackContext';
 import FeedbackHeader from './components/FeedbackHeader';
 // HOOK DE NAVEGAÇÃO POR SWIPE
 import useSwipeNavigation from './hooks/useSwipeNavigation';
+// IMPORTA A PÁGINA DE AFILIADOS
+import MyCouponsPage from './components/MyCouponsPage';
 
 interface SavedResume extends ResumeData {
     savedAt: string;
@@ -353,6 +355,11 @@ const AppContent: React.FC = () => {
     // Se a rota for admin (aceita #/admin, #admin ou #/admin/), mostra o Dashboard
     if (currentRoute === '#/admin' || currentRoute === '#admin' || currentRoute === '#/admin/') {
         return <AdminDashboard />;
+    }
+
+    // Se a rota for meus-cupons, mostra a página de afiliados
+    if (currentRoute === '#/meus-cupons' || currentRoute === '#meus-cupons' || currentRoute === '#/meus-cupons/') {
+        return <MyCouponsPage />;
     }
 
     // --- CÓDIGO DO SITE NORMAL ABAIXO ---
