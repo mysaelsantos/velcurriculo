@@ -5,6 +5,7 @@ export interface PersonalInfo {
   jobTitle: string;
   email: string;
   phone: string;
+  whatsappPhone?: string; // Segundo número (WhatsApp) - usado no QR Code quando preenchido
   address: string;
   age: string;
   maritalStatus: string;
@@ -64,7 +65,7 @@ export interface ResumeData {
 
 // Interface estendida para a paginação
 export interface PageData extends Partial<ResumeData> {
-    // Distância exata do topo do <main> até onde o QR Code começa.
-    // Isso posiciona o espaçador fantasma.
-    qrSpacerMarginTop?: number; 
+  // Distância exata do topo do <main> até onde o QR Code começa.
+  // Isso posiciona o espaçador fantasma.
+  qrSpacerMarginTop?: number;
 }
