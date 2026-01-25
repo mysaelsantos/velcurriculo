@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import mercadopago from "mercadopago";
+import { db, admin } from "./firebase-admin";
 
 // Configurações de Origem (CORS)
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL || "https://velcurriculo.com.br";
@@ -28,8 +29,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   // Verifica configuração do Token
   if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) {
-      console.error("ERRO: Token MP ausente.");
-      return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno de configuração." }) };
+    console.error("ERRO: Token MP ausente.");
+    return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno de configuração." }) };
   }
 
   mercadopago.configure({
@@ -37,6 +38,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
   });
 
   const paymentId = event.queryStringParameters?.paymentId;
+  const couponCode = event.queryStringParameters?.coupon;
+  const userEmail = event.queryStringParameters?.email?.toLowerCase().trim();
 
   if (!paymentId || isNaN(Number(paymentId))) {
     return {
@@ -51,36 +54,68 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const payment = await mercadopago.payment.get(Number(paymentId));
 
     let frontendStatus = 'pending';
-    
+
     // Traduz o status do MP para o Site
     if (payment.body.status === 'approved') {
-        frontendStatus = 'succeeded';
+      frontendStatus = 'succeeded';
+
+      // MARCAR CUPOM COMO USADO apenas quando pagamento for aprovado
+      if (couponCode && userEmail) {
+        try {
+          const couponRef = db.collection('coupons').doc(couponCode);
+          const couponSnap = await couponRef.get();
+
+          if (couponSnap.exists) {
+            const couponData = couponSnap.data();
+            const usedBy = couponData?.usedBy || [];
+            const maxUsesPerUser = couponData?.maxUsesPerUser || 1;
+
+            // Contar quantas vezes o usuário já usou
+            const userUsageCount = usedBy.filter((email: string) => email === userEmail).length;
+
+            // Só incrementa se o usuário ainda não atingiu o limite
+            if (userUsageCount < maxUsesPerUser) {
+              await couponRef.update({
+                usageCount: admin.firestore.FieldValue.increment(1),
+                usedBy: admin.firestore.FieldValue.arrayUnion(userEmail)
+              });
+              console.log(`✅ Cupom ${couponCode} marcado como USADO por ${userEmail} (Pagamento ${paymentId} aprovado)`);
+            } else {
+              console.log(`⚠️ Cupom ${couponCode}: Usuário ${userEmail} já atingiu limite de usos`);
+            }
+          }
+        } catch (couponError) {
+          // Não falhar se houver erro ao atualizar cupom
+          console.error('Erro ao marcar cupom como usado:', couponError);
+        }
+      }
+
     } else if (payment.body.status === 'rejected' || payment.body.status === 'cancelled') {
-        frontendStatus = 'failed';
+      frontendStatus = 'failed';
     } else if (payment.body.status === 'in_process') {
-        frontendStatus = 'pending';
+      frontendStatus = 'pending';
     }
-    
+
     // Devolve a resposta limpa para o site agir
     return {
-        statusCode: 200,
-        headers: headers,
-        body: JSON.stringify({
-            status: frontendStatus,
-            id: payment.body.id,
-            date_created: payment.body.date_created
-        }),
+      statusCode: 200,
+      headers: headers,
+      body: JSON.stringify({
+        status: frontendStatus,
+        id: payment.body.id,
+        date_created: payment.body.date_created
+      }),
     };
 
   } catch (err) {
     const error = err as Error;
     console.error(`[Erro Status] ${error.message}`);
-    
+
     const statusCode = (error as any).status === 404 ? 404 : 500;
     return {
-        statusCode: statusCode,
-        headers: headers,
-        body: JSON.stringify({ message: "Erro ao verificar status." }),
+      statusCode: statusCode,
+      headers: headers,
+      body: JSON.stringify({ message: "Erro ao verificar status." }),
     };
   }
 };
