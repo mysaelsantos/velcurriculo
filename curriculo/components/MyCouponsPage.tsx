@@ -2,7 +2,26 @@ import React, { useState } from 'react';
 import { db } from '../services/firebase';
 import { doc, getDoc, collection, addDoc, query, where, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 
-// Interface para dados do cupom
+// === ÍCONES ===
+const Icons = {
+    Loading: () => (
+        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    ),
+    Logout: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>,
+    Copy: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
+    Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>,
+    ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>,
+    Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>,
+    Money: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>,
+    Users: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+    Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+    Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+};
+
+// === INTERFACES ===
 interface CouponData {
     code: string;
     pin: string;
@@ -11,12 +30,10 @@ interface CouponData {
     commissionPerUse: number;
     totalWithdrawn: number;
     isActive: boolean;
-    usedBy: string[];
     type: 'fixed' | 'percentage';
     value: number;
 }
 
-// Interface para solicitação de saque
 interface WithdrawRequest {
     id: string;
     couponCode: string;
@@ -24,38 +41,32 @@ interface WithdrawRequest {
     amount: number;
     pixKey: string;
     status: 'pending' | 'paid' | 'rejected';
-    paidAt?: Timestamp;
 }
 
-// Componente de FAQ Item
+// === COMPONENTE FAQ ===
 const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
     const [isOpen, setIsOpen] = useState(false);
-
     return (
-        <div className="border-b border-gray-200 last:border-0">
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full py-4 px-2 flex justify-between items-center text-left hover:bg-gray-50 transition rounded-lg"
-            >
-                <span className="font-medium text-gray-700">{question}</span>
-                <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+        <div className="border-b border-blue-700/30 last:border-0">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full py-4 flex justify-between items-center text-left">
+                <span className="font-medium text-white text-sm">{question}</span>
+                <span className={`text-blue-300 transition-transform ${isOpen ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span>
             </button>
-            {isOpen && (
-                <div className="px-2 pb-4 text-gray-600 text-sm leading-relaxed">
-                    {answer}
-                </div>
-            )}
+            {isOpen && <p className="pb-4 text-blue-200 text-sm leading-relaxed">{answer}</p>}
         </div>
     );
 };
 
+// === TELA DE LOADING ===
+const LoadingScreen = () => (
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+        <img src="/logo-azul.png" alt="Vel Currículo" className="h-10 mb-6 animate-pulse" />
+        <Icons.Loading />
+        <p className="text-blue-300 mt-4 text-sm">Carregando...</p>
+    </div>
+);
+
+// === COMPONENTE PRINCIPAL ===
 const MyCouponsPage: React.FC = () => {
     // Estados de autenticação
     const [couponCode, setCouponCode] = useState('');
@@ -64,29 +75,32 @@ const MyCouponsPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Estado do cupom autenticado
+    // Estado do cupom
     const [couponData, setCouponData] = useState<CouponData | null>(null);
 
     // Estados para saque
     const [pixKey, setPixKey] = useState('');
     const [isRequestingSaque, setIsRequestingSaque] = useState(false);
-    const [saqueError, setSaqueError] = useState('');
-    const [saqueSuccess, setSaqueSuccess] = useState('');
+    const [saqueMessage, setSaqueMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [withdrawRequests, setWithdrawRequests] = useState<WithdrawRequest[]>([]);
 
-    // Estado para copiar link
+    // Estados UI
     const [copied, setCopied] = useState(false);
+    const [pageLoading, setPageLoading] = useState(true);
 
-    // Verifica se é sexta-feira
+    // Simula loading inicial
+    React.useEffect(() => {
+        setTimeout(() => setPageLoading(false), 800);
+    }, []);
+
+    // Variáveis calculadas
     const isFriday = new Date().getDay() === 5;
-
-    // Calcula valores
     const totalEarnings = couponData ? (couponData.usageCount * (couponData.commissionPerUse || 1)) : 0;
     const totalWithdrawn = couponData?.totalWithdrawn || 0;
     const availableBalance = totalEarnings - totalWithdrawn;
-    const pendingWithdraw = withdrawRequests.filter(w => w.status === 'pending').reduce((acc, w) => acc + w.amount, 0);
+    const pendingWithdraw = withdrawRequests.filter(w => w.status === 'pending').reduce((sum: number, w: WithdrawRequest) => sum + w.amount, 0);
 
-    // Função de login
+    // Funções
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -97,54 +111,31 @@ const MyCouponsPage: React.FC = () => {
             const couponRef = doc(db, 'coupons', cleanCode);
             const couponSnap = await getDoc(couponRef);
 
-            if (!couponSnap.exists()) {
-                throw new Error('Cupom não encontrado');
-            }
-
+            if (!couponSnap.exists()) throw new Error('Cupom não encontrado.');
             const data = couponSnap.data() as CouponData;
+            if (!data.pin) throw new Error('Este cupom não possui acesso de afiliado.');
+            if (data.pin !== pin) throw new Error('PIN incorreto.');
 
-            if (!data.pin) {
-                throw new Error('Este cupom não possui acesso ao painel de afiliados');
-            }
-
-            if (data.pin !== pin) {
-                throw new Error('PIN incorreto');
-            }
-
-            setCouponData(data);
+            setCouponData({ ...data, code: cleanCode });
             setIsAuthenticated(true);
-
-            // Carregar solicitações de saque
             await loadWithdrawRequests(cleanCode);
-
         } catch (err: any) {
-            setError(err.message || 'Erro ao fazer login');
+            setError(err.message || 'Erro ao fazer login.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Carrega solicitações de saque
     const loadWithdrawRequests = async (code: string) => {
         try {
-            const withdrawRef = collection(db, 'withdrawRequests');
-            const q = query(
-                withdrawRef,
-                where('couponCode', '==', code),
-                orderBy('requestedAt', 'desc')
-            );
+            const q = query(collection(db, 'withdrawRequests'), where('couponCode', '==', code), orderBy('requestedAt', 'desc'));
             const snapshot = await getDocs(q);
-            const requests = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as WithdrawRequest[];
-            setWithdrawRequests(requests);
+            setWithdrawRequests(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as WithdrawRequest)));
         } catch (err) {
             console.error('Erro ao carregar saques:', err);
         }
     };
 
-    // Função de logout
     const handleLogout = () => {
         setIsAuthenticated(false);
         setCouponData(null);
@@ -153,34 +144,21 @@ const MyCouponsPage: React.FC = () => {
         setWithdrawRequests([]);
     };
 
-    // Função de solicitar saque
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(`https://velcurriculo.com.br?cupom=${couponData?.code}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     const handleRequestWithdraw = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSaqueError('');
-        setSaqueSuccess('');
-
-        if (!isFriday) {
-            setSaqueError('Saques só podem ser solicitados às sextas-feiras.');
-            return;
-        }
-
-        if (availableBalance < 5) {
-            setSaqueError('Valor mínimo para saque: R$ 5,00 (precisa de pelo menos 5 usos do cupom).');
-            return;
-        }
-
-        if (pendingWithdraw > 0) {
-            setSaqueError('Você já possui uma solicitação de saque pendente.');
-            return;
-        }
-
-        if (!pixKey.trim()) {
-            setSaqueError('Informe sua chave PIX.');
-            return;
-        }
+        setSaqueMessage(null);
+        if (!isFriday) return setSaqueMessage({ type: 'error', text: 'Saques só podem ser solicitados às sextas-feiras.' });
+        if (availableBalance < 5) return setSaqueMessage({ type: 'error', text: 'Valor mínimo para saque: R$ 5,00.' });
+        if (pendingWithdraw > 0) return setSaqueMessage({ type: 'error', text: 'Você já possui um saque pendente.' });
+        if (!pixKey.trim()) return setSaqueMessage({ type: 'error', text: 'Informe sua chave PIX.' });
 
         setIsRequestingSaque(true);
-
         try {
             await addDoc(collection(db, 'withdrawRequests'), {
                 couponCode: couponData?.code,
@@ -189,403 +167,289 @@ const MyCouponsPage: React.FC = () => {
                 pixKey: pixKey.trim(),
                 status: 'pending'
             });
-
-            setSaqueSuccess(`Solicitação de R$ ${availableBalance.toFixed(2)} enviada com sucesso! Você receberá em até 1 dia útil.`);
+            setSaqueMessage({ type: 'success', text: `Solicitação de R$ ${availableBalance.toFixed(2)} enviada com sucesso!` });
             setPixKey('');
-
-            // Recarrega lista de saques
-            if (couponData?.code) {
-                await loadWithdrawRequests(couponData.code);
-            }
-        } catch (err: any) {
-            setSaqueError('Erro ao solicitar saque. Tente novamente.');
+            if (couponData?.code) await loadWithdrawRequests(couponData.code);
+        } catch {
+            setSaqueMessage({ type: 'error', text: 'Erro ao solicitar saque. Tente novamente.' });
         } finally {
             setIsRequestingSaque(false);
         }
     };
 
-    // Função de copiar link
-    const handleCopyLink = () => {
-        const link = `https://velcurriculo.com.br?cupom=${couponData?.code}`;
-        navigator.clipboard.writeText(link);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    // Formata status do saque
     const formatStatus = (status: string) => {
-        switch (status) {
-            case 'pending': return { text: 'Pendente', color: 'text-yellow-600 bg-yellow-100' };
-            case 'paid': return { text: 'Pago', color: 'text-green-600 bg-green-100' };
-            case 'rejected': return { text: 'Rejeitado', color: 'text-red-600 bg-red-100' };
-            default: return { text: status, color: 'text-gray-600 bg-gray-100' };
-        }
+        const map: Record<string, { text: string; color: string }> = {
+            pending: { text: 'Pendente', color: 'bg-yellow-500/20 text-yellow-400' },
+            paid: { text: 'Pago', color: 'bg-green-500/20 text-green-400' },
+            rejected: { text: 'Rejeitado', color: 'bg-red-500/20 text-red-400' },
+        };
+        return map[status] || { text: status, color: 'bg-gray-500/20 text-gray-400' };
     };
 
-    // FAQ Data
     const faqData = [
-        {
-            question: "Como funciona o programa de afiliados?",
-            answer: "Você compartilha seu cupom de desconto com amigos e conhecidos. Cada vez que alguém usa seu cupom para baixar um currículo, você ganha R$ 1,00 de comissão."
-        },
-        {
-            question: "Quando posso solicitar meu saque?",
-            answer: "Saques podem ser solicitados apenas às sextas-feiras. O pagamento é processado em até 1 dia útil após a solicitação."
-        },
-        {
-            question: "Qual o valor mínimo para saque?",
-            answer: "O valor mínimo para saque é R$ 5,00, o que equivale a 5 usos do seu cupom."
-        },
-        {
-            question: "Como recebo meu pagamento?",
-            answer: "O pagamento é feito exclusivamente via PIX. Ao solicitar o saque, informe sua chave PIX (CPF, telefone, e-mail ou chave aleatória)."
-        },
-        {
-            question: "Posso ter mais de um cupom?",
-            answer: "Não. Cada afiliado possui um único cupom exclusivo com seu PIN de acesso."
-        },
-        {
-            question: "O uso do cupom é rastreado automaticamente?",
-            answer: "Sim! Cada uso válido (pagamento confirmado) é contabilizado automaticamente no seu painel."
-        }
+        { question: "Como funciona o programa?", answer: "Compartilhe seu cupom de desconto. Cada vez que alguém usar seu cupom para baixar um currículo, você ganha R$ 1,00 de comissão." },
+        { question: "Quando posso solicitar saque?", answer: "Saques podem ser solicitados apenas às sextas-feiras. O pagamento é processado em até 1 dia útil." },
+        { question: "Qual o valor mínimo para saque?", answer: "O valor mínimo é R$ 5,00, o que equivale a 5 usos do seu cupom." },
+        { question: "Como recebo meu pagamento?", answer: "O pagamento é feito exclusivamente via PIX. Informe sua chave (CPF, telefone, e-mail ou aleatória) ao solicitar." },
     ];
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-            {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-100">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-                    <a href="#/" className="flex items-center gap-2">
-                        <span className="text-2xl">🎟️</span>
-                        <span className="font-bold text-gray-800">Meus Cupons</span>
-                    </a>
-                    {isAuthenticated && (
-                        <button
-                            onClick={handleLogout}
-                            className="text-sm text-gray-500 hover:text-gray-700 transition"
-                        >
-                            Sair
-                        </button>
-                    )}
-                </div>
-            </header>
+    // Loading inicial
+    if (pageLoading) return <LoadingScreen />;
 
-            <main className="max-w-4xl mx-auto px-4 py-8">
-                {!isAuthenticated ? (
-                    // TELA DE LOGIN
-                    <div className="max-w-md mx-auto">
-                        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                            <div className="text-center mb-8">
-                                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <span className="text-4xl">🔐</span>
-                                </div>
-                                <h1 className="text-2xl font-bold text-gray-800 mb-2">Área do Afiliado</h1>
-                                <p className="text-gray-500">Acesse seu painel para acompanhar suas comissões</p>
-                            </div>
+    // ====================== TELA DE LOGIN ======================
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-poppins">
+                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-sm relative overflow-hidden">
+                    {/* Barra superior azul */}
+                    <div className="absolute top-0 left-0 w-full h-2 bg-blue-700"></div>
 
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Código do Cupom
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={couponCode}
-                                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                                        placeholder="Ex: JOAO10"
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase font-mono tracking-wider"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        PIN de Acesso
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={pin}
-                                        onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                                        placeholder="****"
-                                        maxLength={4}
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-center text-2xl tracking-[0.5em] font-mono"
-                                        required
-                                    />
-                                </div>
-
-                                {error && (
-                                    <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {error}
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition shadow-lg shadow-blue-600/20 disabled:opacity-50"
-                                >
-                                    {isLoading ? 'Verificando...' : 'Acessar Painel'}
-                                </button>
-                            </form>
-
-                            <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                                <p className="text-sm text-gray-500">
-                                    Não tem um cupom de afiliado?{' '}
-                                    <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                        Entre em contato
-                                    </a>
-                                </p>
-                            </div>
-                        </div>
+                    {/* Logo e Título */}
+                    <div className="text-center mb-6 pt-2">
+                        <img src="/logo-azul.png" alt="Vel Currículo" className="h-10 mx-auto mb-4" />
+                        <h1 className="text-xl font-bold text-gray-800">Área do Afiliado</h1>
+                        <p className="text-gray-400 text-sm mt-1">Acompanhe suas comissões e saques</p>
                     </div>
-                ) : (
-                    // DASHBOARD DO AFILIADO
-                    <div className="space-y-6">
-                        {/* Cards de Métricas */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">📊</span>
-                                    </div>
-                                    <span className="text-sm text-gray-500 font-medium">Total de Usos</span>
-                                </div>
-                                <p className="text-3xl font-bold text-gray-800">{couponData?.usageCount || 0}</p>
-                            </div>
 
-                            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">💰</span>
-                                    </div>
-                                    <span className="text-sm text-gray-500 font-medium">Total Ganho</span>
-                                </div>
-                                <p className="text-3xl font-bold text-green-600">R$ {totalEarnings.toFixed(2)}</p>
-                            </div>
-
-                            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">💳</span>
-                                    </div>
-                                    <span className="text-sm text-gray-500 font-medium">Disponível para Saque</span>
-                                </div>
-                                <p className="text-3xl font-bold text-purple-600">R$ {availableBalance.toFixed(2)}</p>
-                            </div>
+                    {/* Formulário */}
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Código do Cupom</label>
+                            <input
+                                type="text"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                placeholder="Ex: JOAO10"
+                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none uppercase font-mono tracking-wider text-center text-lg bg-gray-50"
+                                required
+                            />
                         </div>
 
-                        {/* Link de Compartilhamento */}
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-                            <h3 className="font-bold text-lg mb-2">🔗 Seu Link de Compartilhamento</h3>
-                            <p className="text-blue-100 text-sm mb-4">
-                                Compartilhe este link para ganhar R$ 1,00 por cada uso!
-                            </p>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={`velcurriculo.com.br?cupom=${couponData?.code}`}
-                                    readOnly
-                                    className="flex-1 bg-white/20 border border-white/30 rounded-lg px-4 py-2 text-white placeholder-white/50 backdrop-blur-sm"
-                                />
-                                <button
-                                    onClick={handleCopyLink}
-                                    className={`px-4 py-2 rounded-lg font-bold transition ${copied
-                                        ? 'bg-green-400 text-green-900'
-                                        : 'bg-white text-blue-600 hover:bg-blue-50'
-                                        }`}
-                                >
-                                    {copied ? '✓ Copiado!' : 'Copiar'}
-                                </button>
-                            </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase">PIN de Acesso</label>
+                            <input
+                                type="password"
+                                value={pin}
+                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                placeholder="****"
+                                maxLength={4}
+                                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none text-center text-2xl tracking-[0.5em] font-mono bg-gray-50"
+                                required
+                            />
                         </div>
 
-                        {/* Solicitar Saque */}
-                        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                            <h3 className="font-bold text-lg text-gray-800 mb-4">💸 Solicitar Saque</h3>
-
-                            {!isFriday && (
-                                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4 flex items-start gap-3">
-                                    <span className="text-2xl">📅</span>
-                                    <div>
-                                        <p className="font-medium text-yellow-800">Saques disponíveis apenas às sextas-feiras</p>
-                                        <p className="text-sm text-yellow-600">Volte na próxima sexta para solicitar seu saque.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {availableBalance < 5 && (
-                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4 flex items-start gap-3">
-                                    <span className="text-2xl">🎯</span>
-                                    <div>
-                                        <p className="font-medium text-gray-700">Valor mínimo não atingido</p>
-                                        <p className="text-sm text-gray-500">
-                                            Você precisa de pelo menos R$ 5,00 (5 usos) para solicitar um saque.
-                                            Faltam {Math.max(0, 5 - (couponData?.usageCount || 0))} usos!
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {pendingWithdraw > 0 && (
-                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4 flex items-start gap-3">
-                                    <span className="text-2xl">⏳</span>
-                                    <div>
-                                        <p className="font-medium text-blue-800">Saque pendente</p>
-                                        <p className="text-sm text-blue-600">
-                                            Você já possui uma solicitação de R$ {pendingWithdraw.toFixed(2)} aguardando pagamento.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <form onSubmit={handleRequestWithdraw} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Sua Chave PIX
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={pixKey}
-                                        onChange={(e) => setPixKey(e.target.value)}
-                                        placeholder="CPF, telefone, e-mail ou chave aleatória"
-                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                                        disabled={!isFriday || availableBalance < 5 || pendingWithdraw > 0}
-                                    />
-                                </div>
-
-                                {saqueError && (
-                                    <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-                                        {saqueError}
-                                    </div>
-                                )}
-
-                                {saqueSuccess && (
-                                    <div className="p-3 bg-green-50 text-green-600 rounded-lg text-sm">
-                                        {saqueSuccess}
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    disabled={!isFriday || availableBalance < 5 || pendingWithdraw > 0 || isRequestingSaque}
-                                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isRequestingSaque ? 'Solicitando...' : `Solicitar Saque de R$ ${availableBalance.toFixed(2)}`}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Histórico de Saques */}
-                        {withdrawRequests.length > 0 && (
-                            <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                                <h3 className="font-bold text-lg text-gray-800 mb-4">📋 Histórico de Saques</h3>
-                                <div className="space-y-3">
-                                    {withdrawRequests.map((request) => {
-                                        const status = formatStatus(request.status);
-                                        return (
-                                            <div key={request.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                                <div>
-                                                    <p className="font-bold text-gray-800">R$ {request.amount.toFixed(2)}</p>
-                                                    <p className="text-sm text-gray-500">
-                                                        {request.requestedAt?.toDate?.().toLocaleDateString('pt-BR') || 'Data não disponível'}
-                                                    </p>
-                                                </div>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${status.color}`}>
-                                                    {status.text}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                        {error && (
+                            <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm text-center font-medium">
+                                {error}
                             </div>
                         )}
 
-                        {/* Como Funciona */}
-                        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                            <h3 className="font-bold text-lg text-gray-800 mb-4">📋 Como Funciona</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="text-center p-4">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-2xl">1️⃣</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Compartilhe seu cupom com amigos e conhecidos</p>
-                                </div>
-                                <div className="text-center p-4">
-                                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-2xl">2️⃣</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Cada pessoa que usar ganha desconto e você ganha R$ 1,00</p>
-                                </div>
-                                <div className="text-center p-4">
-                                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-2xl">3️⃣</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Toda sexta-feira você pode solicitar seu saque</p>
-                                </div>
-                                <div className="text-center p-4">
-                                    <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <span className="text-2xl">4️⃣</span>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Receba via PIX em até 1 dia útil</p>
-                                </div>
-                            </div>
-                        </div>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full bg-blue-800 text-white font-bold py-3.5 rounded-xl hover:bg-blue-900 transition disabled:opacity-60 flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? <><Icons.Loading /> Verificando...</> : 'Acessar Painel'}
+                        </button>
+                    </form>
 
-                        {/* FAQ */}
-                        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                            <h3 className="font-bold text-lg text-gray-800 mb-4">❓ Perguntas Frequentes</h3>
-                            <div className="divide-y divide-gray-100">
-                                {faqData.map((item, index) => (
-                                    <FAQItem key={index} question={item.question} answer={item.answer} />
-                                ))}
-                            </div>
-                        </div>
+                    <p className="text-center text-xs text-gray-400 mt-6">
+                        Não tem um cupom?{' '}
+                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium">
+                            Fale conosco
+                        </a>
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
-                        {/* Regras do Programa */}
-                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-6 text-white shadow-lg">
-                            <h3 className="font-bold text-lg mb-4">📜 Regras do Programa</h3>
-                            <ul className="space-y-2 text-gray-300 text-sm">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Comissão de R$ 1,00 por cada uso válido (pagamento confirmado)
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Saques disponíveis apenas às sextas-feiras
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Valor mínimo para saque: R$ 5,00
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Pagamento em até 1 dia útil via PIX
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Não é permitido auto-uso do cupom
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-green-400">✓</span>
-                                    Reservamos o direito de cancelar cupons com uso fraudulento
-                                </li>
-                            </ul>
+    // ====================== DASHBOARD DO AFILIADO ======================
+    return (
+        <div className="min-h-screen bg-slate-900 font-poppins">
+            {/* Header */}
+            <header className="bg-blue-900 sticky top-0 z-50 shadow-lg">
+                <div className="max-w-lg mx-auto px-4 py-3 flex justify-between items-center">
+                    <img src="/logo-header.png" alt="Vel Currículo" className="h-5" />
+                    <div className="flex items-center gap-3">
+                        <span className="text-blue-200 text-sm font-medium">{couponData?.code}</span>
+                        <button onClick={handleLogout} className="p-2 text-blue-300 hover:text-white hover:bg-blue-800 rounded-lg transition">
+                            <Icons.Logout />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+                {/* Cards de Métricas */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-blue-300"><Icons.Users /></span>
+                            <span className="text-xs text-blue-300 font-medium">Total de Usos</span>
+                        </div>
+                        <p className="text-2xl font-bold text-white">{couponData?.usageCount || 0}</p>
+                    </div>
+
+                    <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-green-400"><Icons.Money /></span>
+                            <span className="text-xs text-blue-300 font-medium">Total Ganho</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-400">R$ {totalEarnings.toFixed(2)}</p>
+                    </div>
+                </div>
+
+                {/* Saldo Disponível */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-5 shadow-lg">
+                    <p className="text-blue-200 text-sm font-medium">Disponível para Saque</p>
+                    <p className="text-4xl font-bold text-white mt-1">R$ {availableBalance.toFixed(2)}</p>
+                    {totalWithdrawn > 0 && (
+                        <p className="text-blue-200 text-xs mt-2">Total já sacado: R$ {totalWithdrawn.toFixed(2)}</p>
+                    )}
+                </div>
+
+                {/* Link de Compartilhamento */}
+                <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                    <p className="text-blue-200 text-sm font-medium mb-3">🔗 Seu Link de Compartilhamento</p>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={`velcurriculo.com.br?cupom=${couponData?.code}`}
+                            readOnly
+                            className="flex-1 bg-blue-900/50 border border-blue-600/30 rounded-lg px-3 py-2.5 text-white text-sm truncate"
+                        />
+                        <button
+                            onClick={handleCopyLink}
+                            className={`px-4 py-2.5 rounded-lg font-bold text-sm transition flex items-center gap-2 ${copied ? 'bg-green-500 text-white' : 'bg-white text-blue-700 hover:bg-blue-50'
+                                }`}
+                        >
+                            {copied ? <><Icons.Check /> Copiado</> : <><Icons.Copy /> Copiar</>}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Solicitar Saque */}
+                <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                    <p className="text-white font-bold mb-3">💸 Solicitar Saque</p>
+
+                    {!isFriday && (
+                        <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl mb-3">
+                            <span className="text-yellow-400"><Icons.Calendar /></span>
+                            <p className="text-yellow-300 text-sm">Saques apenas às <strong>sextas-feiras</strong></p>
+                        </div>
+                    )}
+
+                    {availableBalance < 5 && availableBalance >= 0 && (
+                        <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl mb-3">
+                            <span className="text-blue-300"><Icons.Ticket /></span>
+                            <p className="text-blue-200 text-sm">Mínimo R$ 5,00 — Faltam <strong>{Math.max(0, 5 - (couponData?.usageCount || 0))} usos</strong></p>
+                        </div>
+                    )}
+
+                    {pendingWithdraw > 0 && (
+                        <div className="flex items-center gap-3 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl mb-3">
+                            <span className="text-orange-400"><Icons.Clock /></span>
+                            <p className="text-orange-300 text-sm">Saque de <strong>R$ {pendingWithdraw.toFixed(2)}</strong> pendente</p>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleRequestWithdraw} className="space-y-3">
+                        <input
+                            type="text"
+                            value={pixKey}
+                            onChange={(e) => setPixKey(e.target.value)}
+                            placeholder="Sua chave PIX (CPF, telefone, e-mail...)"
+                            className="w-full bg-blue-900/50 border border-blue-600/30 rounded-xl px-4 py-3 text-white placeholder-blue-400 text-sm outline-none focus:border-blue-400"
+                            disabled={!isFriday || availableBalance < 5 || pendingWithdraw > 0}
+                        />
+
+                        {saqueMessage && (
+                            <div className={`p-3 rounded-xl text-sm text-center font-medium ${saqueMessage.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                {saqueMessage.text}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={!isFriday || availableBalance < 5 || pendingWithdraw > 0 || isRequestingSaque}
+                            className="w-full bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {isRequestingSaque ? <><Icons.Loading /> Solicitando...</> : `Solicitar R$ ${availableBalance.toFixed(2)}`}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Histórico de Saques */}
+                {withdrawRequests.length > 0 && (
+                    <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                        <p className="text-white font-bold mb-3">📋 Histórico de Saques</p>
+                        <div className="space-y-2">
+                            {withdrawRequests.slice(0, 5).map((req) => {
+                                const status = formatStatus(req.status);
+                                return (
+                                    <div key={req.id} className="flex items-center justify-between p-3 bg-blue-900/40 rounded-xl">
+                                        <div>
+                                            <p className="font-bold text-white">R$ {req.amount.toFixed(2)}</p>
+                                            <p className="text-xs text-blue-300">{req.requestedAt?.toDate?.()?.toLocaleDateString('pt-BR') || '-'}</p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${status.color}`}>{status.text}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
+
+                {/* Como Funciona */}
+                <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                    <p className="text-white font-bold mb-4">📖 Como Funciona</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { emoji: '1️⃣', text: 'Compartilhe seu link' },
+                            { emoji: '2️⃣', text: 'Ganhe R$ 1 por uso' },
+                            { emoji: '3️⃣', text: 'Saque às sextas' },
+                            { emoji: '4️⃣', text: 'Receba via PIX' },
+                        ].map((step, i) => (
+                            <div key={i} className="text-center p-3 bg-blue-900/40 rounded-xl">
+                                <span className="text-2xl">{step.emoji}</span>
+                                <p className="text-xs text-blue-200 mt-1">{step.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* FAQ */}
+                <div className="bg-blue-800/50 backdrop-blur-sm rounded-2xl p-4 border border-blue-700/30">
+                    <p className="text-white font-bold mb-2">❓ Dúvidas Frequentes</p>
+                    {faqData.map((item, i) => <FAQItem key={i} question={item.question} answer={item.answer} />)}
+                </div>
+
+                {/* Regras */}
+                <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700">
+                    <p className="text-white font-bold mb-3">📜 Regras</p>
+                    <ul className="space-y-2 text-slate-300 text-xs">
+                        {[
+                            'R$ 1,00 por uso válido (pagamento confirmado)',
+                            'Saques apenas às sextas-feiras',
+                            'Mínimo para saque: R$ 5,00',
+                            'Pagamento via PIX em até 1 dia útil',
+                            'Proibido auto-uso do cupom',
+                        ].map((rule, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                                <span className="text-green-400 mt-0.5">✓</span>
+                                {rule}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             </main>
 
             {/* Footer */}
-            <footer className="bg-white border-t border-gray-100 mt-12 py-6">
-                <div className="max-w-4xl mx-auto px-4 text-center text-sm text-gray-500">
-                    <p>VelCurrículo © {new Date().getFullYear()} - Programa de Afiliados</p>
-                    <p className="mt-1">
-                        <a href="#/" className="text-blue-600 hover:underline">Voltar para o site</a>
-                    </p>
-                </div>
+            <footer className="py-6 text-center text-xs text-blue-400">
+                <a href="#/" className="hover:underline">← Voltar para o site</a>
+                <p className="mt-2 text-slate-500">VelCurrículo © {new Date().getFullYear()}</p>
             </footer>
         </div>
     );
