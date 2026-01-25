@@ -1311,11 +1311,20 @@ const AppContent: React.FC = () => {
                 return false;
             }
 
-            // Verifica se o email já usou este cupom (1 uso por usuário)
+            // Verifica se o email já atingiu o limite de usos por usuário
             const userEmail = resumeData.personalInfo.email?.toLowerCase().trim();
+            const maxUsesPerUser = couponData.maxUsesPerUser || 1; // Default: 1 uso por usuário
+
             if (userEmail && couponData.usedBy && Array.isArray(couponData.usedBy)) {
-                if (couponData.usedBy.includes(userEmail)) {
-                    setCouponError('Você já utilizou este cupom');
+                // Conta quantas vezes este email aparece no array usedBy
+                const userUsageCount = couponData.usedBy.filter((email: string) => email === userEmail).length;
+
+                if (userUsageCount >= maxUsesPerUser) {
+                    if (maxUsesPerUser === 1) {
+                        setCouponError('Você já utilizou este cupom');
+                    } else {
+                        setCouponError(`Você já utilizou este cupom ${userUsageCount} vez(es). Limite: ${maxUsesPerUser}`);
+                    }
                     setAppliedCoupon(null);
                     return false;
                 }
