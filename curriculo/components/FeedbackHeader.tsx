@@ -267,22 +267,30 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                 </div>
 
                 {/* 2. CONTEÚDO DO MENU */}
-                <div className={`absolute top-14 left-0 right-0 bottom-0 p-6 flex flex-col transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
+                <div className={`absolute top-14 left-0 right-0 bottom-0 p-4 flex flex-col overflow-y-auto transition-all duration-500 ${isMenuOpen ? 'opacity-100 translate-y-0 delay-100 z-20' : 'opacity-0 -translate-y-4 pointer-events-none z-0'}`}>
 
-                    {/* Botões Principais - Empilhados */}
-                    <div className="flex flex-col gap-3 mb-4">
+                    {/* Botões Principais - Grid 2x2 */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                         <button
                             onClick={() => { closeAll(); onOpenMyResumes(); }}
-                            className="w-full py-4 rounded-2xl bg-blue-50 text-blue-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 hover:bg-blue-100 transition-colors shadow-sm active:scale-95"
+                            className="py-3 px-3 rounded-xl bg-blue-50 text-blue-700 font-poppins font-semibold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 transition-colors active:scale-95"
                         >
                             <Icons.FileText /> Meus Currículos
                         </button>
 
                         <button
                             onClick={() => { closeAll(); setTimeout(openFeedback, 100); }}
-                            className="w-full py-4 rounded-2xl bg-amber-50 text-amber-700 font-poppins font-bold text-lg flex items-center justify-center gap-3 hover:bg-amber-100 transition-colors shadow-sm active:scale-95"
+                            className="py-3 px-3 rounded-xl bg-amber-50 text-amber-700 font-poppins font-semibold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors active:scale-95"
                         >
                             <Icons.StarFilled /> Avaliar
+                        </button>
+
+                        <button
+                            onClick={() => { closeAll(); /* TODO: Implementar Meus Cupons */ }}
+                            className="py-3 px-3 rounded-xl bg-green-50 text-green-700 font-poppins font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-100 transition-colors active:scale-95"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>
+                            Meus Cupons
                         </button>
 
                         {/* Botão Baixar App (PWA) */}
@@ -297,26 +305,26 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     closeAll();
                                 }
                             }}
-                            className={`w-full py-4 rounded-2xl font-poppins font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-sm active:scale-95 ${(window as any).deferredPrompt ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:shadow-lg hover:shadow-blue-500/25' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            className={`py-3 px-3 rounded-xl font-poppins font-semibold text-sm flex items-center justify-center gap-2 transition-colors active:scale-95 ${(window as any).deferredPrompt ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                             disabled={!(window as any).deferredPrompt}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                            {(window as any).deferredPrompt ? 'Baixar App' : 'App já instalado'}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                            {(window as any).deferredPrompt ? 'Baixar App' : 'App Instalado'}
                         </button>
                     </div>
 
                     <div className="w-full border-t border-gray-100 my-2"></div>
 
                     {/* Links Sociais */}
-                    <div className="flex flex-col gap-2 w-full mt-2">
-                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
-                            <div className="p-2 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
+                    <div className="flex flex-col gap-1 w-full">
+                        <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                            <div className="p-1.5 bg-green-100 text-green-600 rounded-full"><Icons.WhatsApp /></div> WhatsApp
                         </a>
-                        <a href="mailto:contato@velsites.com.br" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
-                            <div className="p-2 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
+                        <a href="mailto:contato@velsites.com.br" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                            <div className="p-1.5 bg-purple-100 text-purple-600 rounded-full"><Icons.Mail /></div> E-mail
                         </a>
-                        <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
-                            <div className="p-2 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
+                        <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                            <div className="p-1.5 bg-pink-100 text-pink-600 rounded-full"><Icons.Instagram /></div> Instagram
                         </a>
                     </div>
                 </div>
