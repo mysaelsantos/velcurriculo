@@ -1658,9 +1658,31 @@ const AppContent: React.FC = () => {
                 </div>
             </div>
 
-            {/* TOASTS */}
+            {/* TOASTS - Modernizado */}
             {toast && (
-                <div role="alert" className={`fixed top-20 right-5 z-[101] p-4 rounded-lg shadow-2xl text-white font-semibold transition-all duration-300 animate-fade-in-scale max-w-sm ${{ success: 'bg-green-500', error: 'bg-red-600', warning: 'bg-yellow-500 text-gray-900' }[toast.type]}`}>{toast.message}</div>
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[101] animate-fade-in-scale">
+                    <div role="alert" className={`flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl font-medium transition-all duration-300 backdrop-blur-lg border ${toast.type === 'success'
+                            ? 'bg-emerald-500/95 text-white border-white/20 shadow-emerald-500/30'
+                            : toast.type === 'error'
+                                ? 'bg-red-500/95 text-white border-white/20 shadow-red-500/30'
+                                : 'bg-amber-500/95 text-gray-900 border-amber-600/20 shadow-amber-500/30'
+                        }`}>
+                        {/* Ícone */}
+                        <span className="shrink-0">
+                            {toast.type === 'success' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            )}
+                            {toast.type === 'error' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                            )}
+                            {toast.type === 'warning' && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            )}
+                        </span>
+                        {/* Mensagem */}
+                        <span className="text-sm">{toast.message}</span>
+                    </div>
+                </div>
             )}
 
             {/* MODAIS DIVERSOS */}
