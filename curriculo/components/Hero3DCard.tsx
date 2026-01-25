@@ -116,7 +116,7 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '', isLoaded = fals
                     {/* Header - Avatar + Name */}
                     <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
                         <div className="w-12 h-12 md:w-14 lg:w-16 md:h-14 lg:h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                            <img src="/vel.png" alt="Vel" className="w-9 h-9 md:w-10 md:h-10 lg:w-12 lg:h-12 object-contain" />
+                            <img src="/vel.png" alt="Vel" className="w-7 h-7 md:w-9 md:h-9 lg:w-11 lg:h-11 object-contain" />
                         </div>
                         <div className="flex-1">
                             <div className="w-24 md:w-32 h-3 md:h-4 bg-gray-800 rounded mb-2"></div>
@@ -142,7 +142,7 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '', isLoaded = fals
 
                     {/* Floating Badge - ATS Score with counting animation */}
                     <div
-                        className="absolute -right-4 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float transition-all duration-500"
+                        className="absolute -right-8 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float transition-all duration-500"
                         style={{
                             transform: 'translateZ(40px)',
                             opacity: isVisible ? 1 : 0,
