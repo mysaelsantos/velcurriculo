@@ -179,6 +179,50 @@ const shuffleArray = <T,>(array: T[]) => {
     return newArray;
 };
 
+// Componente de Animação de Digitação para o Mockup
+const TypingAnimationMockup: React.FC = () => {
+    const names = ['Maria Silva', 'João Santos', 'Ana Costa', 'Pedro Oliveira', 'Carla Mendes'];
+    const [currentNameIndex, setCurrentNameIndex] = React.useState(0);
+    const [displayedText, setDisplayedText] = React.useState('');
+    const [isDeleting, setIsDeleting] = React.useState(false);
+    const [showCursor, setShowCursor] = React.useState(true);
+
+    React.useEffect(() => {
+        const cursorInterval = setInterval(() => setShowCursor(prev => !prev), 530);
+        return () => clearInterval(cursorInterval);
+    }, []);
+
+    React.useEffect(() => {
+        const currentName = names[currentNameIndex];
+        let timeout: NodeJS.Timeout;
+
+        if (!isDeleting && displayedText === currentName) {
+            timeout = setTimeout(() => setIsDeleting(true), 2000);
+        } else if (isDeleting && displayedText === '') {
+            setIsDeleting(false);
+            setCurrentNameIndex((prev) => (prev + 1) % names.length);
+        } else {
+            const speed = isDeleting ? 50 : 100;
+            timeout = setTimeout(() => {
+                setDisplayedText(prev =>
+                    isDeleting
+                        ? prev.slice(0, -1)
+                        : currentName.slice(0, prev.length + 1)
+                );
+            }, speed);
+        }
+
+        return () => clearTimeout(timeout);
+    }, [displayedText, isDeleting, currentNameIndex]);
+
+    return (
+        <span className="text-sm text-gray-700 font-medium">
+            {displayedText}
+            <span className={`inline-block w-0.5 h-4 bg-blue-500 ml-0.5 align-middle ${showCursor ? 'opacity-100' : 'opacity-0'}`}></span>
+        </span>
+    );
+};
+
 const shuffledTestimonials = shuffleArray(ALL_TESTIMONIALS);
 const halfLength = Math.ceil(shuffledTestimonials.length / 2);
 const TESTIMONIALS_1 = shuffledTestimonials.slice(0, halfLength);
@@ -1703,7 +1747,7 @@ const AppContent: React.FC = () => {
                                         <img src="/p3.png" className="w-full h-full object-cover" alt="Usuário" />
                                     </div>
                                     <div className="w-10 h-10 rounded-full border-2 border-white bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs text-white font-bold shadow-md">
-                                        +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
+                                        +1200
                                     </div>
                                 </div>
                                 <p className="text-gray-500 text-sm">Profissionais contratados usam VelCurrículo.</p>
@@ -1897,8 +1941,10 @@ const AppContent: React.FC = () => {
                                             <div className="h-6 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                                             <div className="h-3 bg-gray-200/80 rounded w-full"></div>
                                             <div className="h-3 bg-gray-200/80 rounded w-5/6"></div>
-                                            <div className="h-20 bg-gray-100 rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 mt-4">
-                                                Editor
+                                            {/* Typing Animation Input */}
+                                            <div className="h-20 bg-white rounded border border-gray-300 flex flex-col p-2 mt-4 shadow-inner">
+                                                <span className="text-[10px] text-gray-400 mb-1">Seu Nome</span>
+                                                <TypingAnimationMockup />
                                             </div>
                                         </div>
                                         <div className="bg-white rounded shadow-lg p-3 transform hover:scale-105 transition-transform">
