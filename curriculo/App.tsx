@@ -28,6 +28,7 @@ import FeedbackHeader from './components/FeedbackHeader';
 import useSwipeNavigation from './hooks/useSwipeNavigation';
 // IMPORTA A PÁGINA DE AFILIADOS
 import MyCouponsPage from './components/MyCouponsPage';
+import ErrorBoundary from './components/ErrorBoundary';
 
 interface SavedResume extends ResumeData {
     savedAt: string;
@@ -1424,6 +1425,18 @@ const AppContent: React.FC = () => {
     };
 
     const handlePaymentRequest = async () => {
+        // --- VALIDAÇÃO DE CAMPOS CRÍTICOS ---
+        const { name, email } = resumeData.personalInfo;
+        if (!name?.trim()) {
+            showToast("Preencha seu nome antes de finalizar", "warning");
+            return;
+        }
+        if (!email?.trim() || !email.includes('@')) {
+            showToast("Preencha um email válido antes de finalizar", "warning");
+            return;
+        }
+        // --- FIM DA VALIDAÇÃO ---
+
         if (hasPaidInSession) {
             exportToPdf(resumeData);
             return;
@@ -1746,7 +1759,7 @@ const AppContent: React.FC = () => {
                             </h1>
 
                             <p className="text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                                Não é apenas um currículo. É a sua história profissional em um formato premiado.
+                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
@@ -1833,17 +1846,19 @@ const AppContent: React.FC = () => {
                                 {...swipeHandlers}        // Aplica todos os handlers de swipe
                             >
                                 {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                    <ResumePreview
-                                        ref={previewRef}
-                                        data={paginatedData[currentPage - 1]}
-                                        isDemoMode={isDemoMode}
-                                        isFirstPage={currentPage === 1}
-                                        hideEmptySections={paginatedData.length > 1}
-                                        // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                        enableProtection={!hasPaidInSession}
-                                        contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                        hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
-                                    />
+                                    <ErrorBoundary>
+                                        <ResumePreview
+                                            ref={previewRef}
+                                            data={paginatedData[currentPage - 1]}
+                                            isDemoMode={isDemoMode}
+                                            isFirstPage={currentPage === 1}
+                                            hideEmptySections={paginatedData.length > 1}
+                                            // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                            enableProtection={!hasPaidInSession}
+                                            contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                                            hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
+                                        />
+                                    </ErrorBoundary>
                                 )}
                             </div>
                             {paginatedData.length > 1 && (
