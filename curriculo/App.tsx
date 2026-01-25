@@ -1672,24 +1672,21 @@ const AppContent: React.FC = () => {
                             </h1>
 
                             <p className="text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                                Não é apenas um currículo. É a sua história profissional contada através de design premiado e inteligência artificial. Destaque-se em meio à multidão.
+                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado. 
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
                                 <button
                                     onClick={() => setIsImportModalOpen(true)}
-                                    className="group inline-flex items-center justify-center gap-2 btn-primary text-white font-bold py-3.5 px-8 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+                                    className="inline-flex items-center justify-center btn-primary text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
                                 >
                                     Começar Agora
-                                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
                                 </button>
                                 <a
-                                    href="#features"
-                                    className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full border-2 border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all"
+                                    href="#como-funciona"
+                                    className="inline-flex items-center justify-center px-6 py-3 rounded-full border-2 border-gray-200 bg-white text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all"
                                 >
-                                    Ver Modelos
+                                    Como funciona
                                 </a>
                             </div>
 
