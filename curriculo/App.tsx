@@ -1886,7 +1886,7 @@ const AppContent: React.FC = () => {
                 <TestimonialsSection />
 
                 {/* CTA FINAL - Design Limpo */}
-                <section id="final" className="py-16 md:py-24 relative overflow-hidden bg-white">
+                <section id="final" className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
 
                     <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
                         <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
