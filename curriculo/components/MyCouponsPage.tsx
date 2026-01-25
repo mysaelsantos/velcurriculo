@@ -428,42 +428,70 @@ const MyCouponsPage: React.FC = () => {
                     </div>
                 )}
 
-                {/* Como Funciona */}
+                {/* Como Funciona - Versão Detalhada */}
                 <div className="bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80">
-                    <h3 className="font-semibold text-gray-700 mb-5">Como funciona</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <h3 className="font-semibold text-gray-700 mb-6">Como funciona</h3>
+                    <div className="space-y-5">
                         {[
-                            { icon: <Icons.Share2 />, title: 'Compartilhe', desc: 'Envie seu link' },
-                            { icon: <Icons.Gift />, title: 'Desconto', desc: 'Amigo ganha desc.' },
-                            { icon: <Icons.TrendingUp />, title: 'Ganhe', desc: 'R$1 por indicação' },
-                            { icon: <Icons.Wallet />, title: 'Saque', desc: 'Via PIX às sextas' },
-                        ].map((item, i) => (
-                            <div key={i} className="text-center p-4 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors group">
-                                <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                                    {item.icon}
+                            { step: 1, title: 'Compartilhe seu link', desc: 'Envie para amigos que precisam de um currículo profissional.', active: true },
+                            { step: 2, title: 'Eles ganham desconto', desc: 'Seu cupom oferece um desconto exclusivo para novos usuários.' },
+                            { step: 3, title: 'Você ganha comissão', desc: 'A cada uso válido, você recebe R$ 1,00 de comissão.' },
+                            { step: 4, title: 'Saque via PIX', desc: 'Às sextas-feiras, solicite o saque do seu saldo disponível.' },
+                        ].map((item) => (
+                            <div key={item.step} className="flex items-start gap-4 group">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 transition-transform group-hover:scale-110 shadow-lg ${item.active
+                                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
+                                        : 'bg-gray-100 text-gray-500 border border-gray-200 group-hover:border-blue-300'
+                                    }`}>
+                                    {item.step}
                                 </div>
-                                <p className="font-semibold text-gray-800 text-sm">{item.title}</p>
-                                <p className="text-gray-500 text-xs">{item.desc}</p>
+                                <div>
+                                    <h4 className="font-semibold text-gray-800">{item.title}</h4>
+                                    <p className="text-gray-500 text-sm">{item.desc}</p>
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* FAQ */}
+                {/* FAQ Completo */}
                 <div className="bg-white rounded-2xl p-5 shadow-lg shadow-gray-100/50 border border-gray-100/80">
                     <h3 className="font-semibold text-gray-700 mb-2">Dúvidas frequentes</h3>
                     {[
-                        { question: "Quanto ganho por indicação?", answer: "R$ 1,00 por cada uso válido (pagamento confirmado)." },
-                        { question: "Quando posso sacar?", answer: "Apenas às sextas-feiras, mínimo de R$ 5,00." },
-                        { question: "Como recebo?", answer: "Via PIX em até 1 dia útil." },
+                        { question: "Como funciona o programa de afiliados?", answer: "Compartilhe seu cupom de desconto. Cada vez que alguém usar seu cupom para baixar um currículo pago, você recebe R$ 1,00 de comissão." },
+                        { question: "Quando posso solicitar um saque?", answer: "Saques podem ser solicitados apenas às sextas-feiras. O pagamento é processado em até 1 dia útil via PIX." },
+                        { question: "Qual o valor mínimo para saque?", answer: "O valor mínimo é R$ 5,00, equivalente a 5 usos válidos do seu cupom." },
+                        { question: "Como recebo meu pagamento?", answer: "O pagamento é feito exclusivamente via PIX. Informe sua chave (CPF, telefone, e-mail ou aleatória) ao solicitar o saque." },
                     ].map((item, i) => <FAQItem key={i} question={item.question} answer={item.answer} />)}
+                </div>
+
+                {/* Regras do Programa */}
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                    <h3 className="font-semibold text-gray-700 mb-4">Regras do programa</h3>
+                    <ul className="space-y-3">
+                        {[
+                            'Comissão de R$ 1,00 por uso válido (pagamento confirmado)',
+                            'Saques disponíveis apenas às sextas-feiras',
+                            'Valor mínimo para saque: R$ 5,00',
+                            'Pagamento via PIX em até 1 dia útil',
+                            'Proibido o auto-uso do próprio cupom',
+                        ].map((rule, i) => (
+                            <li key={i} className="flex items-start gap-3 text-gray-600 text-sm">
+                                <span className="text-green-500 mt-0.5 shrink-0"><Icons.CheckCircle /></span>
+                                {rule}
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </main>
 
             {/* Footer */}
-            <footer className="py-6 text-center border-t border-gray-100">
-                <a href="#/" className="text-blue-600 hover:underline text-sm font-medium">← Voltar ao site</a>
-                <p className="mt-2 text-gray-400 text-xs">VelCurrículo © {new Date().getFullYear()}</p>
+            <footer className="py-8 text-center border-t border-gray-100 mt-4">
+                <a href="#/" className="inline-flex items-center gap-2 text-blue-600 hover:underline text-sm font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Voltar ao site
+                </a>
+                <p className="mt-3 text-gray-400 text-xs">VelCurrículo © {new Date().getFullYear()}</p>
             </footer>
         </div>
     );
