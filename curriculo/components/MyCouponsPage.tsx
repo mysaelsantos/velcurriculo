@@ -303,14 +303,8 @@ const MyCouponsPage: React.FC = () => {
 
                 {/* Card Principal - Saldo (Redesenhado) */}
                 <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-blue-500/20 group">
-                    {/* Gradiente Premium com Animação */}
+                    {/* Gradiente Premium */}
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600"></div>
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
-
-                    {/* Decorações Circulares Animadas */}
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full transition-transform duration-700 group-hover:scale-110"></div>
-                    <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full transition-transform duration-700 group-hover:scale-110"></div>
-                    <div className="absolute top-1/2 right-1/4 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
 
                     <div className="relative z-10 p-6 text-white">
                         <div className="flex items-center gap-2 text-blue-100 mb-2">
