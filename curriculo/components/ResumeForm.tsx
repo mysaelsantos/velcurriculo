@@ -1235,51 +1235,73 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
 
         <div className="flex-grow flex flex-col overflow-hidden">
           {isFinished ? (
-            <div className="text-center py-6 px-4 flex flex-col justify-center items-center flex-grow">
-              {/* Ícone de sucesso com tamanho fixo */}
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4 flex-shrink-0">
-                <svg className="w-8 h-8 text-green-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-800 mb-1">Seu currículo está pronto!</h3>
+            <div className="flex-grow flex flex-col items-center justify-center px-4 py-6">
+              {/* Card Principal com Glassmorphism */}
+              <div className="w-full max-w-sm bg-gradient-to-br from-white via-white to-indigo-50/50 border border-gray-100 rounded-3xl shadow-xl p-6 space-y-5">
 
-              {/* --- ÁREA DE PREÇO COMPACTA --- */}
-              <div className="mb-4">
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-gray-400 text-base line-through">R$ 5,00</span>
-                    <span className="text-2xl font-bold text-green-600">R$ {(5 - appliedCoupon.discount).toFixed(2).replace('.', ',')}</span>
+                {/* Seção de Sucesso */}
+                <div className="text-center">
+                  {/* Ícone Animado de Sucesso */}
+                  <div className="relative inline-flex items-center justify-center mb-4">
+                    {/* Círculo de Fundo com Gradiente */}
+                    <div className="absolute w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full opacity-20 animate-pulse"></div>
+                    {/* Círculo Principal */}
+                    <div className="relative w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-green-200">
+                      <svg className="w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-2xl font-bold text-blue-700">R$ 5,00</p>
-                )}
-              </div>
 
-              {/* --- CONTAINER UNIFICADO PARA CUPOM E TERMOS --- */}
-              <div className="w-full space-y-3">
-                {/* Campo de Cupom */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
+                  {/* Título */}
+                  <h3 className="text-xl font-bold text-gray-800 mb-1">Seu currículo está pronto!</h3>
+                  <p className="text-sm text-gray-500">Finalize o pagamento para baixar</p>
+                </div>
+
+                {/* Área de Preço Premium */}
+                <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-4 text-center shadow-lg shadow-indigo-200/50">
                   {appliedCoupon ? (
-                    /* Cupom Aplicado */
-                    <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-600 flex-shrink-0">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                          <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg>
-                        <span className="font-mono font-bold text-green-700 truncate">{appliedCoupon.code}</span>
-                        <span className="text-green-600 text-sm whitespace-nowrap">(-R$ {appliedCoupon.discount.toFixed(2).replace('.', ',')})</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="text-white/60 text-lg line-through">R$ 5,00</span>
+                        <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full">
+                          -{appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `R$ ${appliedCoupon.discount.toFixed(2).replace('.', ',')}`}
+                        </span>
+                      </div>
+                      <p className="text-3xl font-black text-white drop-shadow-sm">
+                        R$ {(5 - appliedCoupon.discount).toFixed(2).replace('.', ',')}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-3xl font-black text-white drop-shadow-sm">R$ 5,00</p>
+                  )}
+                  <p className="text-white/70 text-xs mt-1">Pagamento único • PDF de alta qualidade</p>
+                </div>
+
+                {/* Seção de Cupom */}
+                <div className="space-y-3">
+                  {appliedCoupon ? (
+                    /* Cupom Aplicado com Sucesso */
+                    <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-mono font-bold text-green-700 truncate text-sm">{appliedCoupon.code}</p>
+                          <p className="text-green-600 text-xs">Cupom aplicado com sucesso!</p>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={onRemoveCoupon}
-                        className="text-gray-400 hover:text-red-500 transition-colors p-1 flex-shrink-0"
+                        className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
                         title="Remover cupom"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
@@ -1287,15 +1309,23 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                     </div>
                   ) : (
                     /* Campo para digitar cupom */
-                    <>
-                      <p className="text-xs font-medium text-gray-500 mb-2">Tem um cupom de desconto?</p>
+                    <div className="bg-gray-50/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500">
+                          <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                          <path d="M13 5v2" />
+                          <path d="M13 17v2" />
+                          <path d="M13 11v2" />
+                        </svg>
+                        <p className="text-sm font-medium text-gray-700">Tem um cupom de desconto?</p>
+                      </div>
                       <div className="flex gap-2">
                         <input
                           type="text"
-                          placeholder="CÓDIGO"
+                          placeholder="Digite o código"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                          className="flex-1 min-w-0 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm placeholder:text-gray-400 placeholder:normal-case placeholder:tracking-normal placeholder:font-sans"
                           maxLength={20}
                           disabled={isValidatingCoupon}
                         />
@@ -1303,7 +1333,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                           type="button"
                           onClick={() => onValidateCoupon(couponCode)}
                           disabled={isValidatingCoupon || !couponCode.trim()}
-                          className="px-4 py-2 bg-indigo-600 text-white font-semibold text-sm rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center min-w-[80px]"
+                          className="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold text-sm rounded-xl hover:from-indigo-600 hover:to-purple-600 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center min-w-[90px] shadow-md shadow-indigo-200/50 disabled:shadow-none"
                         >
                           {isValidatingCoupon ? (
                             <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1315,36 +1345,46 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                       </div>
                       {/* Mensagem de erro */}
                       {couponError && (
-                        <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="mt-3 flex items-center gap-2 text-red-500 text-xs bg-red-50 px-3 py-2 rounded-lg">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="10" />
                             <line x1="12" y1="8" x2="12" y2="12" />
                             <line x1="12" y1="16" x2="12.01" y2="16" />
                           </svg>
                           {couponError}
-                        </p>
+                        </div>
                       )}
-                    </>
+                    </div>
                   )}
+
+                  {/* Área de Aceite dos Termos */}
+                  <label htmlFor="terms-checkbox" className="flex items-center gap-3 bg-gray-50/80 backdrop-blur-sm border border-gray-200 rounded-xl p-4 cursor-pointer hover:bg-gray-100/80 transition-colors">
+                    <div className="relative flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        id="terms-checkbox"
+                        checked={isTermsAccepted}
+                        onChange={(e) => setIsTermsAccepted(e.target.checked)}
+                        className="peer sr-only"
+                      />
+                      <div className={`w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center ${isTermsAccepted ? 'bg-gradient-to-r from-indigo-500 to-purple-500 border-transparent' : 'bg-white border-gray-300'}`}>
+                        {isTermsAccepted && (
+                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-sm text-gray-700 leading-snug">
+                      Li e concordo com os{' '}
+                      <button type="button" onClick={(e) => { e.preventDefault(); setIsTermsModalOpen(true); }} className="text-indigo-600 font-semibold hover:underline">
+                        Termos e Condições de Uso
+                      </button>.
+                    </span>
+                  </label>
                 </div>
 
-                {/* Área de Aceite dos Termos - mesma largura que o cupom */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="terms-checkbox"
-                      checked={isTermsAccepted}
-                      onChange={(e) => setIsTermsAccepted(e.target.checked)}
-                      className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
-                    />
-                    <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none leading-snug">
-                      Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
-                    </label>
-                  </div>
-                </div>
               </div>
-
             </div>
           ) : (
             <div id="wizard-steps-container" ref={stepsContainerRef}>
