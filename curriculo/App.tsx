@@ -1991,7 +1991,7 @@ const AppContent: React.FC = () => {
                                     <img src="/p3.png" className="w-full h-full object-cover" alt="Usuário" />
                                 </div>
                                 <div className="w-11 h-11 rounded-full border-[3px] border-white bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs text-white font-bold shadow-lg">
-                                    +{resumesGenerated > 100 ? Math.floor(resumesGenerated / 100) * 100 : resumesGenerated}
+                                    +1200
                                 </div>
                             </div>
                             <span className="text-gray-500 text-sm ml-1">currículos gerados</span>
