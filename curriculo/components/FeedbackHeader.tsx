@@ -293,7 +293,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                         </button>
 
                         <button
-                            onClick={() => { closeAll(); /* TODO: Implementar Meus Cupons */ }}
+                            onClick={() => { closeAll(); window.location.hash = '/meus-cupons'; }}
                             className="w-full h-12 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-poppins font-medium text-sm flex items-center gap-3 px-4 transition-colors active:scale-[0.98] border border-gray-100"
                         >
                             <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
