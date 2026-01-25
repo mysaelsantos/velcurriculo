@@ -41,7 +41,11 @@ const Icons = {
     Ticket: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>,
     Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>,
     ThumbsUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12" /><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z" /></svg>,
-    Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+    Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>,
+    Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+    Coins: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></svg>,
+    Bell: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>,
+    Percent: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -120,6 +124,10 @@ const AdminDashboard: React.FC = () => {
     const [newCoupon, setNewCoupon] = useState({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
     const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
+
+    // --- SISTEMA DE NOTIFICAÇÕES ---
+    const [notifications, setNotifications] = useState<{ id: string; type: 'sale' | 'lead' | 'coupon' | 'review'; message: string; time: Date; read: boolean }[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => { const u = onAuthStateChanged(auth, setUser); return () => u(); }, []);
 
@@ -731,20 +739,44 @@ const AdminDashboard: React.FC = () => {
         <div className="flex h-screen bg-gray-50 font-poppins overflow-hidden">
             <style>{` .animate-slide-in-left { animation: slideInLeft 0.3s ease-out forwards; } @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } .custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; } `}</style>
 
-            {/* SIDEBAR */}
-            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-[#002e9e] text-white hidden lg:flex flex-col transition-all duration-300 shadow-xl z-30 relative`}>
+            {/* SIDEBAR MODERNIZADA */}
+            <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#002e9e] to-[#001d6e] text-white hidden lg:flex flex-col transition-all duration-300 shadow-2xl z-30 relative`}>
+                {/* Logo */}
                 <div className="h-20 flex items-center justify-center border-b border-white/10 relative">
-                    {sidebarCollapsed ? <span className="font-bold text-2xl">V</span> : <img src="/logo-header.png" alt="Logo" className="h-7" />}
-                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -right-3 top-8 bg-blue-600 text-white p-1 rounded-full border border-white shadow-sm hover:scale-110 transition">{sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}</button>
+                    {sidebarCollapsed ? <span className="font-bold text-2xl bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center">V</span> : <img src="/logo-header.png" alt="Logo" className="h-7" />}
+                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute -right-3 top-8 bg-blue-500 text-white p-1.5 rounded-full border-2 border-white shadow-lg hover:scale-110 hover:bg-blue-400 transition-all">{sidebarCollapsed ? <Icons.ChevronRight /> : <Icons.ChevronLeft />}</button>
                 </div>
-                <nav className="flex-1 py-6 px-3 space-y-2">
+
+                {/* Menu Principal */}
+                <nav className="flex-1 py-6 px-3 space-y-1">
+                    {!sidebarCollapsed && <p className="text-[10px] uppercase tracking-widest text-blue-300/60 font-bold px-3 mb-3">Menu</p>}
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} icon={<Icons.Grid />} label="Visão Geral" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'resumes'} onClick={() => setActiveTab('resumes')} icon={<Icons.FileText />} label="Leads & Currículos" />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={<Icons.TrendingUp />} label="Business Intelligence" />
-                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" />
+
+                    {!sidebarCollapsed && <div className="h-px bg-white/10 my-4"></div>}
+                    {!sidebarCollapsed && <p className="text-[10px] uppercase tracking-widest text-blue-300/60 font-bold px-3 mb-3">Gestão</p>}
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" badge={reviewStats.pending > 0 ? reviewStats.pending : undefined} />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'coupons'} onClick={() => setActiveTab('coupons')} icon={<Icons.Ticket />} label="Cupons & Promoções" />
                 </nav>
-                <div className="p-4 border-t border-white/10"><button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2 rounded-lg text-blue-200 hover:bg-blue-800 transition ${sidebarCollapsed ? 'justify-center' : ''}`}><Icons.LogOut /> {!sidebarCollapsed && <span>Sair</span>}</button></div>
+
+                {/* User Section */}
+                <div className="p-4 border-t border-white/10 bg-white/5">
+                    <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center font-bold text-lg shadow-lg">
+                            A
+                        </div>
+                        {!sidebarCollapsed && (
+                            <div className="flex-1">
+                                <p className="font-semibold text-sm">Administrador</p>
+                                <p className="text-xs text-blue-200/70">admin@velcurriculo.com</p>
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={() => signOut(auth)} className={`flex items-center gap-3 w-full p-2.5 mt-3 rounded-xl text-blue-200 hover:bg-white/10 hover:text-white transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                        <Icons.LogOut /> {!sidebarCollapsed && <span className="text-sm">Sair da conta</span>}
+                    </button>
+                </div>
             </aside>
 
             {/* MOBILE MENU */}
@@ -765,29 +797,85 @@ const AdminDashboard: React.FC = () => {
             )}
 
             <main className="flex-1 overflow-y-auto w-full bg-slate-50">
-                {/* TOP HEADER COM NOVO FILTRO */}
+                {/* TOP HEADER COM NOTIFICAÇÕES */}
                 <header className="bg-white h-auto border-b border-gray-200 flex flex-col md:flex-row items-center justify-between px-4 lg:px-8 py-4 sticky top-0 z-20 shadow-sm/50 gap-4">
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden text-gray-600 hover:bg-gray-100 p-2 rounded-md"><Icons.Menu /></button>
                         <h1 className="text-xl font-bold text-gray-800">Dashboard Gerencial</h1>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto bg-gray-50 p-1.5 rounded-xl border border-gray-200/60 shadow-inner">
-                        <div className="flex w-full sm:w-auto bg-white rounded-lg shadow-sm p-0.5">
-                            <button onClick={() => handlePresetChange('today')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'today' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Hoje</button>
-                            <button onClick={() => handlePresetChange('7d')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '7d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>7D</button>
-                            <button onClick={() => handlePresetChange('30d')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '30d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>30D</button>
-                            <button onClick={() => handlePresetChange('month')} className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'month' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Mês</button>
+                    <div className="flex items-center gap-4">
+                        {/* Filtros de Data */}
+                        <div className="flex flex-col sm:flex-row items-center gap-3 bg-gray-50 p-1.5 rounded-xl border border-gray-200/60 shadow-inner">
+                            <div className="flex bg-white rounded-lg shadow-sm p-0.5">
+                                <button onClick={() => handlePresetChange('today')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'today' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Hoje</button>
+                                <button onClick={() => handlePresetChange('7d')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '7d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>7D</button>
+                                <button onClick={() => handlePresetChange('30d')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === '30d' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>30D</button>
+                                <button onClick={() => handlePresetChange('month')} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${datePreset === 'month' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>Mês</button>
+                            </div>
+
+                            <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-3">
+                                <input type="date" value={dateRange.start} onChange={e => { setDateRange({ ...dateRange, start: e.target.value }); setDatePreset('custom') }} className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
+                                <span className="text-gray-400 text-xs font-medium">até</span>
+                                <input type="date" value={dateRange.end} onChange={e => { setDateRange({ ...dateRange, end: e.target.value }); setDatePreset('custom') }} className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-gray-200 pt-2 sm:pt-0 sm:pl-3">
-                            <div className="relative flex-1">
-                                <input type="date" value={dateRange.start} onChange={e => { setDateRange({ ...dateRange, start: e.target.value }); setDatePreset('custom') }} className="w-full text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
-                            </div>
-                            <span className="text-gray-400 text-xs font-medium">até</span>
-                            <div className="relative flex-1">
-                                <input type="date" value={dateRange.end} onChange={e => { setDateRange({ ...dateRange, end: e.target.value }); setDatePreset('custom') }} className="w-full text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-600 font-medium focus:ring-1 focus:ring-blue-500 outline-none" />
-                            </div>
+                        {/* Botão de Notificações */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className="relative p-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-800"
+                            >
+                                <Icons.Bell />
+                                {notifications.filter(n => !n.read).length > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                        {notifications.filter(n => !n.read).length}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Dropdown de Notificações */}
+                            {showNotifications && (
+                                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                                    <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-blue-50 to-white">
+                                        <h3 className="font-bold text-gray-800">Notificações</h3>
+                                        {notifications.length > 0 && (
+                                            <button onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))} className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                                Marcar todas como lidas
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-72 overflow-y-auto">
+                                        {notifications.length === 0 ? (
+                                            <div className="p-6 text-center text-gray-400">
+                                                <Icons.Bell />
+                                                <p className="mt-2 text-sm">Nenhuma notificação</p>
+                                            </div>
+                                        ) : (
+                                            notifications.slice(0, 5).map((notif) => (
+                                                <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}>
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${notif.type === 'sale' ? 'bg-green-500' :
+                                                                notif.type === 'lead' ? 'bg-blue-500' :
+                                                                    notif.type === 'coupon' ? 'bg-purple-500' : 'bg-yellow-500'
+                                                            }`}>
+                                                            {notif.type === 'sale' ? <Icons.DollarSign /> :
+                                                                notif.type === 'lead' ? <Icons.Users /> :
+                                                                    notif.type === 'coupon' ? <Icons.Ticket /> : <Icons.Star />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm text-gray-800 font-medium">{notif.message}</p>
+                                                            <p className="text-xs text-gray-400 mt-1">Àgora mesmo</p>
+                                                        </div>
+                                                        {!notif.read && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -1163,7 +1251,7 @@ const AdminDashboard: React.FC = () => {
 
                                         {/* Campo PIN para Afiliados */}
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">🔐 PIN do Afiliado (Opcional)</label>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase flex items-center gap-1"><Icons.Lock /> PIN do Afiliado (Opcional)</label>
                                             <input
                                                 type="text"
                                                 placeholder="Ex: 1234"
@@ -1227,13 +1315,13 @@ const AdminDashboard: React.FC = () => {
 
                                                     {coupon.pin && (
                                                         <div className="text-center">
-                                                            <span className="block text-xs text-gray-400 font-bold uppercase">🔐 PIN</span>
+                                                            <span className="block text-xs text-gray-400 font-bold uppercase flex items-center gap-1 justify-center"><Icons.Lock /> PIN</span>
                                                             <span className="font-bold text-blue-600 font-mono tracking-wider">{coupon.pin}</span>
                                                         </div>
                                                     )}
 
                                                     <div className="text-center">
-                                                        <span className="block text-xs text-gray-400 font-bold uppercase">💰 Comissão</span>
+                                                        <span className="block text-xs text-gray-400 font-bold uppercase flex items-center gap-1 justify-center"><Icons.Coins /> Comissão</span>
                                                         <span className="font-bold text-green-600">R$ {((coupon.usageCount || 0) * (coupon.commissionPerUse || 1)).toFixed(2)}</span>
                                                     </div>
 
@@ -1281,9 +1369,15 @@ const AdminDashboard: React.FC = () => {
     );
 };
 
-const SidebarItem = ({ collapsed, active, onClick, icon, label }: any) => (
+const SidebarItem = ({ collapsed, active, onClick, icon, label, badge }: any) => (
     <button onClick={onClick} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 group relative ${active ? 'bg-white text-blue-900 shadow-lg font-semibold' : 'text-blue-100 hover:bg-white/10 hover:text-white'} ${collapsed ? 'justify-center' : ''}`} title={collapsed ? label : ''}>
-        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>{!collapsed && <span className="animate-fade-in">{label}</span>}
+        <div className={`${active ? 'text-blue-700' : 'text-current'}`}>{icon}</div>
+        {!collapsed && <span className="animate-fade-in flex-1 text-left">{label}</span>}
+        {badge && (
+            <span className={`${collapsed ? 'absolute -top-1 -right-1' : ''} min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center`}>
+                {badge}
+            </span>
+        )}
     </button>
 );
 
