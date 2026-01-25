@@ -1659,9 +1659,9 @@ const AppContent: React.FC = () => {
                 onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
             />
 
-            <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-36">
+            <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-40">
                 {/* NOVA SEÇÃO HERO - Layout 2 colunas com Card 3D */}
-                <section id="intro" className="mt-4 lg:mt-16 mb-16">
+                <section id="intro" className="mt-4 lg:mt-24 mb-16">
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                         {/* Coluna de Texto */}
                         <div className="text-center lg:text-left order-2 lg:order-1">
@@ -1672,7 +1672,7 @@ const AppContent: React.FC = () => {
                             </h1>
 
                             <p className="text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado. 
+                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
@@ -1845,7 +1845,7 @@ const AppContent: React.FC = () => {
                         <div className="grid md:grid-cols-2 gap-12 items-center">
                             {/* Lado Esquerdo: Texto e Passos */}
                             <div>
-                                <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-800">
+                                <h2 className="text-3xl md:text-4xl font-bold mb-8 text-gray-800 text-center md:text-left">
                                     Tão fácil quanto<br />preencher um <span className="gradient-text">formulário</span>.
                                 </h2>
 
