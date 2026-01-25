@@ -117,7 +117,7 @@ const AdminDashboard: React.FC = () => {
     const previewContainerRef = useRef<HTMLDivElement>(null);
 
     // --- ESTADOS DO FORM DE CUPOM ---
-    const [newCoupon, setNewCoupon] = useState({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1' });
+    const [newCoupon, setNewCoupon] = useState({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
     const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
     const [editingCoupon, setEditingCoupon] = useState<any | null>(null);
 
@@ -376,6 +376,12 @@ const AdminDashboard: React.FC = () => {
             if (isNaN(val) || val <= 0) throw new Error("Valor inválido");
             if (newCoupon.type === 'percentage' && val > 100) throw new Error("Porcentagem não pode ser maior que 100");
 
+            // Validar PIN
+            const pinValue = newCoupon.pin.trim();
+            if (pinValue && (!/^\d{4}$/.test(pinValue))) {
+                throw new Error("PIN deve ter exatamente 4 dígitos numéricos");
+            }
+
             await setDoc(doc(db, 'coupons', cleanCode), {
                 code: cleanCode,
                 type: newCoupon.type,
@@ -385,9 +391,12 @@ const AdminDashboard: React.FC = () => {
                 usageCount: 0,
                 isActive: true,
                 createdAt: Timestamp.now(),
-                usedBy: []
+                usedBy: [],
+                pin: pinValue || '',
+                commissionPerUse: 1.00,
+                totalWithdrawn: 0
             });
-            setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1' });
+            setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
             alert("Cupom criado com sucesso!");
         } catch (err: any) {
             alert(err.message);
@@ -413,7 +422,8 @@ const AdminDashboard: React.FC = () => {
             type: coupon.type,
             value: coupon.value.toString(),
             maxUses: coupon.maxUses?.toString() || '',
-            maxUsesPerUser: coupon.maxUsesPerUser?.toString() || '1'
+            maxUsesPerUser: coupon.maxUsesPerUser?.toString() || '1',
+            pin: coupon.pin || ''
         });
     };
 
@@ -426,13 +436,20 @@ const AdminDashboard: React.FC = () => {
             if (isNaN(val) || val <= 0) throw new Error("Valor inválido");
             if (newCoupon.type === 'percentage' && val > 100) throw new Error("Porcentagem não pode ser maior que 100");
 
+            // Validar PIN
+            const pinValue = newCoupon.pin.trim();
+            if (pinValue && (!/^\d{4}$/.test(pinValue))) {
+                throw new Error("PIN deve ter exatamente 4 dígitos numéricos");
+            }
+
             await updateDoc(doc(db, 'coupons', editingCoupon.id), {
                 type: newCoupon.type,
                 value: val,
                 maxUses: newCoupon.maxUses ? parseInt(newCoupon.maxUses) : 9999,
                 maxUsesPerUser: newCoupon.maxUsesPerUser ? parseInt(newCoupon.maxUsesPerUser) : 1,
+                pin: pinValue || ''
             });
-            setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1' });
+            setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
             setEditingCoupon(null);
             alert("Cupom atualizado com sucesso!");
         } catch (err: any) {
@@ -444,7 +461,7 @@ const AdminDashboard: React.FC = () => {
 
     const handleCancelEdit = () => {
         setEditingCoupon(null);
-        setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1' });
+        setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
     };
 
     // UTILS & PDF GENERATION
@@ -1144,6 +1161,25 @@ const AdminDashboard: React.FC = () => {
                                             </div>
                                         </div>
 
+                                        {/* Campo PIN para Afiliados */}
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">🔐 PIN do Afiliado (Opcional)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: 1234"
+                                                value={newCoupon.pin}
+                                                onChange={e => {
+                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                                    setNewCoupon({ ...newCoupon, pin: value });
+                                                }}
+                                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono tracking-widest text-center text-lg"
+                                                maxLength={4}
+                                            />
+                                            <p className="text-[10px] text-gray-400 mt-1">
+                                                PIN de 4 dígitos para o afiliado acessar a página "Meus Cupons" e acompanhar comissões.
+                                            </p>
+                                        </div>
+
                                         <div className="flex gap-2">
                                             {editingCoupon && (
                                                 <button type="button" onClick={handleCancelEdit} className="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300 transition">
@@ -1187,6 +1223,18 @@ const AdminDashboard: React.FC = () => {
                                                     <div className="text-center">
                                                         <span className="block text-xs text-gray-400 font-bold uppercase">Por Usuário</span>
                                                         <span className="font-bold text-gray-700">{coupon.maxUsesPerUser || 1}x</span>
+                                                    </div>
+
+                                                    {coupon.pin && (
+                                                        <div className="text-center">
+                                                            <span className="block text-xs text-gray-400 font-bold uppercase">🔐 PIN</span>
+                                                            <span className="font-bold text-blue-600 font-mono tracking-wider">{coupon.pin}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="text-center">
+                                                        <span className="block text-xs text-gray-400 font-bold uppercase">💰 Comissão</span>
+                                                        <span className="font-bold text-green-600">R$ {((coupon.usageCount || 0) * (coupon.commissionPerUse || 1)).toFixed(2)}</span>
                                                     </div>
 
                                                     <div className="flex gap-2">
