@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 interface Hero3DCardProps {
     className?: string;
@@ -7,10 +7,62 @@ interface Hero3DCardProps {
 const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // State for 3D transform
     const [transform, setTransform] = useState('perspective(1000px) rotateX(5deg) rotateY(-10deg)');
 
+    // State for entrance animation
+    const [isVisible, setIsVisible] = useState(false);
+    const [hasAnimated, setHasAnimated] = useState(false);
+
+    // State for ATS score counting animation
+    const [atsScore, setAtsScore] = useState(0);
+    const targetScore = 98;
+
+    // Entrance animation - triggered after a delay to account for loading screen
+    useEffect(() => {
+        const entranceTimer = setTimeout(() => {
+            setIsVisible(true);
+            setHasAnimated(true);
+        }, 500); // Delay to sync with loading screen finish
+
+        return () => clearTimeout(entranceTimer);
+    }, []);
+
+    // ATS Score counting animation with easeOutQuart for deceleration
+    useEffect(() => {
+        if (!isVisible) return;
+
+        const duration = 2000; // 2 seconds
+        const startTime = Date.now();
+
+        const easeOutQuart = (t: number): number => {
+            return 1 - Math.pow(1 - t, 4); // Strong deceleration near the end
+        };
+
+        const animateScore = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeOutQuart(progress);
+            const currentScore = Math.round(easedProgress * targetScore);
+
+            setAtsScore(currentScore);
+
+            if (progress < 1) {
+                requestAnimationFrame(animateScore);
+            }
+        };
+
+        // Start counting after a small delay for the badge to appear
+        const countTimer = setTimeout(() => {
+            requestAnimationFrame(animateScore);
+        }, 300);
+
+        return () => clearTimeout(countTimer);
+    }, [isVisible]);
+
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!containerRef.current) return;
+        if (!containerRef.current || !hasAnimated) return;
 
         const rect = containerRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -18,14 +70,14 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
 
-        const rotateX = ((y - centerY) / centerY) * -8; // Max 8deg rotation
+        const rotateX = ((y - centerY) / centerY) * -8;
         const rotateY = ((x - centerX) / centerX) * 8;
 
         setTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`);
     };
 
     const handleMouseLeave = () => {
-        // Reset to default angle
+        if (!hasAnimated) return;
         setTransform('perspective(1000px) rotateX(5deg) rotateY(-10deg)');
     };
 
@@ -44,11 +96,12 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
             {/* The Resume Card */}
             <div
                 ref={cardRef}
-                className="hero-3d-card animate-card-entrance relative w-[240px] md:w-[320px] lg:w-[360px] h-[320px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-4 md:p-6 transition-transform duration-300 ease-out"
+                className="hero-3d-card relative w-[240px] md:w-[320px] lg:w-[360px] h-[320px] md:h-[460px] lg:h-[500px] bg-white backdrop-blur-xl border border-gray-200 rounded-2xl shadow-2xl p-4 md:p-6 transition-all duration-500 ease-out"
                 style={{
-                    transform,
+                    transform: isVisible ? transform : 'perspective(1000px) rotateX(15deg) rotateY(-20deg) translateY(30px)',
                     transformStyle: 'preserve-3d',
-                    boxShadow: '0 25px 50px -12px rgba(0, 79, 220, 0.15), 0 0 0 1px rgba(0, 79, 220, 0.05)'
+                    boxShadow: '0 25px 50px -12px rgba(0, 79, 220, 0.15), 0 0 0 1px rgba(0, 79, 220, 0.05)',
+                    opacity: isVisible ? 1 : 0,
                 }}
             >
                 {/* Glass Shine Effect */}
@@ -81,10 +134,14 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
                         </div>
                     </div>
 
-                    {/* Floating Badge - ATS Score */}
+                    {/* Floating Badge - ATS Score with counting animation */}
                     <div
-                        className="absolute -right-4 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float"
-                        style={{ transform: 'translateZ(40px)' }}
+                        className="absolute -right-4 md:-right-6 lg:-right-8 top-16 md:top-20 bg-white border border-green-200 p-2 md:p-3 rounded-xl shadow-xl flex items-center gap-2 md:gap-3 animate-float transition-all duration-300"
+                        style={{
+                            transform: 'translateZ(40px)',
+                            opacity: isVisible ? 1 : 0,
+                            transitionDelay: '0.3s'
+                        }}
                     >
                         <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                             <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,7 +150,9 @@ const Hero3DCard: React.FC<Hero3DCardProps> = ({ className = '' }) => {
                         </div>
                         <div>
                             <div className="text-[10px] md:text-xs text-gray-500">ATS Score</div>
-                            <div className="text-xs md:text-sm font-bold text-gray-800">98/100</div>
+                            <div className="text-xs md:text-sm font-bold text-gray-800">
+                                <span className="tabular-nums">{atsScore}</span>/100
+                            </div>
                         </div>
                     </div>
                 </div>
