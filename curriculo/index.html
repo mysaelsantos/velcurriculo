@@ -667,6 +667,20 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+        // PWA Install Prompt - Captura o evento para uso posterior
+        window.deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window.deferredPrompt = e;
+            console.log('PWA install prompt captured');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            window.deferredPrompt = null;
+            console.log('PWA installed');
+        });
+    </script>
 </body>
 
 </html>
