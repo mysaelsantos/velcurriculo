@@ -490,6 +490,20 @@
             animation: fade-in-scale 0.2s ease-out forwards;
         }
 
+        /* 3D Hero Card Float Animation */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) translateZ(40px);
+            }
+            50% {
+                transform: translateY(-10px) translateZ(40px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
         #whatsapp-qr-code-container {
             position: absolute;
             bottom: 1.5rem;
