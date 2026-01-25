@@ -772,6 +772,11 @@ const AppContent: React.FC = () => {
         } catch (error) {
             console.error("Error removing localStorage item", error);
         }
+
+        // CORREÇÃO: Esconde preview durante recalculo para evitar "flash" de corte
+        setIsPreviewReady(false);
+        isScaleCalculatedRef.current = false;
+
         setIsContinueModalOpen(false);
         setPendingSavedData(null);
         setPixPaymentData(null); // Limpa estado visual também
@@ -1841,6 +1846,7 @@ const AppContent: React.FC = () => {
                                     borderRadius: '8px',
                                     touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
                                     userSelect: 'none',   // Evita seleção de texto durante arraste
+                                    overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
                                     ...swipeStyle         // Aplica transform e cursor dinâmicos
                                 }}
                                 {...swipeHandlers}        // Aplica todos os handlers de swipe
