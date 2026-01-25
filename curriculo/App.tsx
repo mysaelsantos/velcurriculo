@@ -764,7 +764,7 @@ const AppContent: React.FC = () => {
         setPendingSavedData(null);
     };
 
-    const handleStartNew = () => {
+    const handleStartNew = async () => {
         try {
             localStorage.removeItem('inProgressResume');
             // INTELIGÊNCIA: Se o usuário quer começar do zero, o PIX antigo NÃO serve mais.
@@ -784,6 +784,9 @@ const AppContent: React.FC = () => {
         setContentScale(1); // Reseta escala
         // Abre o modal de escolha ao começar novo, se desejar
         setIsImportModalOpen(true);
+
+        // CORREÇÃO MOBILE: Força recálculo de proporção (mesma lógica do carregamento inicial)
+        await performTemplateRefresh('template-modern');
     };
 
     // CORREÇÃO: Função modificada para preservar o estilo (template) ao reiniciar
@@ -1614,7 +1617,8 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        <>
+        // CORREÇÃO: Wrapper com overflow-x hidden para evitar que o swipe empurre o header fixed
+        <div style={{ overflowX: 'hidden', width: '100%', minHeight: '100vh' }}>
             {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
             {isLoading && (
                 <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
@@ -2095,7 +2099,7 @@ const AppContent: React.FC = () => {
                     </div>
                 </div>
             </footer>
-        </>
+        </div>
     );
 };
 
