@@ -1721,9 +1721,6 @@ const AppContent: React.FC = () => {
                 </section>
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
-                    <div className="my-8 flex justify-center">
-                        <img src="https://files.catbox.moe/aid7gz.png" alt="Visualização dos modelos de currículo" className="max-w-full md:max-w-sm rounded-lg" />
-                    </div>
                     <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
                         <ResumeForm
                             data={resumeData}
