@@ -1746,7 +1746,7 @@ const AppContent: React.FC = () => {
                             </h1>
 
                             <p className="text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado.
+                                Não é apenas um currículo. É a sua história profissional em um formato premiado.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
