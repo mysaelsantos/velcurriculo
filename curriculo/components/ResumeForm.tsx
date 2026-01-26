@@ -1321,7 +1321,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               </div>
 
               {/* --- CONTAINER UNIFICADO PARA CUPOM E TERMOS --- */}
-              <div className="w-full space-y-3">
+              <div className="w-full max-w-md mx-auto space-y-3">
                 {/* Campo de Cupom */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
                   {appliedCoupon ? (
