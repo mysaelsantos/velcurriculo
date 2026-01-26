@@ -1862,6 +1862,46 @@ const AppContent: React.FC = () => {
                     </div>
                 </section>
 
+                {/* SEÇÃO DE ESTATÍSTICAS - Apenas Desktop */}
+                <section className="hidden lg:block py-16 mb-8">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="grid grid-cols-3 gap-8">
+                            {/* Estatística 1 */}
+                            <div className="text-center group">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="text-4xl font-bold text-gray-800 mb-1">98%</div>
+                                <div className="text-gray-500 text-sm">Taxa de Aprovação ATS</div>
+                            </div>
+
+                            {/* Estatística 2 */}
+                            <div className="text-center group">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-50 text-green-600 mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="text-4xl font-bold text-gray-800 mb-1">10 min</div>
+                                <div className="text-gray-500 text-sm">Para Criar seu Currículo</div>
+                            </div>
+
+                            {/* Estatística 3 */}
+                            <div className="text-center group">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 mb-4 group-hover:scale-110 transition-transform">
+                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                </div>
+                                <div className="text-4xl font-bold text-gray-800 mb-1">1.200+</div>
+                                <div className="text-gray-500 text-sm">Profissionais Contratados</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="gerador" className="mb-16 scroll-mt-24">
                     <div id="form-layout" className="flex flex-col lg:flex-row gap-8">
                         <ResumeForm
@@ -1890,7 +1930,7 @@ const AppContent: React.FC = () => {
                             onRemoveCoupon={handleRemoveCoupon}
                             paymentAmount={paymentAmount}
                         />
-                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28 lg:self-start lg:flex lg:justify-center">
+                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28 lg:self-start lg:flex lg:flex-col lg:items-center">
                             <div
                                 ref={previewWrapperRef}
                                 className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
