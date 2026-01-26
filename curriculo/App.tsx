@@ -238,7 +238,7 @@ const HighlightsSection: React.FC = () => {
             title: "3 Templates",
             subtitle: "Modelos Profissionais",
             color: "blue",
-            delay: 0
+            animClass: "animate-fade-in-up"
         },
         {
             icon: (
@@ -249,7 +249,7 @@ const HighlightsSection: React.FC = () => {
             title: "IA Integrada",
             subtitle: "Textos Otimizados",
             color: "green",
-            delay: 200
+            animClass: "animate-fade-in-up-delay-1"
         },
         {
             icon: (
@@ -260,7 +260,7 @@ const HighlightsSection: React.FC = () => {
             title: "PDF Premium",
             subtitle: "Exportação em Alta Qualidade",
             color: "purple",
-            delay: 400
+            animClass: "animate-fade-in-up-delay-2"
         }
     ];
 
@@ -279,11 +279,7 @@ const HighlightsSection: React.FC = () => {
                         return (
                             <div
                                 key={index}
-                                className={`${colors.bg} text-center group p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}
-                                style={{
-                                    animation: `fade-in-up 0.7s ease-out ${item.delay}ms forwards`,
-                                    opacity: 0
-                                }}
+                                className={`${colors.bg} text-center group p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${item.animClass}`}
                             >
                                 <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${colors.iconBg} mb-5 group-hover:scale-110 transition-transform duration-300`}>
                                     {item.icon}
@@ -1940,7 +1936,7 @@ const AppContent: React.FC = () => {
                 <HighlightsSection />
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
-                    <div id="form-layout" className="flex flex-col lg:flex-row gap-8">
+                    <div id="form-layout" className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start">
                         <ResumeForm
                             data={resumeData}
                             setData={setResumeData}
@@ -1967,7 +1963,7 @@ const AppContent: React.FC = () => {
                             onRemoveCoupon={handleRemoveCoupon}
                             paymentAmount={paymentAmount}
                         />
-                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28 lg:self-start lg:flex lg:flex-col lg:items-center">
+                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28">
                             <div
                                 ref={previewWrapperRef}
                                 className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
