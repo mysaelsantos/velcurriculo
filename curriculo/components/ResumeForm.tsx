@@ -1285,7 +1285,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         </div>
       )}
 
-      <div id="form-wizard" style={{ scrollMarginTop: '9rem' }} className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-md form-container lg:max-h-[80vh] lg:overflow-y-auto">
+      <div id="form-wizard" style={{ scrollMarginTop: '9rem' }} className="w-full lg:w-1/3 bg-white p-6 rounded-lg shadow-md form-container">
         {!isFinished && (
           <div id="wizard-header" className="mb-4 text-center">
             <p id="wizard-step-info" className="text-sm font-medium text-gray-500 mb-1">
@@ -1303,21 +1303,10 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
 
         <div className="flex-grow flex flex-col overflow-hidden">
           {isFinished ? (
-            <div className="text-center py-6 px-4 flex flex-col justify-center items-center flex-grow">
-              {/* Ícone Animado de Sucesso */}
-              <div className="relative inline-flex items-center justify-center mb-4">
-                {/* Círculo de Fundo com Gradiente */}
-                <div className="absolute w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full opacity-20 animate-pulse"></div>
-                {/* Círculo Principal */}
-                <div className="relative w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-green-200">
-                  <svg className="w-8 h-8 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-              </div>
+            <div className="text-center p-8 flex flex-col justify-center items-center flex-grow">
+              <svg className="w-24 h-24 text-green-500 mb-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              <h3 className="text-2xl font-bold text-gray-800">Seu currículo está pronto!</h3>
 
-              <h3 className="text-xl font-bold text-gray-800 mb-1">Seu currículo está pronto!</h3>
-              <p className="text-sm text-gray-500 mb-4">Finalize o pagamento para baixar</p>
 
               {/* --- ÁREA DE PREÇO COMPACTA --- */}
               <div className="mb-4">
