@@ -1395,13 +1395,13 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
 
                 {/* Área de Aceite dos Termos - mesma largura que o cupom */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-2 shadow-sm">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="checkbox"
                       id="terms-checkbox"
                       checked={isTermsAccepted}
                       onChange={(e) => setIsTermsAccepted(e.target.checked)}
-                      className="w-4 h-4 mt-0.5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
+                      className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
                     />
                     <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none leading-snug text-left">
                       Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
