@@ -228,27 +228,6 @@ const TypingAnimationMockup: React.FC = () => {
 
 // Componente de Destaques com Animação de Scroll Reveal
 const HighlightsSection: React.FC = () => {
-    const sectionRef = React.useRef<HTMLElement>(null);
-    const [isVisible, setIsVisible] = React.useState(false);
-
-    React.useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsVisible(true);
-                    observer.disconnect(); // Anima apenas uma vez
-                }
-            },
-            { threshold: 0.2 } // Ativa quando 20% da seção está visível
-        );
-
-        if (sectionRef.current) {
-            observer.observe(sectionRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
-
     const highlights = [
         {
             icon: (
@@ -270,7 +249,7 @@ const HighlightsSection: React.FC = () => {
             title: "IA Integrada",
             subtitle: "Textos Otimizados",
             color: "green",
-            delay: 150
+            delay: 200
         },
         {
             icon: (
@@ -281,7 +260,7 @@ const HighlightsSection: React.FC = () => {
             title: "PDF Premium",
             subtitle: "Exportação em Alta Qualidade",
             color: "purple",
-            delay: 300
+            delay: 400
         }
     ];
 
@@ -292,7 +271,7 @@ const HighlightsSection: React.FC = () => {
     };
 
     return (
-        <section ref={sectionRef} className="hidden lg:block py-20 mb-8">
+        <section className="hidden lg:block py-20 mb-8">
             <div className="max-w-5xl mx-auto px-4">
                 <div className="grid grid-cols-3 gap-10">
                     {highlights.map((item, index) => {
@@ -300,8 +279,11 @@ const HighlightsSection: React.FC = () => {
                         return (
                             <div
                                 key={index}
-                                className={`${colors.bg} text-center group p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}
-                                style={{ animationDelay: `${item.delay}ms`, animationFillMode: 'forwards' }}
+                                className={`${colors.bg} text-center group p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}
+                                style={{
+                                    animation: `fade-in-up 0.7s ease-out ${item.delay}ms forwards`,
+                                    opacity: 0
+                                }}
                             >
                                 <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${colors.iconBg} mb-5 group-hover:scale-110 transition-transform duration-300`}>
                                     {item.icon}
