@@ -1592,11 +1592,29 @@ const AppContent: React.FC = () => {
         }
     };
 
-    const handleExportJson = () => {
+    const handleExportJson = async () => {
         const json = JSON.stringify(resumeData, null, 2);
-        navigator.clipboard.writeText(json)
-            .then(() => alert("JSON do currículo copiado para a área de transferência!"))
-            .catch(err => alert("Erro ao copiar JSON: " + err));
+        try {
+            await navigator.clipboard.writeText(json);
+            alert("JSON do currículo copiado para a área de transferência!");
+        } catch {
+            // Fallback para Safari e navegadores antigos
+            const textArea = document.createElement('textarea');
+            textArea.value = json;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            textArea.style.top = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (success) {
+                alert("JSON do currículo copiado para a área de transferência!");
+            } else {
+                alert("Erro ao copiar JSON. Tente selecionar manualmente.");
+            }
+        }
     };
 
     const handleFillDemoData = () => {
@@ -1783,7 +1801,7 @@ const AppContent: React.FC = () => {
                             </h1>
 
                             <p className="text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                                Não é apenas um currículo. É a sua história profissional em um formato premiado.
+                                Não é apenas um currículo. Sua história profissional contada através de um currículo premiado.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8">
@@ -1829,7 +1847,7 @@ const AppContent: React.FC = () => {
                 </section>
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
-                    <div id="form-wizard" className="flex flex-col lg:flex-row gap-8">
+                    <div id="form-layout" className="flex flex-col lg:flex-row gap-8">
                         <ResumeForm
                             data={resumeData}
                             setData={setResumeData}
