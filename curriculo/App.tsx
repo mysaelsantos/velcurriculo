@@ -1806,7 +1806,7 @@ const AppContent: React.FC = () => {
 
             <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-40">
                 {/* NOVA SEÇÃO HERO - Layout 2 colunas com Card 3D */}
-                <section id="intro" className="mt-4 lg:mt-24 mb-16 lg:mb-32 lg:min-h-[calc(100vh-200px)]">
+                <section id="intro" className="mt-4 lg:mt-24 mb-16 lg:mb-24">
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                         {/* Coluna de Texto */}
                         <div className="text-center lg:text-left order-2 lg:order-1">
@@ -1890,7 +1890,7 @@ const AppContent: React.FC = () => {
                             onRemoveCoupon={handleRemoveCoupon}
                             paymentAmount={paymentAmount}
                         />
-                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28 lg:self-start">
+                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28 lg:self-start lg:flex lg:justify-center">
                             <div
                                 ref={previewWrapperRef}
                                 className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
