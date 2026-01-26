@@ -226,6 +226,97 @@ const TypingAnimationMockup: React.FC = () => {
     );
 };
 
+// Componente de Destaques com Animação de Scroll Reveal
+const HighlightsSection: React.FC = () => {
+    const sectionRef = React.useRef<HTMLElement>(null);
+    const [isVisible, setIsVisible] = React.useState(false);
+
+    React.useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect(); // Anima apenas uma vez
+                }
+            },
+            { threshold: 0.2 } // Ativa quando 20% da seção está visível
+        );
+
+        if (sectionRef.current) {
+            observer.observe(sectionRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, []);
+
+    const highlights = [
+        {
+            icon: (
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+            ),
+            title: "3 Templates",
+            subtitle: "Modelos Profissionais",
+            color: "blue",
+            delay: 0
+        },
+        {
+            icon: (
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+            ),
+            title: "IA Integrada",
+            subtitle: "Textos Otimizados",
+            color: "green",
+            delay: 150
+        },
+        {
+            icon: (
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            title: "PDF Premium",
+            subtitle: "Exportação em Alta Qualidade",
+            color: "purple",
+            delay: 300
+        }
+    ];
+
+    const colorClasses: Record<string, { bg: string; iconBg: string }> = {
+        blue: { bg: 'bg-white', iconBg: 'bg-blue-50 text-blue-600' },
+        green: { bg: 'bg-white', iconBg: 'bg-green-50 text-green-600' },
+        purple: { bg: 'bg-white', iconBg: 'bg-purple-50 text-purple-600' }
+    };
+
+    return (
+        <section ref={sectionRef} className="hidden lg:block py-20 mb-8">
+            <div className="max-w-5xl mx-auto px-4">
+                <div className="grid grid-cols-3 gap-10">
+                    {highlights.map((item, index) => {
+                        const colors = colorClasses[item.color];
+                        return (
+                            <div
+                                key={index}
+                                className={`${colors.bg} text-center group p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-500 hover:-translate-y-1 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}
+                                style={{ animationDelay: `${item.delay}ms`, animationFillMode: 'forwards' }}
+                            >
+                                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl ${colors.iconBg} mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                                    {item.icon}
+                                </div>
+                                <div className="text-3xl font-bold text-gray-800 mb-2">{item.title}</div>
+                                <div className="text-gray-500 text-sm">{item.subtitle}</div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
+    );
+};
+
 const shuffledTestimonials = shuffleArray(ALL_TESTIMONIALS);
 const halfLength = Math.ceil(shuffledTestimonials.length / 2);
 const TESTIMONIALS_1 = shuffledTestimonials.slice(0, halfLength);
@@ -1862,45 +1953,9 @@ const AppContent: React.FC = () => {
                     </div>
                 </section>
 
-                {/* SEÇÃO DE ESTATÍSTICAS - Apenas Desktop */}
-                <section className="hidden lg:block py-16 mb-8">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="grid grid-cols-3 gap-8">
-                            {/* Estatística 1 */}
-                            <div className="text-center group">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div className="text-4xl font-bold text-gray-800 mb-1">98%</div>
-                                <div className="text-gray-500 text-sm">Taxa de Aprovação ATS</div>
-                            </div>
 
-                            {/* Estatística 2 */}
-                            <div className="text-center group">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-50 text-green-600 mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div className="text-4xl font-bold text-gray-800 mb-1">10 min</div>
-                                <div className="text-gray-500 text-sm">Para Criar seu Currículo</div>
-                            </div>
-
-                            {/* Estatística 3 */}
-                            <div className="text-center group">
-                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 mb-4 group-hover:scale-110 transition-transform">
-                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                </div>
-                                <div className="text-4xl font-bold text-gray-800 mb-1">1.200+</div>
-                                <div className="text-gray-500 text-sm">Profissionais Contratados</div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                {/* SEÇÃO DE DESTAQUES - Apenas Desktop com Animação de Scroll Reveal */}
+                <HighlightsSection />
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
                     <div id="form-layout" className="flex flex-col lg:flex-row gap-8">
