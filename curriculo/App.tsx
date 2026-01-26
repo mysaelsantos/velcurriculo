@@ -1650,8 +1650,8 @@ const AppContent: React.FC = () => {
     };
 
     return (
-        // CORREÇÃO: Wrapper com overflow-x hidden para evitar que o swipe empurre o header fixed
-        <div style={{ overflowX: 'hidden', width: '100%', minHeight: '100vh' }}>
+        // CORREÇÃO: Usando 'clip' em vez de 'hidden' para não quebrar position: sticky
+        <div style={{ overflowX: 'clip', width: '100%', minHeight: '100vh' }}>
             {/* LOADING OVERLAY - ATUALIZADO: h-screen -> h-[100dvh] para iPhone */}
             {isLoading && (
                 <div className="fixed inset-0 w-screen h-[100dvh] z-[200] bg-white flex items-center justify-center">
