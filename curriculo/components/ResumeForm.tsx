@@ -1321,7 +1321,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
               </div>
 
               {/* --- CONTAINER UNIFICADO PARA CUPOM E TERMOS --- */}
-              <div className="w-full max-w-md mx-auto space-y-3">
+              <div className="w-full space-y-3">
                 {/* Campo de Cupom */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-sm">
                   {appliedCoupon ? (
@@ -1403,7 +1403,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                       onChange={(e) => setIsTermsAccepted(e.target.checked)}
                       className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer flex-shrink-0"
                     />
-                    <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none leading-snug">
+                    <label htmlFor="terms-checkbox" className="text-sm text-gray-700 cursor-pointer select-none leading-snug text-left">
                       Li e concordo com os <button type="button" onClick={() => setIsTermsModalOpen(true)} className="text-indigo-600 font-semibold hover:underline">Termos e Condições de Uso</button>.
                     </label>
                   </div>
