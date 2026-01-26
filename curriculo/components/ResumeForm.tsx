@@ -1394,8 +1394,8 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                 </div>
 
                 {/* Área de Aceite dos Termos - mesma largura que o cupom */}
-                <div className="bg-gray-50 border border-gray-200 rounded-xl px-0 py-2 shadow-sm">
-                  <div className="flex items-center gap-2 px-2">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl py-2 shadow-sm">
+                  <div className="flex items-center gap-2 px-1">
                     <input
                       type="checkbox"
                       id="terms-checkbox"
