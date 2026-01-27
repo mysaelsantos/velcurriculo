@@ -1937,8 +1937,8 @@ const AppContent: React.FC = () => {
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
                     {/* Container centralizado apenas para desktop */}
-                    <div className="lg:max-w-[1100px] lg:mx-auto lg:px-6">
-                        <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:gap-10 lg:items-stretch">
+                    <div className="lg:flex lg:justify-center lg:px-6">
+                        <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:gap-6 lg:items-stretch lg:max-w-[1100px]">
                             <ResumeForm
                                 data={resumeData}
                                 setData={setResumeData}
@@ -1966,9 +1966,9 @@ const AppContent: React.FC = () => {
                                 paymentAmount={paymentAmount}
                             />
                             {/* Container do Preview + Paginação - layout flex no desktop */}
-                            <div className="w-full lg:flex lg:items-center lg:gap-4">
+                            <div className="w-full lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
                                 {/* Preview */}
-                                <div className="w-full lg:w-[650px] lg:flex-shrink-0">
+                                <div className="w-full lg:flex-1 lg:max-w-[650px]">
                                     <div
                                         ref={previewWrapperRef}
                                         className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
