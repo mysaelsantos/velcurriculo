@@ -101,6 +101,18 @@
             border-bottom-right-radius: 0.5rem;
         }
 
+        /* Desktop: Remove sticky da barra de navegação para layout mais estável */
+        @media (min-width: 1024px) {
+            #wizard-nav {
+                position: relative;
+                bottom: auto;
+                margin: 1.5rem -1.5rem -1.5rem;
+                border-top: none;
+                background-color: white;
+                backdrop-filter: none;
+            }
+        }
+
         /* Estilo Base da Pré-visualização (Na Tela) */
         .resume-preview {
             width: 794px;
