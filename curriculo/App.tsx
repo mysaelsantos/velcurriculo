@@ -273,7 +273,7 @@ const HighlightsSection: React.FC = () => {
     };
 
     return (
-        <section className="hidden lg:block py-20 mb-8">
+        <section className="highlights-section hidden lg:block py-20 mb-8">
             <div className="max-w-5xl mx-auto px-4">
                 <div className="grid grid-cols-3 gap-10">
                     {highlights.map((item, index) => {
@@ -405,7 +405,7 @@ const TestimonialsSection = React.memo(() => {
 });
 
 // COMPONENTE PRINCIPAL
-const AppContent: React.FC = () => {
+export const AppContent: React.FC = () => {
     // --- HOOK DE FEEDBACK ---
     const { status, triggerFeedback } = useFeedback();
 
@@ -1875,7 +1875,7 @@ const AppContent: React.FC = () => {
                 onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
             />
 
-            <main className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-40">
+            <main id="main-content" className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-40">
                 {/* NOVA SEÇÃO HERO - Layout 2 colunas com Card 3D */}
                 <section id="intro" className="mt-4 lg:mt-24 mb-16 lg:mb-24">
                     <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
@@ -1970,7 +1970,7 @@ const AppContent: React.FC = () => {
                             {/* Container do Preview + Paginação - posição relativa para paginação absoluta */}
                             <div className="preview-pagination-container w-full lg:w-auto">
                                 {/* Preview */}
-                                <div className="preview-wrapper w-full">
+                                <div id="resume-preview" className="preview-wrapper w-full">
                                     <div
                                         ref={previewWrapperRef}
                                         className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
