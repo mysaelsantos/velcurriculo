@@ -583,15 +583,15 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         case 1:
           content = (
             <div className="space-y-4">
-              <input type="text" placeholder="Nome Completo" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
+              <input type="text" name="name" placeholder="Nome Completo" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
                 value={data.personalInfo.name}
                 onChange={e => handlePersonalInfoChange('name', capitalizeName(e.target.value))}
                 maxLength={CHAR_LIMITS.personalInfo.name} />
-              <input type="text" placeholder="Cargo Desejado" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
+              <input type="text" name="jobTitle" placeholder="Cargo Desejado" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900"
                 value={data.personalInfo.jobTitle}
                 onChange={e => handlePersonalInfoChange('jobTitle', e.target.value)}
                 maxLength={CHAR_LIMITS.personalInfo.jobTitle} />
-              <input type="email" placeholder="E-mail" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900" value={data.personalInfo.email} onChange={e => handlePersonalInfoChange('email', e.target.value)} maxLength={CHAR_LIMITS.personalInfo.email} />
+              <input type="email" name="email" placeholder="E-mail" className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900" value={data.personalInfo.email} onChange={e => handlePersonalInfoChange('email', e.target.value)} maxLength={CHAR_LIMITS.personalInfo.email} />
 
               {/* SEÇÃO DE TELEFONES EXPANSÍVEL */}
               <div className="space-y-3">
@@ -599,6 +599,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
                 <div className="relative">
                   <input
                     type="tel"
+                    name="phone"
                     placeholder={showSecondPhone || data.personalInfo.whatsappPhone ? "Telefone" : "Telefone"}
                     className="w-full p-2 border rounded-md bg-white border-gray-300 text-gray-900 pr-10"
                     value={data.personalInfo.phone}
