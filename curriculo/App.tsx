@@ -1965,10 +1965,10 @@ const AppContent: React.FC = () => {
                                 onRemoveCoupon={handleRemoveCoupon}
                                 paymentAmount={paymentAmount}
                             />
-                            {/* Container do Preview + Paginação - layout flex no desktop */}
-                            <div className="w-full lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
+                            {/* Container do Preview + Paginação - largura fixa para manter paginação colada */}
+                            <div className="w-full lg:w-auto lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
                                 {/* Preview */}
-                                <div className="w-full lg:flex-1 lg:max-w-[650px]">
+                                <div className="w-full lg:w-[595px] lg:flex-shrink-0">
                                     <div
                                         ref={previewWrapperRef}
                                         className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
@@ -1998,9 +1998,9 @@ const AppContent: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {/* Paginação - ao lado direito no desktop, abaixo no mobile */}
+                                {/* Paginação - colada ao preview, flex-shrink-0 para não encolher */}
                                 {paginatedData.length > 1 && (
-                                    <div className="pagination-controls lg:flex-col lg:gap-2">
+                                    <div className="pagination-controls lg:flex-col lg:gap-2 lg:flex-shrink-0">
                                         {paginatedData.map((_, index) => (
                                             <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
                                         ))}
