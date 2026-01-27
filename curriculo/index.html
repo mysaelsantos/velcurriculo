@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#002e9e">
 
-    <title>Currículo</title>
+    <title>Vel Currículo | Gerador de Currículo Profissional com IA</title>
     <meta name="description"
         content="Crie seu currículo profissional em minutos com a IA da Vel Currículo. Modelos modernos, exportação em PDF e otimização para recrutadores.">
     <meta name="keywords"
@@ -597,6 +597,93 @@
             animation: card-entrance 0.8s ease-out forwards;
         }
 
+        /* ============================================
+           SCROLL REVEAL ANIMATION SYSTEM
+           ============================================ */
+
+        /* Estado inicial - elemento invisível */
+        .scroll-reveal {
+            opacity: 0;
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out, filter 0.6s ease-out;
+        }
+
+        /* Estado revelado */
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1) !important;
+            filter: blur(0) !important;
+        }
+
+        /* Variações de animação */
+        .scroll-reveal.reveal-up {
+            transform: translateY(40px);
+        }
+
+        .scroll-reveal.reveal-down {
+            transform: translateY(-40px);
+        }
+
+        .scroll-reveal.reveal-left {
+            transform: translateX(-40px);
+        }
+
+        .scroll-reveal.reveal-right {
+            transform: translateX(40px);
+        }
+
+        .scroll-reveal.reveal-scale {
+            transform: scale(0.9);
+        }
+
+        .scroll-reveal.reveal-blur {
+            filter: blur(10px);
+            transform: translateY(20px);
+        }
+
+        /* Delays para efeito stagger (elementos aparecem em sequência) */
+        .scroll-reveal.reveal-delay-1 {
+            transition-delay: 0.1s;
+        }
+
+        .scroll-reveal.reveal-delay-2 {
+            transition-delay: 0.2s;
+        }
+
+        .scroll-reveal.reveal-delay-3 {
+            transition-delay: 0.3s;
+        }
+
+        .scroll-reveal.reveal-delay-4 {
+            transition-delay: 0.4s;
+        }
+
+        .scroll-reveal.reveal-delay-5 {
+            transition-delay: 0.5s;
+        }
+
+        .scroll-reveal.reveal-delay-6 {
+            transition-delay: 0.6s;
+        }
+
+        /* Durações customizáveis */
+        .scroll-reveal.reveal-fast {
+            transition-duration: 0.4s;
+        }
+
+        .scroll-reveal.reveal-slow {
+            transition-duration: 0.8s;
+        }
+
+        /* Respeita preferência de movimento reduzido */
+        @media (prefers-reduced-motion: reduce) {
+            .scroll-reveal {
+                opacity: 1;
+                transform: none !important;
+                filter: none !important;
+                transition: none;
+            }
+        }
+
         #whatsapp-qr-code-container {
             position: absolute;
             bottom: 1.5rem;
@@ -753,6 +840,76 @@
             window.deferredPrompt = null;
             console.log('PWA installed');
         });
+
+        // ============================================
+        // SCROLL REVEAL - Intersection Observer
+        // ============================================
+        (function initScrollReveal() {
+            // Verifica preferência de movimento reduzido
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReducedMotion) return;
+
+            const observerOptions = {
+                root: null, // viewport
+                rootMargin: '0px 0px -50px 0px', // Trigger 50px antes do elemento entrar completamente
+                threshold: 0.1 // 10% do elemento visível
+            };
+
+            const revealCallback = (entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        // Opcional: Para de observar após revelar (performance)
+                        if (entry.target.dataset.revealOnce !== 'false') {
+                            observer.unobserve(entry.target);
+                        }
+                    }
+                });
+            };
+
+            const scrollObserver = new IntersectionObserver(revealCallback, observerOptions);
+
+            // Função para observar novos elementos
+            const observeElements = () => {
+                document.querySelectorAll('.scroll-reveal:not(.revealed)').forEach(el => {
+                    scrollObserver.observe(el);
+                });
+            };
+
+            // Observa elementos iniciais quando DOM carrega
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', observeElements);
+            } else {
+                observeElements();
+            }
+
+            // MutationObserver para detectar elementos adicionados dinamicamente (React)
+            const mutationObserver = new MutationObserver((mutations) => {
+                let hasNewElements = false;
+                mutations.forEach(mutation => {
+                    mutation.addedNodes.forEach(node => {
+                        if (node.nodeType === 1) { // Element node
+                            if (node.classList?.contains('scroll-reveal')) {
+                                hasNewElements = true;
+                            }
+                            // Também verifica filhos
+                            if (node.querySelectorAll?.('.scroll-reveal').length > 0) {
+                                hasNewElements = true;
+                            }
+                        }
+                    });
+                });
+                if (hasNewElements) {
+                    // Pequeno delay para garantir que o React terminou
+                    setTimeout(observeElements, 100);
+                }
+            });
+
+            mutationObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        })();
     </script>
 </body>
 
