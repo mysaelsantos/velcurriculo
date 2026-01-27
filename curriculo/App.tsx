@@ -1936,74 +1936,77 @@ const AppContent: React.FC = () => {
                 <HighlightsSection />
 
                 <section id="gerador" className="mb-16 scroll-mt-24">
-                    <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:items-start">
-                        <ResumeForm
-                            data={resumeData}
-                            setData={setResumeData}
-                            isDemoMode={isDemoMode}
-                            onStartEditing={handleStartEditing}
-                            onRequestPayment={handlePaymentRequest}
-                            isPaymentProcessing={isPaymentProcessing}
-                            onRequestDelete={handleRequestDelete}
-                            hasPaidInSession={hasPaidInSession}
-                            isEditing={!!editingResumeId}
-                            currentStep={currentStep}
-                            setCurrentStep={setCurrentStep}
-                            isFinished={isFinished}
-                            setIsFinished={setIsFinished}
-                            onRequestImport={() => setIsImportModalOpen(true)}
-                            showToast={showToast}
-                            // Props do sistema de cupom
-                            couponCode={couponCode}
-                            setCouponCode={setCouponCode}
-                            appliedCoupon={appliedCoupon}
-                            couponError={couponError}
-                            isValidatingCoupon={isValidatingCoupon}
-                            onValidateCoupon={handleValidateCoupon}
-                            onRemoveCoupon={handleRemoveCoupon}
-                            paymentAmount={paymentAmount}
-                        />
-                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28">
-                            <div
-                                ref={previewWrapperRef}
-                                className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
-                                style={{
-                                    boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
-                                    borderRadius: '8px',
-                                    touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
-                                    userSelect: 'none',   // Evita seleção de texto durante arraste
-                                    overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
-                                    ...swipeStyle         // Aplica transform e cursor dinâmicos
-                                }}
-                                {...swipeHandlers}        // Aplica todos os handlers de swipe
-                            >
-                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                    <ErrorBoundary>
-                                        <ResumePreview
-                                            ref={previewRef}
-                                            data={paginatedData[currentPage - 1]}
-                                            isDemoMode={isDemoMode}
-                                            isFirstPage={currentPage === 1}
-                                            hideEmptySections={paginatedData.length > 1}
-                                            // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                            enableProtection={!hasPaidInSession}
-                                            contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                            hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
-                                        />
-                                    </ErrorBoundary>
-                                )}
-                            </div>
-                            {paginatedData.length > 1 && (
-                                <div className="pagination-controls">
-                                    {paginatedData.map((_, index) => (
-                                        <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
-                                    ))}
+                    {/* Container centralizado apenas para desktop */}
+                    <div className="lg:max-w-[1100px] lg:mx-auto lg:px-6">
+                        <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:gap-10 lg:items-stretch">
+                            <ResumeForm
+                                data={resumeData}
+                                setData={setResumeData}
+                                isDemoMode={isDemoMode}
+                                onStartEditing={handleStartEditing}
+                                onRequestPayment={handlePaymentRequest}
+                                isPaymentProcessing={isPaymentProcessing}
+                                onRequestDelete={handleRequestDelete}
+                                hasPaidInSession={hasPaidInSession}
+                                isEditing={!!editingResumeId}
+                                currentStep={currentStep}
+                                setCurrentStep={setCurrentStep}
+                                isFinished={isFinished}
+                                setIsFinished={setIsFinished}
+                                onRequestImport={() => setIsImportModalOpen(true)}
+                                showToast={showToast}
+                                // Props do sistema de cupom
+                                couponCode={couponCode}
+                                setCouponCode={setCouponCode}
+                                appliedCoupon={appliedCoupon}
+                                couponError={couponError}
+                                isValidatingCoupon={isValidatingCoupon}
+                                onValidateCoupon={handleValidateCoupon}
+                                onRemoveCoupon={handleRemoveCoupon}
+                                paymentAmount={paymentAmount}
+                            />
+                            <div className="w-full lg:w-[650px] lg:flex-shrink-0">
+                                <div
+                                    ref={previewWrapperRef}
+                                    className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
+                                    style={{
+                                        boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
+                                        borderRadius: '8px',
+                                        touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
+                                        userSelect: 'none',   // Evita seleção de texto durante arraste
+                                        overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
+                                        ...swipeStyle         // Aplica transform e cursor dinâmicos
+                                    }}
+                                    {...swipeHandlers}        // Aplica todos os handlers de swipe
+                                >
+                                    {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                        <ErrorBoundary>
+                                            <ResumePreview
+                                                ref={previewRef}
+                                                data={paginatedData[currentPage - 1]}
+                                                isDemoMode={isDemoMode}
+                                                isFirstPage={currentPage === 1}
+                                                hideEmptySections={paginatedData.length > 1}
+                                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                                enableProtection={!hasPaidInSession}
+                                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                                                hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
+                                            />
+                                        </ErrorBoundary>
+                                    )}
                                 </div>
-                            )}
+                                {paginatedData.length > 1 && (
+                                    <div className="pagination-controls">
+                                        {paginatedData.map((_, index) => (
+                                            <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                        ))}
+                                    </div>
+                                )}
 
-                            {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                            {/* O usuário pediu para remover */}
+                                {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                                {/* O usuário pediu para remover */}
 
+                            </div>
                         </div>
                     </div>
                 </section>
