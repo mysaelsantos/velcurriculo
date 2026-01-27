@@ -252,59 +252,45 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                     {isMenuOpen ? <Icons.Close /> : <Icons.Menu />}
                                 </button>
 
-                                {/* DROPDOWN DESKTOP PREMIUM - Aparece apenas em lg: */}
+                                {/* DROPDOWN DESKTOP - Mesmo estilo do menu mobile */}
                                 {isMenuOpen && (
-                                    <div className="hidden lg:block absolute top-14 right-0 w-72 z-50 animate-fade-in">
-                                        {/* Seta conectora */}
-                                        <div className="absolute -top-2 right-4 w-4 h-4 bg-gradient-to-br from-blue-600 to-blue-700 rotate-45 rounded-sm shadow-lg"></div>
+                                    <div className="hidden lg:block absolute top-14 right-0 w-64 z-50 animate-fade-in">
+                                        {/* Seta conectora simples */}
+                                        <div className="absolute -top-2 right-5 w-4 h-4 bg-white rotate-45 border-l border-t border-gray-200"></div>
 
-                                        {/* Container principal */}
-                                        <div className="relative bg-white rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-200/50 overflow-hidden">
-                                            {/* Header do dropdown com gradiente */}
-                                            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4">
-                                                <span className="text-white font-poppins font-semibold text-base">Menu</span>
-                                                <p className="text-blue-200 text-xs mt-0.5">Acesso rápido às opções</p>
-                                            </div>
+                                        {/* Container com mesmo estilo do site */}
+                                        <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200 p-3">
 
-                                            {/* Botões Principais */}
-                                            <div className="p-3 space-y-1">
+                                            {/* Botões Principais - Mesmo estilo do mobile */}
+                                            <div className="flex flex-col gap-2 mb-3">
                                                 <button
                                                     onClick={() => { closeAll(); onOpenMyResumes(); }}
-                                                    className="group w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100/50 text-gray-700 hover:text-blue-700 font-poppins font-medium text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                                                    className="w-full h-12 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-poppins font-medium text-sm flex items-center gap-3 px-4 transition-colors border border-gray-100"
                                                 >
-                                                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-200 shadow-sm">
+                                                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
                                                         <Icons.FileText />
                                                     </div>
-                                                    <div className="text-left">
-                                                        <span className="block">Meus Currículos</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-blue-500">Gerencie seus documentos</span>
-                                                    </div>
+                                                    Meus Currículos
                                                 </button>
 
                                                 <button
                                                     onClick={() => { closeAll(); setTimeout(openFeedback, 100); }}
-                                                    className="group w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-amber-50 hover:to-amber-100/50 text-gray-700 hover:text-amber-700 font-poppins font-medium text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                                                    className="w-full h-12 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-poppins font-medium text-sm flex items-center gap-3 px-4 transition-colors border border-gray-100"
                                                 >
-                                                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-200 shadow-sm">
+                                                    <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
                                                         <Icons.StarFilledSmall />
                                                     </div>
-                                                    <div className="text-left">
-                                                        <span className="block">Avaliar o App</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-amber-500">Sua opinião importa</span>
-                                                    </div>
+                                                    Avaliar o App
                                                 </button>
 
                                                 <button
                                                     onClick={() => { closeAll(); window.location.hash = '/meus-cupons'; }}
-                                                    className="group w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100/50 text-gray-700 hover:text-green-700 font-poppins font-medium text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                                                    className="w-full h-12 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-700 font-poppins font-medium text-sm flex items-center gap-3 px-4 transition-colors border border-gray-100"
                                                 >
-                                                    <div className="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0 group-hover:bg-green-600 group-hover:text-white transition-colors duration-200 shadow-sm">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>
+                                                    <div className="w-8 h-8 rounded-lg bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>
                                                     </div>
-                                                    <div className="text-left">
-                                                        <span className="block">Meus Cupons</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-green-500">Descontos disponíveis</span>
-                                                    </div>
+                                                    Meus Cupons
                                                 </button>
 
                                                 {/* Botão Baixar App (PWA) */}
@@ -319,59 +305,36 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                                             closeAll();
                                                         }
                                                     }}
-                                                    className={`group w-full flex items-center gap-4 px-4 py-3 rounded-xl font-poppins font-medium text-sm transition-all duration-200 ${(window as any).deferredPrompt ? 'hover:bg-gradient-to-r hover:from-indigo-50 hover:to-indigo-100/50 text-gray-700 hover:text-indigo-700 hover:scale-[1.02] hover:shadow-sm' : 'text-gray-400 cursor-not-allowed opacity-60'}`}
+                                                    className={`w-full h-12 rounded-xl font-poppins font-medium text-sm flex items-center gap-3 px-4 transition-colors border ${(window as any).deferredPrompt ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' : 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed'}`}
                                                     disabled={!(window as any).deferredPrompt}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-200 shadow-sm ${(window as any).deferredPrompt ? 'bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white' : 'bg-gray-100 text-gray-400'}`}>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${(window as any).deferredPrompt ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                                                     </div>
-                                                    <div className="text-left">
-                                                        <span className="block">{(window as any).deferredPrompt ? 'Instalar App' : 'App Instalado'}</span>
-                                                        <span className={`text-xs ${(window as any).deferredPrompt ? 'text-gray-400 group-hover:text-indigo-500' : 'text-gray-400'}`}>
-                                                            {(window as any).deferredPrompt ? 'Acesso offline' : 'Já instalado ✓'}
-                                                        </span>
-                                                    </div>
+                                                    {(window as any).deferredPrompt ? 'Instalar App' : 'App Instalado'}
                                                 </button>
                                             </div>
 
-                                            {/* Separador elegante */}
-                                            <div className="mx-4 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
+                                            {/* Separador */}
+                                            <div className="border-t border-gray-100 my-2"></div>
 
-                                            {/* Links de Contato */}
-                                            <div className="p-3">
-                                                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider px-4 mb-2 block">Fale Conosco</span>
-
+                                            {/* Links de Contato - Mesmo estilo */}
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-xs text-gray-400 font-medium px-1 mb-1">Contato</span>
                                                 <a href="https://wa.me/5537984116034" target="_blank" rel="noopener noreferrer" onClick={closeAll}
-                                                    className="group flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-gray-600 hover:text-green-700 text-sm font-medium transition-all duration-200 hover:scale-[1.02]">
-                                                    <div className="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors duration-200 shadow-sm">
-                                                        <Icons.WhatsApp />
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <span className="block">WhatsApp</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-green-500">Resposta rápida</span>
-                                                    </div>
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                                    <div className="w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Icons.WhatsApp /></div>
+                                                    WhatsApp
                                                 </a>
-
                                                 <a href="mailto:contato@velsites.com.br" onClick={closeAll}
-                                                    className="group flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 text-gray-600 hover:text-purple-700 text-sm font-medium transition-all duration-200 hover:scale-[1.02]">
-                                                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors duration-200 shadow-sm">
-                                                        <Icons.Mail />
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <span className="block">E-mail</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-purple-500">contato@velsites.com.br</span>
-                                                    </div>
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                                    <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><Icons.Mail /></div>
+                                                    E-mail
                                                 </a>
-
                                                 <a href="https://www.instagram.com/velcurriculo/" target="_blank" rel="noopener noreferrer" onClick={closeAll}
-                                                    className="group flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gradient-to-r hover:from-pink-50 hover:to-rose-50 text-gray-600 hover:text-pink-700 text-sm font-medium transition-all duration-200 hover:scale-[1.02]">
-                                                    <div className="w-10 h-10 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-pink-500 group-hover:to-purple-600 group-hover:text-white transition-all duration-200 shadow-sm">
-                                                        <Icons.Instagram />
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <span className="block">Instagram</span>
-                                                        <span className="text-xs text-gray-400 group-hover:text-pink-500">@velcurriculo</span>
-                                                    </div>
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                                    <div className="w-7 h-7 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center"><Icons.Instagram /></div>
+                                                    Instagram
                                                 </a>
                                             </div>
                                         </div>
