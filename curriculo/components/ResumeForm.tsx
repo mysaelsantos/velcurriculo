@@ -1285,7 +1285,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         </div>
       )}
 
-      <div id="form-wizard" style={{ scrollMarginTop: '9rem' }} className="w-full lg:w-[420px] lg:flex-shrink-0 bg-white p-6 rounded-lg shadow-md form-container">
+      <div id="form-wizard" style={{ scrollMarginTop: '9rem' }} className="w-full lg:w-[420px] lg:flex-shrink-0 lg:h-[850px] lg:overflow-y-auto bg-white p-6 rounded-lg shadow-md form-container">
         {!isFinished && (
           <div id="wizard-header" className="mb-4 text-center">
             <p id="wizard-step-info" className="text-sm font-medium text-gray-500 mb-1">
