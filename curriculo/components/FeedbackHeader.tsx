@@ -182,7 +182,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
             {/* BARRA FLUTUANTE - CÁPSULA */}
             <header
                 ref={headerRef}
-                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out overflow-hidden flex flex-col border border-white/10 ${containerClasses}`}
+                className={`fixed top-6 left-6 right-6 lg:left-6 lg:right-6 ${borderShape} shadow-2xl z-50 transition-all duration-500 ease-in-out flex flex-col border border-white/10 ${containerClasses} ${isDesktop && isMenuOpen ? 'overflow-visible' : 'overflow-hidden'}`}
                 style={{
                     height: headerHeight,
                     transformOrigin: 'top',
