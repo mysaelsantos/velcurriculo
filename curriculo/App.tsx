@@ -1935,8 +1935,8 @@ const AppContent: React.FC = () => {
                 {/* SEÇÃO DE DESTAQUES - Apenas Desktop com Animação de Scroll Reveal */}
                 <HighlightsSection />
 
-                <section id="gerador" className="mb-16 scroll-mt-24 px-4">
-                    <div id="form-layout" className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center">
+                <section id="gerador" className="mb-16 scroll-mt-24">
+                    <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:items-start">
                         <ResumeForm
                             data={resumeData}
                             setData={setResumeData}
@@ -1963,7 +1963,7 @@ const AppContent: React.FC = () => {
                             onRemoveCoupon={handleRemoveCoupon}
                             paymentAmount={paymentAmount}
                         />
-                        <div className="w-full lg:w-[600px] lg:flex-shrink-0 lg:h-[850px] lg:overflow-y-auto">
+                        <div className="w-full lg:w-2/3 lg:sticky lg:top-28">
                             <div
                                 ref={previewWrapperRef}
                                 className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
