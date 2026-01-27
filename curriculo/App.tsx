@@ -1935,77 +1935,75 @@ const AppContent: React.FC = () => {
                 {/* SEÇÃO DE DESTAQUES - Apenas Desktop com Animação de Scroll Reveal */}
                 <HighlightsSection />
 
-                <section id="gerador" className="mb-16 scroll-mt-24">
-                    <div className="container mx-auto px-4 max-w-7xl">
-                        <div id="form-layout" className="flex flex-col lg:flex-row gap-6 lg:gap-8 lg:items-start lg:justify-center">
-                            <ResumeForm
-                                data={resumeData}
-                                setData={setResumeData}
-                                isDemoMode={isDemoMode}
-                                onStartEditing={handleStartEditing}
-                                onRequestPayment={handlePaymentRequest}
-                                isPaymentProcessing={isPaymentProcessing}
-                                onRequestDelete={handleRequestDelete}
-                                hasPaidInSession={hasPaidInSession}
-                                isEditing={!!editingResumeId}
-                                currentStep={currentStep}
-                                setCurrentStep={setCurrentStep}
-                                isFinished={isFinished}
-                                setIsFinished={setIsFinished}
-                                onRequestImport={() => setIsImportModalOpen(true)}
-                                showToast={showToast}
-                                // Props do sistema de cupom
-                                couponCode={couponCode}
-                                setCouponCode={setCouponCode}
-                                appliedCoupon={appliedCoupon}
-                                couponError={couponError}
-                                isValidatingCoupon={isValidatingCoupon}
-                                onValidateCoupon={handleValidateCoupon}
-                                onRemoveCoupon={handleRemoveCoupon}
-                                paymentAmount={paymentAmount}
-                            />
-                            <div className="w-full lg:flex-1 lg:max-w-[700px] lg:sticky lg:top-28">
-                                <div
-                                    ref={previewWrapperRef}
-                                    className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
-                                    style={{
-                                        boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
-                                        borderRadius: '8px',
-                                        touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
-                                        userSelect: 'none',   // Evita seleção de texto durante arraste
-                                        overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
-                                        ...swipeStyle         // Aplica transform e cursor dinâmicos
-                                    }}
-                                    {...swipeHandlers}        // Aplica todos os handlers de swipe
-                                >
-                                    {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                        <ErrorBoundary>
-                                            <ResumePreview
-                                                ref={previewRef}
-                                                data={paginatedData[currentPage - 1]}
-                                                isDemoMode={isDemoMode}
-                                                isFirstPage={currentPage === 1}
-                                                hideEmptySections={paginatedData.length > 1}
-                                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
-                                                enableProtection={!hasPaidInSession}
-                                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                                hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
-                                            />
-                                        </ErrorBoundary>
-                                    )}
-                                </div>
-                                {paginatedData.length > 1 && (
-                                    <div className="pagination-controls">
-                                        {paginatedData.map((_, index) => (
-                                            <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
-                                        ))}
-                                    </div>
+                <section id="gerador" className="mb-16 scroll-mt-24 px-4">
+                    <div id="form-layout" className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-start lg:justify-center">
+                        <ResumeForm
+                            data={resumeData}
+                            setData={setResumeData}
+                            isDemoMode={isDemoMode}
+                            onStartEditing={handleStartEditing}
+                            onRequestPayment={handlePaymentRequest}
+                            isPaymentProcessing={isPaymentProcessing}
+                            onRequestDelete={handleRequestDelete}
+                            hasPaidInSession={hasPaidInSession}
+                            isEditing={!!editingResumeId}
+                            currentStep={currentStep}
+                            setCurrentStep={setCurrentStep}
+                            isFinished={isFinished}
+                            setIsFinished={setIsFinished}
+                            onRequestImport={() => setIsImportModalOpen(true)}
+                            showToast={showToast}
+                            // Props do sistema de cupom
+                            couponCode={couponCode}
+                            setCouponCode={setCouponCode}
+                            appliedCoupon={appliedCoupon}
+                            couponError={couponError}
+                            isValidatingCoupon={isValidatingCoupon}
+                            onValidateCoupon={handleValidateCoupon}
+                            onRemoveCoupon={handleRemoveCoupon}
+                            paymentAmount={paymentAmount}
+                        />
+                        <div className="w-full lg:w-[600px] lg:flex-shrink-0 lg:h-[850px] lg:overflow-y-auto">
+                            <div
+                                ref={previewWrapperRef}
+                                className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
+                                style={{
+                                    boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
+                                    borderRadius: '8px',
+                                    touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
+                                    userSelect: 'none',   // Evita seleção de texto durante arraste
+                                    overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
+                                    ...swipeStyle         // Aplica transform e cursor dinâmicos
+                                }}
+                                {...swipeHandlers}        // Aplica todos os handlers de swipe
+                            >
+                                {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                    <ErrorBoundary>
+                                        <ResumePreview
+                                            ref={previewRef}
+                                            data={paginatedData[currentPage - 1]}
+                                            isDemoMode={isDemoMode}
+                                            isFirstPage={currentPage === 1}
+                                            hideEmptySections={paginatedData.length > 1}
+                                            // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
+                                            enableProtection={!hasPaidInSession}
+                                            contentScale={contentScale} // APLICA O SMART SHRINK AQUI
+                                            hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
+                                        />
+                                    </ErrorBoundary>
                                 )}
-
-                                {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                                {/* O usuário pediu para remover */}
-
                             </div>
+                            {paginatedData.length > 1 && (
+                                <div className="pagination-controls">
+                                    {paginatedData.map((_, index) => (
+                                        <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
+                            {/* O usuário pediu para remover */}
+
                         </div>
                     </div>
                 </section>
