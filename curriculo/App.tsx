@@ -1965,46 +1965,49 @@ const AppContent: React.FC = () => {
                                 onRemoveCoupon={handleRemoveCoupon}
                                 paymentAmount={paymentAmount}
                             />
-                            {/* Container do Preview - participa do items-stretch */}
-                            <div className="w-full lg:w-[650px] lg:flex-shrink-0">
-                                <div
-                                    ref={previewWrapperRef}
-                                    className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
-                                    style={{
-                                        boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
-                                        borderRadius: '8px',
-                                        touchAction: 'pan-y',
-                                        userSelect: 'none',
-                                        overflow: 'hidden',
-                                        ...swipeStyle
-                                    }}
-                                    {...swipeHandlers}
-                                >
-                                    {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
-                                        <ErrorBoundary>
-                                            <ResumePreview
-                                                ref={previewRef}
-                                                data={paginatedData[currentPage - 1]}
-                                                isDemoMode={isDemoMode}
-                                                isFirstPage={currentPage === 1}
-                                                hideEmptySections={paginatedData.length > 1}
-                                                enableProtection={!hasPaidInSession}
-                                                contentScale={contentScale}
-                                                hidePlaceholders={hidePlaceholders}
-                                            />
-                                        </ErrorBoundary>
-                                    )}
+                            {/* Container do Preview + Paginação - layout flex no desktop */}
+                            <div className="w-full lg:flex lg:items-center lg:gap-4">
+                                {/* Preview */}
+                                <div className="w-full lg:w-[650px] lg:flex-shrink-0">
+                                    <div
+                                        ref={previewWrapperRef}
+                                        className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
+                                        style={{
+                                            boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
+                                            borderRadius: '8px',
+                                            touchAction: 'pan-y',
+                                            userSelect: 'none',
+                                            overflow: 'hidden',
+                                            ...swipeStyle
+                                        }}
+                                        {...swipeHandlers}
+                                    >
+                                        {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
+                                            <ErrorBoundary>
+                                                <ResumePreview
+                                                    ref={previewRef}
+                                                    data={paginatedData[currentPage - 1]}
+                                                    isDemoMode={isDemoMode}
+                                                    isFirstPage={currentPage === 1}
+                                                    hideEmptySections={paginatedData.length > 1}
+                                                    enableProtection={!hasPaidInSession}
+                                                    contentScale={contentScale}
+                                                    hidePlaceholders={hidePlaceholders}
+                                                />
+                                            </ErrorBoundary>
+                                        )}
+                                    </div>
                                 </div>
+                                {/* Paginação - ao lado direito no desktop, abaixo no mobile */}
+                                {paginatedData.length > 1 && (
+                                    <div className="pagination-controls lg:flex-col lg:gap-2">
+                                        {paginatedData.map((_, index) => (
+                                            <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
-                        {/* Paginação FORA do flex items-stretch - à direita no desktop */}
-                        {paginatedData.length > 1 && (
-                            <div className="pagination-controls lg:ml-[calc(400px+2.5rem)] lg:max-w-[650px] lg:justify-end">
-                                {paginatedData.map((_, index) => (
-                                    <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </section>
 
