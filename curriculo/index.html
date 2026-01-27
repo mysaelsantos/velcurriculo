@@ -101,7 +101,7 @@
             border-bottom-right-radius: 0.5rem;
         }
 
-        /* Desktop: Remove sticky da barra de navegação para layout mais estável */
+        /* Desktop: Layout estável para form, preview e paginação */
         @media (min-width: 1024px) {
             #wizard-nav {
                 position: relative;
@@ -110,6 +110,39 @@
                 border-top: none;
                 background-color: white;
                 backdrop-filter: none;
+            }
+
+            /* Container principal centralizado */
+            #form-layout {
+                display: flex;
+                justify-content: center;
+                align-items: stretch;
+                gap: 24px;
+            }
+
+            /* Container do preview + paginação - posição relativa */
+            .preview-pagination-container {
+                position: relative;
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+            }
+
+            /* Preview com largura fixa baseada em A4 */
+            .preview-wrapper {
+                width: 595px;
+                flex-shrink: 0;
+            }
+
+            /* Paginação posicionada absolutamente à direita do preview */
+            .pagination-controls {
+                position: absolute;
+                right: -48px;
+                top: 50%;
+                transform: translateY(-50%);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
             }
         }
 
