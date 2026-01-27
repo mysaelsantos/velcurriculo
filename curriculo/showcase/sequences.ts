@@ -33,7 +33,7 @@ export const marketingIntro: ShowcaseSequence = {
         anim.wait(500),
 
         // Scroll para o formulário
-        anim.scrollTo('#resume-form', { duration: 2000 }),
+        anim.scrollTo('#form-wizard', { duration: 2000 }),
         anim.wait(1000),
 
         // Zoom no preview
@@ -64,7 +64,7 @@ export const formDemo: ShowcaseSequence = {
         anim.wait(500),
 
         // Ir para o formulário
-        anim.scrollTo('#resume-form', { duration: 1500, offset: -100 }),
+        anim.scrollTo('#form-wizard', { duration: 1500, offset: -100 }),
         anim.wait(800),
 
         // Preencher nome
