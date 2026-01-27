@@ -1965,10 +1965,10 @@ const AppContent: React.FC = () => {
                                 onRemoveCoupon={handleRemoveCoupon}
                                 paymentAmount={paymentAmount}
                             />
-                            {/* Container do Preview + Paginação - largura fixa para manter paginação colada */}
-                            <div className="w-full lg:w-auto lg:flex lg:items-center lg:gap-3 lg:flex-shrink-0">
+                            {/* Container do Preview + Paginação - posição relativa para paginação absoluta */}
+                            <div className="preview-pagination-container w-full lg:w-auto">
                                 {/* Preview */}
-                                <div className="w-full lg:w-[595px] lg:flex-shrink-0">
+                                <div className="preview-wrapper w-full">
                                     <div
                                         ref={previewWrapperRef}
                                         className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
@@ -1998,9 +1998,9 @@ const AppContent: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {/* Paginação - colada ao preview, flex-shrink-0 para não encolher */}
+                                {/* Paginação - posicionada via CSS no index.html */}
                                 {paginatedData.length > 1 && (
-                                    <div className="pagination-controls lg:flex-col lg:gap-2 lg:flex-shrink-0">
+                                    <div className="pagination-controls">
                                         {paginatedData.map((_, index) => (
                                             <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
                                         ))}
