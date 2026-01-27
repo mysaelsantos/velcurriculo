@@ -28,7 +28,7 @@ const ShowcasePage: React.FC<ShowcasePageProps> = ({ onClose }) => {
 
     // Hooks de animação
     const timeline = useShowcaseTimeline();
-    const autoScroll = useAutoScroll();
+    const autoScroll = useAutoScroll(containerRef);
     const autoType = useAutoType();
     const zoom = useZoom(containerRef);
     const cursor = useShowcaseCursor();
