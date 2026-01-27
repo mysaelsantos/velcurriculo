@@ -1965,19 +1965,20 @@ const AppContent: React.FC = () => {
                                 onRemoveCoupon={handleRemoveCoupon}
                                 paymentAmount={paymentAmount}
                             />
+                            {/* Container do Preview - participa do items-stretch */}
                             <div className="w-full lg:w-[650px] lg:flex-shrink-0">
                                 <div
                                     ref={previewWrapperRef}
-                                    className={`w-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
+                                    className={`w-full h-full transition-opacity duration-500 ${isPreviewReady ? 'opacity-100' : 'opacity-0'}`}
                                     style={{
                                         boxShadow: '0 10px 40px -10px rgba(0, 46, 158, 0.15)',
                                         borderRadius: '8px',
-                                        touchAction: 'pan-y', // Permite scroll vertical, captura horizontal
-                                        userSelect: 'none',   // Evita seleção de texto durante arraste
-                                        overflow: 'hidden',   // CORREÇÃO: Evita que o swipe estique o container
-                                        ...swipeStyle         // Aplica transform e cursor dinâmicos
+                                        touchAction: 'pan-y',
+                                        userSelect: 'none',
+                                        overflow: 'hidden',
+                                        ...swipeStyle
                                     }}
-                                    {...swipeHandlers}        // Aplica todos os handlers de swipe
+                                    {...swipeHandlers}
                                 >
                                     {paginatedData.length > 0 && paginatedData[currentPage - 1] && (
                                         <ErrorBoundary>
@@ -1987,27 +1988,23 @@ const AppContent: React.FC = () => {
                                                 isDemoMode={isDemoMode}
                                                 isFirstPage={currentPage === 1}
                                                 hideEmptySections={paginatedData.length > 1}
-                                                // ATIVAÇÃO DAS PROTEÇÕES: Se não pagou, ativa.
                                                 enableProtection={!hasPaidInSession}
-                                                contentScale={contentScale} // APLICA O SMART SHRINK AQUI
-                                                hidePlaceholders={hidePlaceholders} // FADE-OUT DOS PLACEHOLDERS
+                                                contentScale={contentScale}
+                                                hidePlaceholders={hidePlaceholders}
                                             />
                                         </ErrorBoundary>
                                     )}
                                 </div>
-                                {paginatedData.length > 1 && (
-                                    <div className="pagination-controls">
-                                        {paginatedData.map((_, index) => (
-                                            <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* REMOVIDO: Indicador visual de ajuste automático (Opcional, para debug visual) */}
-                                {/* O usuário pediu para remover */}
-
                             </div>
                         </div>
+                        {/* Paginação FORA do flex items-stretch - alinhada abaixo do preview */}
+                        {paginatedData.length > 1 && (
+                            <div className="pagination-controls lg:ml-[calc(400px+2.5rem)] lg:max-w-[650px]">
+                                {paginatedData.map((_, index) => (
+                                    <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
 
