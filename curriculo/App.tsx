@@ -1997,9 +1997,9 @@ const AppContent: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Paginação FORA do flex items-stretch - alinhada abaixo do preview */}
+                        {/* Paginação FORA do flex items-stretch - à direita no desktop */}
                         {paginatedData.length > 1 && (
-                            <div className="pagination-controls lg:ml-[calc(400px+2.5rem)] lg:max-w-[650px]">
+                            <div className="pagination-controls lg:ml-[calc(400px+2.5rem)] lg:max-w-[650px] lg:justify-end">
                                 {paginatedData.map((_, index) => (
                                     <button key={index} onClick={() => setCurrentPage(index + 1)} className={`pagination-btn ${currentPage === index + 1 ? 'active' : ''}`}>{index + 1}</button>
                                 ))}
