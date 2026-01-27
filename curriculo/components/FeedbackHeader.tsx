@@ -204,18 +204,18 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                                 <img
                                     src="/logo-header.png"
                                     alt="Logo"
-                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive && !isMenuOpen ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                                    className={`h-5 lg:h-6 mr-3 transition-opacity duration-200 absolute left-0 ${showLogo && !isFeedbackActive && !(isMenuOpen && !isDesktop) ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
                                 />
 
                                 {/* TEXTO SAUDAÇÃO / MOTIVAÇÃO */}
-                                {!isFeedbackActive && !isMenuOpen && headerMessage && (
+                                {!isFeedbackActive && !(isMenuOpen && !isDesktop) && headerMessage && (
                                     <span className={`absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-white whitespace-nowrap transition-opacity duration-700 flex items-center h-full tracking-tight ${!showLogo ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
                                         {headerMessage}
                                     </span>
                                 )}
 
-                                {/* TÍTULO DO MENU (Com delay) */}
-                                {showMenuText && (
+                                {/* TÍTULO DO MENU (Com delay) - Apenas mobile */}
+                                {showMenuText && !isDesktop && (
                                     <span className="absolute left-0 font-poppins font-medium text-lg sm:text-xl lg:text-4xl text-gray-800 animate-fade-in whitespace-nowrap flex items-center h-full tracking-tight z-20">
                                         Menu
                                     </span>
