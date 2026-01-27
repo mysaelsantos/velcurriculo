@@ -10,6 +10,7 @@ import useZoom from '../../hooks/useZoom';
 import ShowcaseControls from './ShowcaseControls';
 import ShowcaseCursor, { useShowcaseCursor } from './ShowcaseCursor';
 import { useShowcaseHighlight } from './ShowcaseHighlight';
+import { AppContent } from '../../App'; // Importa a aplicação real
 
 // Sequências pré-definidas
 import { sequenceList } from '../../showcase/sequences';
@@ -255,89 +256,9 @@ const ShowcasePage: React.FC<ShowcasePageProps> = ({ onClose }) => {
                 className="w-full h-full overflow-auto"
                 style={zoom.containerStyle}
             >
-                {/* Aqui você pode renderizar o conteúdo da App ou usar um iframe */}
+                {/* Aqui renderizamos a Aplicação REAL */}
                 <div className="min-h-screen">
-                    {/* 
-                        OPÇÃO 1: Renderizar componentes diretamente
-                        Importe e renderize os componentes principais da App aqui
-                        
-                        OPÇÃO 2: Usar iframe (mais isolado)
-                        <iframe
-                            ref={iframeRef}
-                            src="/"
-                            className="w-full h-full border-0"
-                        />
-                    */}
-
-                    {/* Placeholder - Substitua pelo conteúdo real */}
-                    <div className="p-8 text-center">
-                        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-                            🎬 Modo Showcase
-                        </h1>
-                        <p className="text-gray-600 max-w-xl mx-auto mb-8">
-                            Este é o modo de gravação profissional do VelCurrículo.
-                            Use os controles abaixo para executar sequências de animação
-                            pré-programadas para criar vídeos de marketing incríveis.
-                        </p>
-
-                        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto">
-                            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                                Para ativar o Showcase completo:
-                            </h2>
-                            <ol className="text-left text-gray-600 space-y-3">
-                                <li className="flex items-start gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
-                                    <span>Importe os componentes principais da App dentro deste container</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
-                                    <span>Configure os seletores CSS das sequências para corresponder aos elementos reais</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
-                                    <span>Use um software de gravação de tela (OBS, Loom, etc.) para capturar as animações</span>
-                                </li>
-                            </ol>
-                        </div>
-
-                        {/* Área de demonstração dos efeitos */}
-                        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                            <div
-                                id="demo-card-1"
-                                className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg"
-                            >
-                                <h3 className="font-bold text-lg mb-2">Zoom Demo</h3>
-                                <p className="text-blue-100 text-sm">Clique para testar o zoom</p>
-                            </div>
-                            <div
-                                id="demo-card-2"
-                                className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg"
-                            >
-                                <h3 className="font-bold text-lg mb-2">Highlight Demo</h3>
-                                <p className="text-purple-100 text-sm">Clique para testar o destaque</p>
-                            </div>
-                            <div
-                                id="demo-card-3"
-                                className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg"
-                            >
-                                <h3 className="font-bold text-lg mb-2">Scroll Demo</h3>
-                                <p className="text-green-100 text-sm">Clique para testar o scroll</p>
-                            </div>
-                        </div>
-
-                        {/* Input para teste de digitação */}
-                        <div className="mt-8 max-w-md mx-auto">
-                            <label className="block text-left text-sm font-medium text-gray-700 mb-2">
-                                Campo para teste de digitação automática:
-                            </label>
-                            <input
-                                id="demo-input"
-                                type="text"
-                                placeholder="A digitação aparecerá aqui..."
-                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700"
-                            />
-                        </div>
-                    </div>
+                    <AppContent />
                 </div>
             </div>
 
