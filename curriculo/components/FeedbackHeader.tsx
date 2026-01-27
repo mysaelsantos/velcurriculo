@@ -32,6 +32,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
     const [text, setText] = useState('');
     const [displayText, setDisplayText] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isContactDropdownOpen, setIsContactDropdownOpen] = useState(false);
 
     // Estado para controlar o texto "Menu" com atraso
     const [showMenuText, setShowMenuText] = useState(false);
@@ -122,10 +123,14 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
             if (isHeaderExpanded && headerRef.current && !headerRef.current.contains(event.target as Node)) {
                 closeAll();
             }
+            // Fechar dropdown de contato desktop ao clicar fora
+            if (isContactDropdownOpen && headerRef.current && !headerRef.current.contains(event.target as Node)) {
+                setIsContactDropdownOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isHeaderExpanded]);
+    }, [isHeaderExpanded, isContactDropdownOpen]);
 
     const isValid = text.trim().split(/\s+/).length >= 3 && rating > 0;
 
@@ -227,10 +232,88 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
                             </button>
                         )}
 
+                        {/* NAVEGAÇÃO DESKTOP - Links inline visíveis apenas em lg: */}
+                        {!isFeedbackActive && !isMenuOpen && (
+                            <div className="hidden lg:flex items-center gap-1">
+                                {/* Meus Currículos */}
+                                <button
+                                    onClick={() => { onOpenMyResumes(); }}
+                                    className="px-4 py-2 rounded-full text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                                >
+                                    <Icons.FileText />
+                                    Meus Currículos
+                                </button>
+
+                                {/* Meus Cupons */}
+                                <button
+                                    onClick={() => { window.location.hash = '/meus-cupons'; }}
+                                    className="px-4 py-2 rounded-full text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" /><path d="M13 5v2" /><path d="M13 17v2" /><path d="M13 11v2" /></svg>
+                                    Cupons
+                                </button>
+
+                                {/* Avaliar */}
+                                <button
+                                    onClick={() => { openFeedback(); }}
+                                    className="px-4 py-2 rounded-full text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                                >
+                                    <Icons.StarFilledSmall />
+                                    Avaliar
+                                </button>
+
+                                {/* Dropdown de Contato */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setIsContactDropdownOpen(!isContactDropdownOpen)}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${isContactDropdownOpen ? 'bg-white text-gray-800' : 'text-white/90 hover:text-white hover:bg-white/10'}`}
+                                    >
+                                        Contato
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${isContactDropdownOpen ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6" /></svg>
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {isContactDropdownOpen && (
+                                        <div className="absolute top-12 right-0 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-fade-in">
+                                            <a
+                                                href="https://wa.me/5537984116034"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors"
+                                                onClick={() => setIsContactDropdownOpen(false)}
+                                            >
+                                                <div className="w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Icons.WhatsApp /></div>
+                                                WhatsApp
+                                            </a>
+                                            <a
+                                                href="mailto:contato@velsites.com.br"
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors"
+                                                onClick={() => setIsContactDropdownOpen(false)}
+                                            >
+                                                <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><Icons.Mail /></div>
+                                                E-mail
+                                            </a>
+                                            <a
+                                                href="https://www.instagram.com/velcurriculo/"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors"
+                                                onClick={() => setIsContactDropdownOpen(false)}
+                                            >
+                                                <div className="w-7 h-7 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center"><Icons.Instagram /></div>
+                                                Instagram
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* BOTÃO MENU MOBILE - Visível apenas em mobile ou quando não há nav desktop */}
                         {!isFeedbackActive && (
                             <button
                                 onClick={toggleMenu}
-                                className={`p-1.5 rounded-full transition focus:outline-none ${isMenuOpen ? 'bg-gray-100 text-gray-800 rotate-90' : 'hover:bg-white/10 text-white'}`}
+                                className={`lg:hidden p-1.5 rounded-full transition focus:outline-none ${isMenuOpen ? 'bg-gray-100 text-gray-800 rotate-90' : 'hover:bg-white/10 text-white'}`}
                             >
                                 {isMenuOpen ? <Icons.Close /> : <Icons.Menu />}
                             </button>
