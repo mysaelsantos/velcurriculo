@@ -243,7 +243,7 @@ const ResumeForm: React.FC<ResumeFormProps> = ({
         stepsContainerRef.current.style.height = `${activeStepNode.scrollHeight}px`;
       }
     }
-  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup, showTemplateSuggestion]);
+  }, [currentStep, isFinished, data.experiences, data.education, data.courses, data.languages, openAccordion, aiSkillSuggestions, data.summary, data.skills, expandedSummaryGroup, showTemplateSuggestion, showSecondPhone]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
