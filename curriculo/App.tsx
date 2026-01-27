@@ -29,6 +29,8 @@ import useSwipeNavigation from './hooks/useSwipeNavigation';
 // IMPORTA A PÁGINA DE AFILIADOS
 import MyCouponsPage from './components/MyCouponsPage';
 import ErrorBoundary from './components/ErrorBoundary';
+// IMPORTA O MODO SHOWCASE
+import ShowcasePage from './components/showcase/ShowcasePage';
 
 interface SavedResume extends ResumeData {
     savedAt: string;
@@ -2249,6 +2251,11 @@ const Router: React.FC = () => {
     // Se a rota for meus-cupons
     if (currentRoute === '#/meus-cupons' || currentRoute === '#meus-cupons' || currentRoute === '#/meus-cupons/') {
         return <MyCouponsPage />;
+    }
+
+    // Se a rota for showcase (modo de gravação profissional)
+    if (currentRoute === '#/showcase' || currentRoute === '#showcase' || currentRoute === '#/showcase/') {
+        return <ShowcasePage onClose={() => window.location.hash = ''} />;
     }
 
     // Rota padrão: site principal (envolvido pelo FeedbackProvider)
