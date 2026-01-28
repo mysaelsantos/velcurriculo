@@ -1328,6 +1328,11 @@ export const AppContent: React.FC = () => {
         setGeneratingStatus('Preparando documento...');
         trackResumeGenerated(dataToExport);
 
+        // Safari/iOS: Detecta para aplicar otimizações específicas
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const needsSafariOptimizations = isSafari || isIOS;
+
         // Garante que as fontes estão carregadas para evitar layout shift
         if (document.fonts) {
             await document.fonts.ready;
@@ -1340,14 +1345,23 @@ export const AppContent: React.FC = () => {
             return;
         }
 
-        // Pequeno delay para garantir renderização do DOM (especialmente QR Codes e Imagens)
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Delay para garantir renderização do DOM (especialmente QR Codes e Imagens)
+        // Safari/iOS precisa de mais tempo para estabilizar o layout
+        const renderDelay = needsSafariOptimizations ? 1500 : 1000;
+        await new Promise(resolve => setTimeout(resolve, renderDelay));
 
         try {
             setGeneratingStatus('Gerando imagens otimizadas...');
             const pages = Array.from(printArea.querySelectorAll('.resume-page')) as HTMLElement[];
 
             if (pages.length === 0) throw new Error("Nenhuma página encontrada.");
+
+            // Safari/iOS: Força reflow para garantir que o layout está atualizado
+            if (needsSafariOptimizations) {
+                // Leitura de offsetHeight força o navegador a recalcular o layout
+                void printArea.offsetHeight;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
 
             // 1. Configuração do jsPDF com compressão ativada
             const pdf = new jsPDF({
@@ -1360,6 +1374,11 @@ export const AppContent: React.FC = () => {
             const pdfWidth = 210;
             const pdfHeight = 297;
 
+            // Safari/iOS: Ajusta pixelRatio para evitar crash de memória
+            const primaryPixelRatio = needsSafariOptimizations ? 1.5 : 2;
+            const fallbackPixelRatio = needsSafariOptimizations ? 1 : 1.5;
+            const fallbackQuality = needsSafariOptimizations ? 0.7 : 0.75;
+
             for (let i = 0; i < pages.length; i++) {
                 const pageEl = pages[i];
 
@@ -1368,14 +1387,20 @@ export const AppContent: React.FC = () => {
                 pageEl.style.minHeight = '1123px';
                 pageEl.style.width = '794px';
 
+                // Safari/iOS: Força composição de camada e aguarda estabilização
+                if (needsSafariOptimizations) {
+                    pageEl.style.transform = 'translateZ(0)';
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+
                 let imgData;
                 try {
                     // 2. MUDANÇA CRÍTICA: Usar toJpeg com qualidade controlada
                     // quality: 0.85 -> Excelente equilíbrio (quase indistinguível de 1.0, mas muito menor)
-                    // pixelRatio: 2 -> Mantém a nitidez do texto (Retina quality)
+                    // pixelRatio: 2 (Chrome) / 1.5 (Safari) -> Mantém nitidez com segurança de memória
                     imgData = await toJpeg(pageEl, {
                         quality: 0.85,
-                        pixelRatio: 2,
+                        pixelRatio: primaryPixelRatio,
                         backgroundColor: '#ffffff', // OBRIGATÓRIO: JPEG não tem transparência
                         width: 794,
                         height: 1123,
@@ -1395,9 +1420,10 @@ export const AppContent: React.FC = () => {
                     console.warn("Falha na alta qualidade, tentando fallback...", firstError);
 
                     // Fallback: Reduz pixelRatio se falhar (ex: falta de memória no mobile)
+                    // Safari/iOS: Fallback mais agressivo para evitar travamentos
                     imgData = await toJpeg(pageEl, {
-                        quality: 0.75,
-                        pixelRatio: 1.5,
+                        quality: fallbackQuality,
+                        pixelRatio: fallbackPixelRatio,
                         backgroundColor: '#ffffff',
                         width: 794,
                         height: 1123,
@@ -1429,7 +1455,11 @@ export const AppContent: React.FC = () => {
 
         } catch (error) {
             console.error("Erro ao gerar PDF:", error);
-            showToast("Erro ao gerar PDF. Tente usar um computador se persistir.", "error");
+            // Safari/iOS: Mensagem de erro mais específica e útil
+            const errorMsg = needsSafariOptimizations
+                ? "Erro ao gerar PDF no Safari. Tente fechar outras abas ou use o Chrome para melhor compatibilidade."
+                : "Erro ao gerar PDF. Tente usar um computador se persistir.";
+            showToast(errorMsg, "error");
         } finally {
             setIsPaymentProcessing(false);
             setGeneratingStatus('');
