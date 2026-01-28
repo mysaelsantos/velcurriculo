@@ -157,7 +157,7 @@ const FeedbackHeader: React.FC<FeedbackHeaderProps> = ({ userData, headerMessage
         });
     };
 
-    const headerHeight = isHeaderExpanded ? '520px' : '56px';
+    const headerHeight = isHeaderExpanded ? '580px' : '56px';
     const borderShape = 'rounded-[32px]';
     const containerClasses = isHeaderExpanded
         ? 'bg-white text-gray-800'
