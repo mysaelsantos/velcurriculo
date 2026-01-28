@@ -29,6 +29,7 @@ import useSwipeNavigation from './hooks/useSwipeNavigation';
 // IMPORTA A PÁGINA DE AFILIADOS
 import MyCouponsPage from './components/MyCouponsPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import BugReportModal from './components/BugReportModal';
 // IMPORTA O MODO SHOWCASE
 import ShowcasePage from './components/showcase/ShowcasePage';
 
@@ -433,6 +434,7 @@ export const AppContent: React.FC = () => {
     const [paymentAmount, setPaymentAmount] = useState(5.00);
     const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
     const [isMyResumesModalOpen, setIsMyResumesModalOpen] = useState(false);
+    const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
 
     // --- NOVO: ESTADOS DO MODAL DE IMPORTAÇÃO ---
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1865,6 +1867,14 @@ export const AppContent: React.FC = () => {
 
             <MyResumesModal isOpen={isMyResumesModalOpen} onClose={() => setIsMyResumesModalOpen(false)} resumes={savedResumes} onEdit={handleEditResume} onDownload={exportToPdf} onDelete={handleDeleteSavedResume} />
 
+            {/* MODAL DE REPORT DE BUG */}
+            <BugReportModal
+                isOpen={isBugReportModalOpen}
+                onClose={() => setIsBugReportModalOpen(false)}
+                userData={userData}
+                showToast={showToast}
+            />
+
             {/* NOVO: MODAL DE IMPORTAÇÃO */}
             <ImportModal
                 isOpen={isImportModalOpen}
@@ -1903,6 +1913,7 @@ export const AppContent: React.FC = () => {
                 showLogo={showLogo}
                 // Passamos a função para abrir o modal de currículos
                 onOpenMyResumes={() => setIsMyResumesModalOpen(true)}
+                onOpenBugReport={() => setIsBugReportModalOpen(true)}
             />
 
             <main id="main-content" className="container mx-auto p-4 lg:p-8 pt-28 lg:pt-40">
