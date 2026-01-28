@@ -46,6 +46,7 @@ const Icons = {
     Coins: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></svg>,
     Bell: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>,
     Percent: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>,
+    Mail: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>,
     Bug: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88" /><path d="M14.12 3.88 16 2" /><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" /><path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4" /><path d="M22 13h-4" /><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" /></svg>
 };
 
@@ -1366,17 +1367,24 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 🐛 TAB DE BUGS REPORTADOS */}
+                    {/* 🐛 TAB DE BUGS REPORTADOS - REDESENHADO */}
                     {activeTab === 'bugs' && (
                         <div className="animate-fade-in space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            {/* Header com estatísticas */}
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                                 <div>
-                                    <h3 className="font-bold text-gray-700 text-xl">Bugs Reportados</h3>
-                                    <p className="text-sm text-gray-500">Gerencie os bugs reportados pelos usuários.</p>
+                                    <h3 className="font-bold text-gray-700 text-xl flex items-center gap-2">
+                                        <Icons.Bug /> Central de Bugs
+                                    </h3>
+                                    <p className="text-sm text-gray-500">Gerencie e responda aos bugs reportados pelos usuários.</p>
                                 </div>
-                                <div className="flex gap-3">
-                                    <div className="bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200">
-                                        <span className="text-sm text-yellow-800 font-bold">{bugReports.filter(b => b.status === 'pending').length} Pendentes</span>
+                                <div className="flex flex-wrap gap-2">
+                                    <div className="bg-red-50 px-4 py-2 rounded-lg border border-red-200 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                        <span className="text-sm text-red-800 font-bold">{bugReports.filter(b => b.status === 'pending').length} Pendentes</span>
+                                    </div>
+                                    <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+                                        <span className="text-sm text-blue-800 font-bold">{bugReports.filter(b => b.status === 'in_progress').length} Em Análise</span>
                                     </div>
                                     <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200">
                                         <span className="text-sm text-green-800 font-bold">{bugReports.filter(b => b.status === 'resolved').length} Resolvidos</span>
@@ -1386,55 +1394,144 @@ const AdminDashboard: React.FC = () => {
 
                             {bugReports.length === 0 ? (
                                 <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                                    <Icons.Bug />
-                                    <p className="text-gray-400 mt-4">Nenhum bug reportado ainda.</p>
+                                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mb-4">
+                                        <Icons.Bug />
+                                    </div>
+                                    <p className="text-gray-400 font-medium">Nenhum bug reportado ainda.</p>
+                                    <p className="text-gray-400 text-sm mt-1">Os relatórios dos usuários aparecerão aqui.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     {bugReports.map((bug) => (
-                                        <div key={bug.id} className={`bg-white p-5 rounded-xl border shadow-sm transition-all ${bug.status === 'pending' ? 'border-yellow-200' : bug.status === 'resolved' ? 'border-green-200' : 'border-gray-200'}`}>
-                                            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                                                <div className="flex-1 space-y-3">
+                                        <div key={bug.id} className={`bg-white rounded-2xl border-2 shadow-sm transition-all hover:shadow-md ${bug.status === 'pending' ? 'border-red-200' : bug.status === 'in_progress' ? 'border-blue-200' : 'border-green-200'}`}>
+                                            {/* Header do Card */}
+                                            <div className="p-4 border-b border-gray-100">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${bug.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : bug.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                            <Icons.Bug />
+                                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold ${bug.status === 'pending' ? 'bg-red-100 text-red-600' : bug.status === 'in_progress' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                                                            {bug.userName ? bug.userName.charAt(0).toUpperCase() : '?'}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-gray-800">{bug.userName || 'Usuário Anônimo'}</p>
-                                                            <p className="text-xs text-gray-400">{bug.userEmail || 'sem-email'}</p>
+                                                            <p className="font-bold text-gray-800 text-lg">{bug.userName || 'Usuário Anônimo'}</p>
+                                                            <p className="text-sm text-gray-500">{bug.userEmail || 'Email não informado'}</p>
                                                         </div>
-                                                        <span className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${bug.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : bug.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                            {bug.status === 'pending' ? 'Pendente' : bug.status === 'resolved' ? 'Resolvido' : bug.status}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${bug.status === 'pending' ? 'bg-red-100 text-red-700' : bug.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+                                                            {bug.status === 'pending' ? '🔴 Pendente' : bug.status === 'in_progress' ? '🔵 Em Análise' : '✅ Resolvido'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                                            #{bug.id?.slice(-6).toUpperCase()}
                                                         </span>
                                                     </div>
-                                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{bug.description}</p>
-                                                    </div>
-                                                    {bug.images && bug.images.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2">
+                                                </div>
+                                            </div>
+
+                                            {/* Corpo do Card */}
+                                            <div className="p-4 space-y-4">
+                                                {/* Descrição */}
+                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                                    <p className="text-sm font-medium text-gray-500 mb-2">📝 Descrição do Problema</p>
+                                                    <p className="text-gray-700 whitespace-pre-wrap">{bug.description}</p>
+                                                </div>
+
+                                                {/* Imagens */}
+                                                {bug.images && bug.images.length > 0 && (
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-500 mb-2">📷 Screenshots ({bug.images.length})</p>
+                                                        <div className="flex flex-wrap gap-3">
                                                             {bug.images.map((img: string, idx: number) => (
-                                                                <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition">
+                                                                <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all">
                                                                     <img src={img} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover" />
                                                                 </a>
                                                             ))}
                                                         </div>
-                                                    )}
-                                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
-                                                        <span>📅 {bug.createdAt?.toDate?.()?.toLocaleString('pt-BR') || 'Data não disponível'}</span>
-                                                        <span className="truncate max-w-[300px]">🔗 {bug.url || 'URL não disponível'}</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Informações Técnicas */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    <div className="bg-slate-50 p-3 rounded-lg">
+                                                        <p className="text-xs font-medium text-gray-400 mb-1">📅 Data do Relato</p>
+                                                        <p className="text-sm text-gray-700 font-medium">{bug.createdAt?.toDate?.()?.toLocaleString('pt-BR') || 'Não disponível'}</p>
+                                                    </div>
+                                                    <div className="bg-slate-50 p-3 rounded-lg">
+                                                        <p className="text-xs font-medium text-gray-400 mb-1">🔗 Página do Erro</p>
+                                                        <p className="text-sm text-blue-600 truncate font-medium">{bug.url || 'Não informado'}</p>
+                                                    </div>
+                                                    <div className="bg-slate-50 p-3 rounded-lg md:col-span-2 lg:col-span-1">
+                                                        <p className="text-xs font-medium text-gray-400 mb-1">💻 Dispositivo/Navegador</p>
+                                                        <p className="text-xs text-gray-600 truncate" title={bug.userAgent}>{bug.userAgent?.slice(0, 60)}...</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col gap-2 min-w-[140px]">
-                                                    {bug.status === 'pending' && (
-                                                        <button onClick={() => handleUpdateBugStatus(bug.id, 'resolved')} className="w-full px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition">
-                                                            ✓ Marcar Resolvido
-                                                        </button>
-                                                    )}
-                                                    {bug.status === 'resolved' && (
-                                                        <button onClick={() => handleUpdateBugStatus(bug.id, 'pending')} className="w-full px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-bold hover:bg-yellow-600 transition">
-                                                            ↺ Reabrir
-                                                        </button>
-                                                    )}
+                                            </div>
+
+                                            {/* Footer com Ações */}
+                                            <div className="p-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+                                                <div className="flex flex-col sm:flex-row gap-3">
+                                                    {/* Botões de Contato */}
+                                                    <div className="flex gap-2 flex-1">
+                                                        {bug.userEmail && bug.userEmail !== 'sem-email' && (
+                                                            <a
+                                                                href={`mailto:${bug.userEmail}?subject=Sobre seu relato de bug %23${bug.id?.slice(-6).toUpperCase()}&body=Olá ${bug.userName},%0A%0ARecebemos seu relato de bug e gostaríamos de informar que estamos trabalhando na solução.%0A%0AAtenciosamente,%0AEquipe VelCurrículo`}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-500 text-white rounded-lg text-sm font-bold hover:bg-purple-600 transition"
+                                                            >
+                                                                <Icons.Mail /> Enviar Email
+                                                            </a>
+                                                        )}
+                                                        <a
+                                                            href={`https://wa.me/55${bug.userEmail?.includes('@') ? '' : bug.userEmail}?text=Olá ${bug.userName || 'usuário'}! Sobre o bug que você reportou (ID: ${bug.id?.slice(-6).toUpperCase()}), estamos analisando e em breve teremos uma solução. Obrigado pelo feedback!`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition"
+                                                        >
+                                                            <Icons.MessageSquare /> WhatsApp
+                                                        </a>
+                                                    </div>
+
+                                                    {/* Botões de Status */}
+                                                    <div className="flex gap-2">
+                                                        {bug.status === 'pending' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleUpdateBugStatus(bug.id, 'in_progress')}
+                                                                    className="px-4 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-bold hover:bg-blue-600 transition"
+                                                                >
+                                                                    🔵 Em Análise
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateBugStatus(bug.id, 'resolved')}
+                                                                    className="px-4 py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-bold hover:bg-emerald-600 transition"
+                                                                >
+                                                                    ✅ Resolvido
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {bug.status === 'in_progress' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleUpdateBugStatus(bug.id, 'pending')}
+                                                                    className="px-4 py-2.5 bg-gray-400 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition"
+                                                                >
+                                                                    ↩ Voltar
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateBugStatus(bug.id, 'resolved')}
+                                                                    className="px-4 py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-bold hover:bg-emerald-600 transition"
+                                                                >
+                                                                    ✅ Resolvido
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {bug.status === 'resolved' && (
+                                                            <button
+                                                                onClick={() => handleUpdateBugStatus(bug.id, 'pending')}
+                                                                className="px-4 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 transition"
+                                                            >
+                                                                🔄 Reabrir
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
