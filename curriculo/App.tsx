@@ -1066,7 +1066,6 @@ export const AppContent: React.FC = () => {
         // Isso faz com que a paginação seja "pessimista", quebrando a página ANTES
         // do conteúdo realmente tocar no QR Code. Isso resolve o problema do Drag & Drop
         // sem precisar aumentar a margem visual real.
-        // Voltamos para 50 pois agora calculamos o espaçamento exato entre seções.
         const CALCULATION_BUFFER = 50;
         const dangerZoneStart = A4_HEIGHT - qrPosition.bottom - qrHeight - qrPadding - CALCULATION_BUFFER;
 
@@ -1150,36 +1149,12 @@ export const AppContent: React.FC = () => {
             }
         };
 
-        // --- SMART SPACING: Simula o 'space-y-4' (16px) do layout ---
-        const addSpacing = () => {
-            if (blocks.length > 0) {
-                blocks.push({ id: `spacer-${blocks.length}`, type: 'spacer-gap' as any, data: null, height: 16 });
-            }
-        };
-
-        if (dataToPaginate.summary) {
-            extractBlocks('summary-section', 'summary');
-        }
-        if (dataToPaginate.experiences.length > 0) {
-            if (blocks.length > 0) addSpacing();
-            extractBlocks('experience-section', 'experiences', 'resume-experience-list');
-        }
-        if (dataToPaginate.education.length > 0) {
-            if (blocks.length > 0) addSpacing();
-            extractBlocks('education-section', 'education', 'resume-education-list');
-        }
-        if (dataToPaginate.courses.length > 0) {
-            if (blocks.length > 0) addSpacing();
-            extractBlocks('courses-section', 'courses', 'resume-courses-list');
-        }
-        if (dataToPaginate.languages.length > 0) {
-            if (blocks.length > 0) addSpacing();
-            extractBlocks('languages-section', 'languages');
-        }
-        if (dataToPaginate.skills.length > 0) {
-            if (blocks.length > 0) addSpacing();
-            extractBlocks('skills-section', 'skills');
-        }
+        if (dataToPaginate.summary) extractBlocks('summary-section', 'summary');
+        if (dataToPaginate.experiences.length > 0) extractBlocks('experience-section', 'experiences', 'resume-experience-list');
+        if (dataToPaginate.education.length > 0) extractBlocks('education-section', 'education', 'resume-education-list');
+        if (dataToPaginate.courses.length > 0) extractBlocks('courses-section', 'courses', 'resume-courses-list');
+        if (dataToPaginate.languages.length > 0) extractBlocks('languages-section', 'languages');
+        if (dataToPaginate.skills.length > 0) extractBlocks('skills-section', 'skills');
 
         const pages: PageData[] = [];
         let currentPageData: PageData = {
@@ -1255,8 +1230,6 @@ export const AppContent: React.FC = () => {
                     currentPageData.summary = block.data;
                 } else if (block.type === 'skills' || block.type === 'languages') {
                     currentPageData[block.type] = block.data;
-                } else if ((block.type as string) === 'spacer-gap') {
-                    // Spacers apenas consomem altura, sem dados
                 } else if (Array.isArray(currentPageData[block.type])) {
                     (currentPageData[block.type] as any[]).push(block.data);
                 }
