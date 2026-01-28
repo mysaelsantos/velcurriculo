@@ -45,14 +45,15 @@ const Icons = {
     Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
     Coins: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></svg>,
     Bell: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>,
-    Percent: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
+    Percent: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>,
+    Bug: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88" /><path d="M14.12 3.88 16 2" /><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" /><path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4" /><path d="M22 13h-4" /><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4" /></svg>
 };
 
 const COLORS = ['#002e9e', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const AdminDashboard: React.FC = () => {
     const [user, setUser] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'overview' | 'resumes' | 'analytics' | 'reviews' | 'coupons'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'resumes' | 'analytics' | 'reviews' | 'coupons' | 'bugs'>('overview');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -69,6 +70,7 @@ const AdminDashboard: React.FC = () => {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [reviews, setReviews] = useState<any[]>([]);
     const [coupons, setCoupons] = useState<any[]>([]);
+    const [bugReports, setBugReports] = useState<any[]>([]);
 
     // --- DADOS PROCESSADOS (KPIs) ---
     const [kpis, setKpis] = useState({
@@ -151,6 +153,11 @@ const AdminDashboard: React.FC = () => {
 
         onSnapshot(query(collection(db, 'coupons'), orderBy('createdAt', 'desc')), (snap) => {
             setCoupons(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
+
+        // Buscar bug reports
+        onSnapshot(query(collection(db, 'bugReports'), orderBy('createdAt', 'desc'), limit(200)), (snap) => {
+            setBugReports(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         });
 
     }, [user]);
@@ -472,6 +479,15 @@ const AdminDashboard: React.FC = () => {
         setNewCoupon({ code: '', type: 'fixed', value: '', maxUses: '', maxUsesPerUser: '1', pin: '' });
     };
 
+    // Função para atualizar status de bugs
+    const handleUpdateBugStatus = async (bugId: string, newStatus: string) => {
+        try {
+            await updateDoc(doc(db, 'bugReports', bugId), { status: newStatus });
+        } catch (error) {
+            console.error("Erro ao atualizar status do bug:", error);
+        }
+    };
+
     // UTILS & PDF GENERATION
     useEffect(() => {
         const handleResize = () => {
@@ -758,6 +774,7 @@ const AdminDashboard: React.FC = () => {
                     {!sidebarCollapsed && <p className="text-[10px] uppercase tracking-widest text-blue-300/60 font-bold px-3 mb-3">Gestão</p>}
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Icons.MessageSquare />} label="Avaliações" badge={reviewStats.pending > 0 ? reviewStats.pending : undefined} />
                     <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'coupons'} onClick={() => setActiveTab('coupons')} icon={<Icons.Ticket />} label="Cupons & Promoções" />
+                    <SidebarItem collapsed={sidebarCollapsed} active={activeTab === 'bugs'} onClick={() => setActiveTab('bugs')} icon={<Icons.Bug />} label="Bugs Reportados" badge={bugReports.filter(b => b.status === 'pending').length > 0 ? bugReports.filter(b => b.status === 'pending').length : undefined} />
                 </nav>
 
                 {/* User Section */}
@@ -791,6 +808,7 @@ const AdminDashboard: React.FC = () => {
                             <SidebarItem collapsed={false} active={activeTab === 'analytics'} onClick={() => { setActiveTab('analytics'); setMobileMenuOpen(false) }} icon={<Icons.TrendingUp />} label="BI & Dados" />
                             <SidebarItem collapsed={false} active={activeTab === 'reviews'} onClick={() => { setActiveTab('reviews'); setMobileMenuOpen(false) }} icon={<Icons.MessageSquare />} label="Avaliações" />
                             <SidebarItem collapsed={false} active={activeTab === 'coupons'} onClick={() => { setActiveTab('coupons'); setMobileMenuOpen(false) }} icon={<Icons.Ticket />} label="Cupons" />
+                            <SidebarItem collapsed={false} active={activeTab === 'bugs'} onClick={() => { setActiveTab('bugs'); setMobileMenuOpen(false) }} icon={<Icons.Bug />} label="Bugs" />
                         </nav>
                     </div>
                 </div>
@@ -857,8 +875,8 @@ const AdminDashboard: React.FC = () => {
                                                 <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${!notif.read ? 'bg-blue-50/50' : ''}`}>
                                                     <div className="flex items-start gap-3">
                                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white ${notif.type === 'sale' ? 'bg-green-500' :
-                                                                notif.type === 'lead' ? 'bg-blue-500' :
-                                                                    notif.type === 'coupon' ? 'bg-purple-500' : 'bg-yellow-500'
+                                                            notif.type === 'lead' ? 'bg-blue-500' :
+                                                                notif.type === 'coupon' ? 'bg-purple-500' : 'bg-yellow-500'
                                                             }`}>
                                                             {notif.type === 'sale' ? <Icons.DollarSign /> :
                                                                 notif.type === 'lead' ? <Icons.Users /> :
@@ -1345,6 +1363,84 @@ const AdminDashboard: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* 🐛 TAB DE BUGS REPORTADOS */}
+                    {activeTab === 'bugs' && (
+                        <div className="animate-fade-in space-y-6">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                    <h3 className="font-bold text-gray-700 text-xl">Bugs Reportados</h3>
+                                    <p className="text-sm text-gray-500">Gerencie os bugs reportados pelos usuários.</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="bg-yellow-50 px-4 py-2 rounded-lg border border-yellow-200">
+                                        <span className="text-sm text-yellow-800 font-bold">{bugReports.filter(b => b.status === 'pending').length} Pendentes</span>
+                                    </div>
+                                    <div className="bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                                        <span className="text-sm text-green-800 font-bold">{bugReports.filter(b => b.status === 'resolved').length} Resolvidos</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {bugReports.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                    <Icons.Bug />
+                                    <p className="text-gray-400 mt-4">Nenhum bug reportado ainda.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {bugReports.map((bug) => (
+                                        <div key={bug.id} className={`bg-white p-5 rounded-xl border shadow-sm transition-all ${bug.status === 'pending' ? 'border-yellow-200' : bug.status === 'resolved' ? 'border-green-200' : 'border-gray-200'}`}>
+                                            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${bug.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : bug.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            <Icons.Bug />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-gray-800">{bug.userName || 'Usuário Anônimo'}</p>
+                                                            <p className="text-xs text-gray-400">{bug.userEmail || 'sem-email'}</p>
+                                                        </div>
+                                                        <span className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${bug.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : bug.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {bug.status === 'pending' ? 'Pendente' : bug.status === 'resolved' ? 'Resolvido' : bug.status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{bug.description}</p>
+                                                    </div>
+                                                    {bug.images && bug.images.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {bug.images.map((img: string, idx: number) => (
+                                                                <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-400 transition">
+                                                                    <img src={img} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover" />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+                                                        <span>📅 {bug.createdAt?.toDate?.()?.toLocaleString('pt-BR') || 'Data não disponível'}</span>
+                                                        <span className="truncate max-w-[300px]">🔗 {bug.url || 'URL não disponível'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col gap-2 min-w-[140px]">
+                                                    {bug.status === 'pending' && (
+                                                        <button onClick={() => handleUpdateBugStatus(bug.id, 'resolved')} className="w-full px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:bg-green-600 transition">
+                                                            ✓ Marcar Resolvido
+                                                        </button>
+                                                    )}
+                                                    {bug.status === 'resolved' && (
+                                                        <button onClick={() => handleUpdateBugStatus(bug.id, 'pending')} className="w-full px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-bold hover:bg-yellow-600 transition">
+                                                            ↺ Reabrir
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
