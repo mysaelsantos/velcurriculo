@@ -35,6 +35,11 @@
 
     <link rel="manifest" href="/manifest.json">
 
+    <!-- iOS Safari Enhancements -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="format-detection" content="telephone=no">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.1/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
@@ -46,6 +51,13 @@
             scroll-behavior: smooth;
             -ms-overflow-style: none;
             scrollbar-width: none;
+            /* Safari/iOS: Scroll suave com momentum */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Safari/iOS: Remove highlight azul de toque */
+        * {
+            -webkit-tap-highlight-color: transparent;
         }
 
         :root {
@@ -58,6 +70,16 @@
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f9fafb;
+            /* Safari/iOS: Previne pull-to-refresh acidental */
+            overscroll-behavior-y: none;
+            -webkit-touch-callout: none;
+        }
+
+        /* Safari/iOS: Evita zoom automático em inputs (font-size >= 16px) */
+        input,
+        textarea,
+        select {
+            font-size: 16px;
         }
 
         .form-container {
@@ -155,6 +177,11 @@
             transform-origin: top left;
             position: relative;
             box-sizing: border-box;
+            /* Safari/iOS: Garante transforms funcionem corretamente */
+            -webkit-transform-style: preserve-3d;
+            transform-style: preserve-3d;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         .resume-preview-paginated {
@@ -187,6 +214,10 @@
             /* Largura fixa A4 */
             background: white;
             transform: none !important;
+            -webkit-transform: none !important;
+            /* Safari/iOS: Força composição de camada para captura correta */
+            -webkit-transform-style: preserve-3d;
+            transform-style: preserve-3d;
             /* Importante para cálculos de coordenadas precisos */
         }
 
